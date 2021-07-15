@@ -5,17 +5,19 @@ Function ExtractISO {
     
     .DESCRIPTION
     This function not only extracts ISO contents, but also downloads and installs 7Zip client if version not match.
-    If other version is found, version 19 will replace older one. Folder will be created where the ISO is located.
+    If other version is found, version 19 will replace older one, and extract ISO contents.
     
     .PARAMETER ISOImage
     Mandatory - path of an ISO image. Location can be declared with this parametar.
     .PARAMETER ISOExpandPath
     Mandatory - path on a system drive where you want your extracted contents.
-    .PARAMETER ISOExpandPathName
-    Mandatory - name of folder path on a system drive where you want your extracted contents.
 
     .EXAMPLE
-    ExtractISO -ISOImage "$env:TEMP\Windows10.iso" -ISOExpandPath "$env:TEMP" --ISOExpandPathName 'MyImage'
+    ExtractISO -ISOImage "$env:TEMP\Windows10.iso" -ISOExpandPath "$env:TEMP\MyImage"
+    
+    .NOTES
+    *ISOImage and ISOExpandPath should not have empty spaces, otherwise(like in NOTES) it will work.
+    *you dont need to create new directory, it will be created when declaring ISOExpandPath parameter.
     #>
     [CmdletBinding()]
     Param(
@@ -23,10 +25,7 @@ Function ExtractISO {
         [string]$ISOImage,
 
         [Parameter(Mandatory = $true)]
-        [string]$ISOExpandPath,
-
-        [Parameter(Mandatory = $false)]
-        [string]$ISOExpandPathName
+        [string]$ISOExpandPath
     )
     $7Zip = Get-Package -Provider Programs -IncludeWindowsInstaller -Name "7-Zip*" -AllVersions -ErrorAction SilentlyContinue
     $Install = {
@@ -45,7 +44,6 @@ Function ExtractISO {
         $7zXArgs = 'x -y -o' + "$ISOExpandPath\$ISOExpandPathName $ISOImage"
         Start-Process -FilePath $7zPath -ArgumentList $7zXArgs -Wait -WindowStyle Hidden
     }
-    New-Item -Path $ISOExpandPath -ItemType Directory -Name $ISOExpandPathName | Out-Null
     if (!$7Zip) {
         Invoke-Command -ScriptBlock $Install
         Invoke-Command -ScriptBlock $Expand
