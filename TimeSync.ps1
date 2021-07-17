@@ -9,6 +9,9 @@ Function TimeSync {
 
     .EXAMPLE
     TimeSync -StartupType Automatic
+
+    .NOTES
+    https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/time-synchronization-not-succeed-non-ntp
     #>
     [CmdletBinding()]
     Param(
@@ -27,7 +30,10 @@ Function TimeSync {
         Write-Output 'Setting service to Automatic and syncing time.'
         Get-Service -Name W32Time | Set-Service -StartupType $StartupType
         Start-Process W32tm -ArgumentList " /resync /force" -WindowStyle Hidden -Wait  
-        
+        #^^ w32tm /config /manualpeerlist: NTP_server_IP_Address, 0x8 /syncfromflags: MANUAL
+        #^^ net stop w32time
+        #^^ net start w32time
+        #^^ w32tm /resync
     }
     END {
         return W32tm /query /status
