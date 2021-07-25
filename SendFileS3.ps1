@@ -33,9 +33,9 @@ Function SendFileS3 {
     $Headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
     $Headers.Add("Content-Type", "text/csv")
     $Headers.Add("x-amz-acl", "bucket-owner-full-control")
-    $TransferURL = "$SendURL" + "$ReportFileName"
+    #$TransferURL = "$SendURL" + "$ReportFileName"
     try {
-        Invoke-RestMethod $TransferURL -Method 'PUT' -Headers $Headers -UserAgent $Key -InFile "$ReportFilePath" -Verbose
+        Invoke-RestMethod $SendURL -Method 'PUT' -Headers $Headers -UserAgent $Key -InFile "$ReportFilePath" -Verbose
         return $true
     }
     catch {
