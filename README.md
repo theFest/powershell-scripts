@@ -1,2 +1,2 @@
 # Powershell-Scripts
-PowerShell reusable scripts(modules) as functions
+PowerShell reusable scripts() as functions
