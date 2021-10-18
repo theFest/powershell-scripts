@@ -37,21 +37,20 @@
     if (!$DestinationPath) {
         $DestinationPath = $env:TEMP
     }
+    $SecurePassword = ConvertTo-SecureString $Key -AsPlainText -Force
     [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls, ssl3"
     $FileName = [System.IO.Path]::GetFileName($FileUrl)
     $DownloadFilePath = [System.IO.Path]::Combine($DestinationPath, $FileName)
     $LocalPath = (Get-Item $DownloadFilePath -ErrorAction SilentlyContinue).Length
-    $RemotePath = (Invoke-WebRequest $FileUrl -UserAgent $Key -UseBasicParsing -Method Head -ErrorAction SilentlyContinue).Headers.'Content-Length'
+    $RemotePath = (Invoke-WebRequest $FileUrl -UserAgent $SecurePassword -UseBasicParsing -Method Head -ErrorAction SilentlyContinue).Headers.'Content-Length'
     if ([System.IO.File]::Exists($DownloadFilePath) -and $LocalPath -eq $RemotePath) {
         Write-Output -InputObject ('File already exists. Local and remote files match, exiting.')
-        #WriteLog -LogMessage "File already exists. Local and remote files match." -LogSeverity Information
     }
     else {
         Write-Output -InputObject ('File missing or local and remote files do not match, downloading...')
-        #WriteLog -LogMessage "File missing or local and remote files do not match!" -LogSeverity Warning
         Remove-Item -Path $DownloadFilePath -ErrorAction SilentlyContinue
         $DlClient = New-Object System.Net.WebClient;
-        $DlClient.Headers.Add("User-Agent", "$Key");   
+        $DlClient.Headers.Add("User-Agent", "$SecurePassword");   
         $DlClient.DownloadFile($FileUrl, $DownloadFilePath);
         $DlClient.Dispose()
     }
