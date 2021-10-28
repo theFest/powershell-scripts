@@ -7,20 +7,15 @@ Function PingTest {
     With this function you can test list of destinations by specifying timeframe.
     
     .PARAMETER StringList
-    Mandatory - list of destinations that you want to ping.
-    
+    Mandatory - list of destinations that you want to ping.    
     .PARAMETER Logfile
-    Mandatory - output path for logfile, in CSV format.
-    
+    Mandatory - output path for logfile, in CSV format.    
     .PARAMETER Intervall
-    Mandatory - interval that waits between each ping.
-    
+    Mandatory - interval that waits between each ping.    
     .PARAMETER IntervallUnit
-    Mandatory - intervallUnit that relates to intervall. Described in validateset.
-    
+    Mandatory - intervallUnit that relates to intervall. Described in validateset.   
     .PARAMETER Duration
-    Mandatory - duration that relates to timeframe. Described in validateset.
-    
+    Mandatory - duration that relates to timeframe. Described in validateset.    
     .PARAMETER EndTimeFrame
     Mandatory - declare when you want loop/ping test to end. 
     
@@ -32,24 +27,24 @@ Function PingTest {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 0, mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true)]
         [array]$StringList,
  
-        [Parameter(Position = 1, mandatory = $true)]
+        [Parameter(Position = 1, Mandatory = $true)]
         [string]$Logfile,
  
-        [Parameter(Position = 2, mandatory = $true)]
+        [Parameter(Position = 2, Mandatory = $true)]
         [int]$Intervall,
  
-        [Parameter(Position = 4, mandatory = $true)]
+        [Parameter(Position = 4, Mandatory = $true)]
         [ValidateSet('ms', 's', 'm')]
         [string]$IntervallUnit,
 
-        [Parameter(Position = 5, mandatory = $true)]
+        [Parameter(Position = 5, Mandatory = $true)]
         [ValidateSet('AddDays', 'AddHours', 'AddMinutes', 'AddSeconds')]
         [string]$Duration,
 
-        [Parameter(Position = 6, mandatory = $true)]
+        [Parameter(Position = 6, Mandatory = $true)]
         [int]$EndTimeFrame
     )
     $Ping = New-Object system.net.networkinformation.ping
