@@ -19,13 +19,10 @@
     .PARAMETER OutFile
     Mandatory - specify where you would with for a file to reside.
     
-    .EXAMPLES 
-    ## ListFiles
-    ListFiles -FilesPath 'F:\Test' -Manage ListFiles -OutFile 'F:\Test\Test.txt'
-    ## WithoutExtensionReplaceString
-    ListFiles -FilesPath 'F:\Test' -Manage WEReplaceString -ReplaceStringIn 'panel_' -OutFile 'F:\Test\Test.txt'
-    ## WithoutExtensionReplaceStringSubString
-    ListFiles -FilesPath 'F:\Test' -Manage WEReplaceStringSubString -ReplaceStringIn 'panel_' -Substring 3 -OutFile 'F:\Test\Test.txt'
+    .EXAMPLE 
+    ListFiles -FilesPath 'F:\Test' -Manage ListFiles -OutFile 'F:\Test\Test.txt' ##-->ListFiles
+    ListFiles -FilesPath 'F:\Test' -Manage WEReplaceString -ReplaceStringIn 'panel_' -OutFile 'F:\Test\Test.txt' ##-->WithoutExtensionReplaceString
+    ListFiles -FilesPath 'F:\Test' -Manage WEReplaceStringSubString -ReplaceStringIn 'panel_' -Substring 3 -OutFile 'F:\Test\Test.txt' ##-->WithoutExtensionReplaceStringSubString
     
     .NOTES
     V1
