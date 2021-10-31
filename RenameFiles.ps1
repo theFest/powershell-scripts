@@ -28,6 +28,10 @@
     NotMandatory - choose extension that you wish to replace.  
     .PARAMETER Manage
     Mandatory - choose operation that you want to use.
+    .PARAMETER Recurse
+    NotMandatory - include subdirectories.
+    .PARAMETER Force
+    NotMandatory - force to override.
     .PARAMETER OutputToFile
     NotMandatory - if you want result to be written to file, use this switch together with Outfile. 
     .PARAMETER OutFile
@@ -40,7 +44,7 @@
     RenameFiles -FilesPath 'F:\Test\a' -Manage SetNewPrefixSuffix -AddNewPrefix YYYYY -AddNewSuffix ZZZZZ ##-->SetNewPrefixSuffix
     RenameFiles -FilesPath 'F:\Test\a' -Manage MethodOptions -Methods ToLower ##-->MethodOptions
     RenameFiles -FilesPath 'F:\Test\a' -Manage SubString -Substring 1 ##-->SubString
-    * also you can use $OutputToFile switch with $OutFile parametar to write results to a file.
+    * also you can use $Recurse, $Force and $OutputToFile/$OutFile parametar to write results to a file.
 
     .NOTES
     v1
@@ -51,7 +55,7 @@
         [string]$FilesPath,
 
         [Parameter(Mandatory = $false)]
-        [string]$RenameFiles = $false,
+        [string]$RenameFiles,
 
         [Parameter(Mandatory = $false)]
         [string]$ReplaceStringIn,
@@ -84,27 +88,34 @@
         [string]$Manage,
 
         [Parameter(Mandatory = $false)]
+        [switch]$Recurse,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force,
+
+        [Parameter(Mandatory = $false)]
         [switch]$OutputToFile,
 
         [Parameter(Mandatory = $false)]
         [string]$OutFile
     )
-    Set-Location -Path $FilesPath -Verbose
+    $FilesPathLocation = [System.IO.Path]::GetDirectoryName($FilesPath)
+    Set-Location -Path $FilesPathLocation
+    $Files = Get-ChildItem -Path $FilesPath -Recurse:$Recurse -Force:$Force | Where-Object { $_.PSIsContainer -eq $PSIsContainer }
     #$Files = Get-ChildItem -Path $FilesPath -File:$FilesOnly -Filter $Filter -Include $Include -Exclude $Exclude -ReadOnly:$ReadOnly -Hidden:$Hidden -System:$System -Recurse:$Recurse -Depth $Depth | Where-Object { $_.PSIsContainer -eq $PSIsContainer }
-    $Files = Get-ChildItem -Path $FilesPath | Where-Object { $_.PSIsContainer -eq $PSIsContainer }
     switch ($Manage) {
         'RenameWithIndex' {
             $WO = Write-Output "`nTotal : "$Files.Count "Files renamed to; $RenameFiles`n"
             $AddExtension = $Files.Extension | Select-Object -First 1
-            $F = $Files | ForEach-Object -Begin { $Count = 1 } -Process { Rename-Item $_ -NewName $RenameFiles$Count$AddExtension -PassThru -Verbose; $Count++ } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+            $F = $Files.FullName | ForEach-Object -Begin { $Count = 1 } -Process { Rename-Item $_ -NewName $RenameFiles$Count$AddExtension -PassThru -Verbose; $Count++ } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
         }
         'ChangeExtension' {
             $WO = Write-Output "`nTotal : "$Files.Count "Files have changed extension to; $ReplaceExtensionTo`n"
-            $F = $Files | ForEach-Object -Process { Rename-Item $_ -NewName ([System.IO.Path]::ChangeExtension($_, "$ReplaceExtensionTo")) -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+            $F = $Files.FullName | ForEach-Object -Process { Rename-Item $_ -NewName ([System.IO.Path]::ChangeExtension($_, "$ReplaceExtensionTo")) -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
         }
         'ReplaceString' {
             $WO = Write-Output "`nTotal : "$Files.Count "Files that have replaced string; $ReplaceStringIn>>$ReplaceStringOut`n"
-            $F = $Files | ForEach-Object -Process { Rename-Item $_ -NewName $_.Name.Replace("$ReplaceStringIn", "$ReplaceStringOut") -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+            $F = $Files.FullName | ForEach-Object -Process { Rename-Item $_ -NewName $_.Replace("$ReplaceStringIn", "$ReplaceStringOut") -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
         }
         'SetNewPrefixSuffix' {
             $WO = Write-Output "`nTotal : "$Files.Count "Files that changed Prefix;$AddNewPrefix and/or suffix; $AddNewSuffix`n"
@@ -123,6 +134,7 @@
     }
     Write-Host $RenamedFiles
     if ($OutputToFile.IsPresent) {
-        $F | Out-File $OutFile
+        $F | Select-Object FullName, CreationTime, LastAccessTime, LastWriteTime, Attributes, Extension, Exists `
+        | Format-Table | Out-File $OutFile
     }
 }
