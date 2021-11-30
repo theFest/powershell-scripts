@@ -4,14 +4,24 @@ Function CertCallback {
     TLS, SSL circumvent certificate callback validation.
     
     .DESCRIPTION
-    Suppress 'Invoke-WebRequest The underlying connection was closed: Could not establish trust relationship for the SSL TLS secure channel.'
+    For cases such as;
+    'Invoke-WebRequest The underlying connection was closed: Could not establish trust relationship for the SSL TLS secure channel.'
     
+    .PARAMETER Operate
+    Mandatory - use to suppress or revert validation check. Works in a current session but system wide. 
+
     .EXAMPLE
-    CertCallback
+    CertCallback -Operate true
     
     .NOTES
-    v1
+    v2
     #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('true', 'false')]
+        [string]$Operate
+    )
     if (-not ([System.Management.Automation.PSTypeName]'ServerCertificateValidationCallback').Type) {
         $CertCallback = @"
 using System;
@@ -33,7 +43,7 @@ public class ServerCertificateValidationCallback
                     SslPolicyErrors errors
                 )
                 {
-                    return true;
+                    return $Operate;
                 };
         }
     }
