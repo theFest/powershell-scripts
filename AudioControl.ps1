@@ -1,4 +1,4 @@
-﻿Function AudioControl {
+Function AudioControl {
     <#
     .SYNOPSIS
     Adjust sound volume or mute with a timespan.
