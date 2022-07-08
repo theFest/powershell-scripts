@@ -1,4 +1,4 @@
-﻿Function WaitProcess {
+Function WaitProcess {
     <#
     .SYNOPSIS
     This function waits for a process to start.
