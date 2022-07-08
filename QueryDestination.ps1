@@ -1,4 +1,4 @@
-﻿Function QueryDestination {
+Function QueryDestination {
     <#
     .SYNOPSIS
     Query url for status and information in a loop.
