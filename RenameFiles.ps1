@@ -1,4 +1,4 @@
-﻿Function RenameFiles {
+Function RenameFiles {
     <#
     .SYNOPSIS
     Rename your data.

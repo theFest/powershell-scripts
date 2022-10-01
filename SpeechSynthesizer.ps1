@@ -1,4 +1,4 @@
-﻿Function SpeechSynthesizer {
+Function SpeechSynthesizer {
     <#
     .SYNOPSIS
     Simple function for text to speech.

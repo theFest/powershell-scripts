@@ -1,4 +1,4 @@
-﻿Function TimeOffsetQuery {
+Function TimeOffsetQuery {
     <#
     .SYNOPSIS
     Query time offset.

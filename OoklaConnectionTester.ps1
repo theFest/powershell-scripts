@@ -1,4 +1,4 @@
-﻿Function OoklaConnectionTester {
+Function OoklaConnectionTester {
     <#
     .SYNOPSIS
     Ookla tester for Internet connection performance and network stability. 

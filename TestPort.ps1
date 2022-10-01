@@ -1,4 +1,4 @@
-﻿Function TestPort {
+Function TestPort {
     <#
     .SYNOPSIS
     Simple port tester/checker.
