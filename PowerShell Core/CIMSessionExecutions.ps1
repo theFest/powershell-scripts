@@ -137,7 +137,7 @@
     }
     END {
         Write-Host "Finished, cleaning up, stopping transcript and exiting..." -ForegroundColor Cyan
-        #Get-CimSession | Remove-CimSession -verbose
+        Get-CimSession | Remove-CimSession -Verbose
         Clear-Variable -Name RemoteComputerUser, RemoteComputerPass -Force -Verbose
         Write-Output "`nTime taken [$((Get-Date).Subtract($StartTime).Duration() -replace ".{8}$")]"
         Clear-History -Verbose
