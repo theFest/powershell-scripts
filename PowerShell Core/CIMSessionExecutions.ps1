@@ -8,34 +8,24 @@
 
     .PARAMETER ComputerName
     Mandatory - target machine/s.
-
     .PARAMETER RemoteComputerUser
     Mandatory - user of the target machines.
-
     .PARAMETER RemoteComputerPass
     Mandatory - password on target machines.
-
     .PARAMETER ScriptBlock
     Mandatory - scriptblock your commands on a remote computers, for example url to your script and execution.
-
     .PARAMETER Protocol
     NotMandatory - choose protocol you want to use.
-
     .PARAMETER Authentication
     NotMandatory - choose authentication type from set.
-
     .PARAMETER Class
     NotMandatory - choose class, default present, others unimplemented atm.
-
     .PARAMETER Method
     NotMandatory - choose method of a class, for now you can create or terminate a process.
-
     .PARAMETER OperationTimeoutSec
     NotMandatory - timeout for the operation, script or command.
-
     .PARAMETER Port
     NotMandatory - choose port you wanna use.
-
     .PARAMETER SkipTestConnection
     NotMandatory - use to speed up execution.
 
