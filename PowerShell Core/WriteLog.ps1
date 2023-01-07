@@ -1,67 +1,63 @@
 Function WriteLog {
     <#
     .SYNOPSIS
-    This function writes logs.
-    
+    Simple function for writing logs.
+
     .DESCRIPTION
     This function writes, appends and exports logs.
-    
+
     .PARAMETER LogMessage
     Mandatory - your log message.
     .PARAMETER LogSeverity
     Mandatory - severity of your message.
     .PARAMETER LogPath
     Not mandatory - path to location where you want the file to be saved.
-    If LogPath is not declared, folder will be created inside $env:APPDATA\BMX\Logs
-
-    .NOTES
-    If LogPath is not declared, logs will end in $env:TEMP\Logs.
-    If LogFileName if not declared, hostname will be used as one.
+    .PARAMETER LogFileName
+    Not mandatory - name of the log file, it will have .csv extension.
 
     .EXAMPLE
-    WriteLog -LogMessage "Your_Message" -LogSeverity Information -LogPath "C:\" -LogFileName "Your_File_Name"
+    WriteLog -LogSeverity Alert -LogMessage "your_log_message"
+    "your_log_message" | WriteLog -LogSeverity Alert -LogPath "$env:USERPROFILE\Desktop\your_log_path" -LogFileName "you_log_name"
+
+    .NOTES
+    v1
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [ValidateNotNullOrEmpty()]
         [string]$LogMessage,
  
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [ValidateSet('Information', 'Warning', 'Alert', 'Error')]
-        [string]$LogSeverity = 'Information',
+        [ValidateSet("Information", "Trace", "Alert", "Debug", "Warning", "Error", "Critical", "Fatal")]
+        [string]$LogSeverity,
 
         [Parameter(Mandatory = $false)]
-        [string]$LogPath,
+        [string]$LogPath = "$env:TEMP",
 		
         [Parameter(Mandatory = $false)]
-        [string]$LogFileName
+        [string]$LogFileName = "$env:COMPUTERNAME"
     )
     BEGIN {
         if ($LogPath) {
-            New-Item -Path "$LogPath" -ItemType Directory -Force | Out-Null
+            if (!(Test-Path -Path $LogPath)) {
+                New-Item -Path "$LogPath" -ItemType Directory -Verbose -Force | Out-Null
+            }
         } 
-        elseif (!$LogPath) {
-            New-Item -Path "$env:TEMP\Logs" -ItemType Directory -Force | Out-Null
-            $LogPath = "$env:TEMP\Logs"
-        }
         else {
             Write-Error -Message "Unable to create logpath '$LogPath'. Error was: $_" -ErrorAction Stop
         }
     }
     PROCESS {
         if ($LogFileName) {
-            $LogFileName = "$LogFileName" + ".csv"
+            $ReportLogTable = [PSCustomObject]@{
+                'TimeAppended' = (Get-Date -Format "yyyy-MM-dd-HH:mm")
+                'LogMessage'   = $LogMessage
+                'LogSeverity'  = $LogSeverity
+            }
         }
-        elseif (!$LogFileName) {
-            $LogFileName = "$env:COMPUTERNAME" + ".csv"
-        }
-        $ReportLogTable = [PSCustomObject]@{
-            'TimeAppended' = (Get-Date -Format "yyyy-MM-dd-HH:mm")
-            'LogMessage'   = $LogMessage
-            'LogSeverity'  = $LogSeverity
-        }
+        $LogFileName = [System.IO.Path]::Combine("$LogFileName.csv")
     }
     END {
         $ReportLogTable | Export-Csv -Path "$LogPath\$LogFileName" -Append -NoTypeInformation
