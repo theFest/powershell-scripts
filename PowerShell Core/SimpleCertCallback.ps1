@@ -1,4 +1,4 @@
-Function CertCallback {
+Function SimpleCertCallback {
     <#
     .SYNOPSIS
     TLS, SSL circumvent certificate callback validation.
@@ -9,12 +9,12 @@ Function CertCallback {
     
     .PARAMETER Operate
     Mandatory - use to suppress or revert validation check. Works in a current session but system wide. 
-
+    
     .EXAMPLE
-    CertCallback -Operate true
+    SimpleCertCallback -Operate true
     
     .NOTES
-    v2
+    v2.0.1
     #>
     [CmdletBinding()]
     param (
