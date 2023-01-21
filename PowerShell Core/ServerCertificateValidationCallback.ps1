@@ -9,18 +9,21 @@ Function ServerCertificateValidationCallback {
     .PARAMETER Operate
     Mandatory - specify whether the certificate validation should be ignored or validated.
     .PARAMETER Certificate
-    NotMandatory - pecify a single X509Certificate object that should be used for validation, if this parameter is used, the function will compare the passed certificate with the certificate being validated.
+    NotMandatory - define a single X509Certificate object that should be used for validation, if used, the function will compare the passed certificate with the certificate being validated.
     .PARAMETER TrustedCertificates
-    NotMandatory - used to specify a list of trusted X509Certificate objects that should be used for validation. If this parameter is used, the function will check if the certificate being validated is present in the list of trusted certificates.
+    NotMandatory - list of trusted X509Certificate objects that should be used for validation, if used, function will check if the certificate being validated is present in the list of trusted certificates.
     .PARAMETER Callback
     NotMandatory - specify a script block that contains a callback function that should be executed when a certificate validation occurs, the script block should return a Boolean value indicating whether the certificate is valid or not.
 
     .EXAMPLE
     ServerCertificateValidationCallback -Operate Ignore
-    
+    ServerCertificateValidationCallback -Operate Validate
+    ServerCertificateValidationCallback -Operate Validate -Callback
+    ServerCertificateValidationCallback -Operate Validate -Certificate
+    ServerCertificateValidationCallback -Operate Validate -TrustedCertificates
+
     .NOTES
-    v2.1
-    #>
+    v2.1.1
     #>
     [CmdletBinding()]
     param (
@@ -33,7 +36,8 @@ Function ServerCertificateValidationCallback {
         $Certificate,
         
         [Parameter()]
-        [System.Collections.Generic.List[System.Security.Cryptography.X509Certificates.X509Certificate]]$TrustedCertificates,
+        [System.Collections.Generic.List[System.Security.Cryptography.X509Certificates.X509Certificate]]
+        $TrustedCertificates,
         
         [Parameter()]
         [scriptblock]$Callback
