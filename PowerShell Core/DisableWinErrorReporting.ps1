@@ -1,4 +1,4 @@
-Function DontWER {
+Function DisableWinErrorReporting {
     <#
     .SYNOPSIS
     Small Function to disable WER
@@ -10,11 +10,12 @@ Function DontWER {
     NotMandatory - restart to apply
     
     .EXAMPLE
-    DontWER -Verbose
-    DontWER -Restart -Verbose
+    DisableWinErrorReporting -Verbose
+    DisableWinErrorReporting -Restart -Verbose
     
     .NOTES
     0.1 - 'explorer.exe will be added as replacement for restart'...
+    https://winreg-kb.readthedocs.io/en/latest/sources/system-keys/Windows-error-reporting.html
     #>
     [CmdletBinding(DefaultParameterSetName = "Disable WER")]
     param(                
@@ -40,5 +41,3 @@ Function DontWER {
         Restart-Computer -Verbose
     }
 }
-
-DontWER -Verbose
