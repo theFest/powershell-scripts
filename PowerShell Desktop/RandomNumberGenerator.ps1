@@ -1,7 +1,7 @@
 Function RandomNumberGenerator {
     <#
     .SYNOPSIS
-    Generates random numbers within a specified range and with optional encoding, sorting, uniqueness, and exporting capabilities.
+    Generates random numbers=+chars within a specified range and with optional seeding, encoding, sorting, uniqueness, and exporting capabilities.
     
     .DESCRIPTION
     This function generates a specified number of random numbers within a given range, with various optional features for encoding, sorting, uniqueness, and exporting the results.
@@ -13,30 +13,34 @@ Function RandomNumberGenerator {
     .PARAMETER Max
     Mandatory - specifies the maximum value for the range of random numbers to be generated.
     .PARAMETER Count
-    Mandatory - specifies the number of random numbers to be generated, choose a minimum value of 1 or a maximum value of 1000.
+    NotMandatory - specifies the number of random numbers to be generated, choose a minimum value of 1 or a maximum value of 1000000.
+    .PARAMETER NumberType
+    NotMandatory - used to specify the type of random number generator that should be used to generate the numbers. It accepts two possible values: "Random" and "PseudoRandom".
+    .PARAMETER Seed
+    NotMandatory - value is used to initialize the generator and can be used to generate a predictable sequence of numbers. If a seed value is specified, the generator will use it to generate a repeatable sequence of numbers, if not, it will use a random seed value.
     .PARAMETER Encoding
     NotMandatory - specifies whether the generated numbers should be encoded or not, if the parameter is included, the generated numbers are encoded.
     .PARAMETER EncodingFormat
-    NotMandatory - specifies the format in which the generated numbers should be encoded.
+    NotMandatory - if you choose Encoding switch, this then specifies the format in which the generated numbers should be encoded, choose depending on your needs.
     .PARAMETER Sort
     NotMandatory - specifies whether the generated numbers should be sorted or not.
     .PARAMETER Unique
-    NotMandatory - specifies whether the generated numbers should be unique or not.
+    NotMandatory - this specifies whether the generated numbers should be unique or not.
     .PARAMETER Export
     NotMandatory - export the result of generated number to a CSV file.
     .PARAMETER NoClobber
     NotMandatory - switch parameter that prevents the script from overwriting an existing file when exporting the random numbers.
     
     .EXAMPLE
-    ## Generate 5 random numbers between 1 and 10:
-    RandomNumberGenerator -Min 2 -Max 10 -Count 2 -EncodingFormat UTF-32
-    ## Generate 5 unique random numbers between 1 and 10 and export the result to a CSV file:
-    RandomNumberGenerator -Min 1 -Max 10 -Count 5 -Unique -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv"
-    ## Generate 5 random numbers between 1 and 10, encode them in Base64 format and export the result to a CSV file:
-    RandomNumberGenerator -Min 1 -Max 10 -Count 5 -Encoding -EncodingFormat ASCII -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv"
+    RandomNumberGenerator -Min 1 -Max 10 -Count 5
+    RandomNumberGenerator -Min 1 -Max 50 -Count 10 -Sort
+    RandomNumberGenerator -Min 1 -Max 100 -Seed 1 -NumberType PseudoRandom
+    RandomNumberGenerator -Min 1 -Max 1000 -Count 15 -Unique -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv"
+    RandomNumberGenerator -Min 1 -Max 10000 -Count 20 -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv" -NoClobber
+    RandomNumberGenerator -Min 1 -Max 100000 -Count 25 -NumberType Random -Encoding -EncodingFormat "Hexadecimal" -Seed 12345
     
     .NOTES
-    1.1.2
+    1.1.3
     #>
     [CmdletBinding(DefaultParameterSetName = "RandomNumberGenerator", SupportsShouldProcess = $true)]
     param(
@@ -47,10 +51,18 @@ Function RandomNumberGenerator {
         [ValidateRange(1, 1000000000)]
         [int]$Max,
         
-        [Parameter(Mandatory = $true)]
-        [ValidateRange(1, 10000)]
-        [int]$Count,
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 1000000)]
+        [int]$Count = 1,
         
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Random", "PseudoRandom")]
+        [string]$NumberType = "Random",
+      
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 1000000000)]
+        [int]$Seed,
+
         [Parameter(Mandatory = $false)]
         [switch]$Encoding,
         
@@ -79,72 +91,87 @@ Function RandomNumberGenerator {
         [switch]$NoClobber
     )
     BEGIN {
-        Write-Verbose -Message "Preparing and doing prechecks..."
+        Write-Verbose -Message "Preparing..."
         if ($Min -ge $Max) {
             throw [System.Exception] "Min value must be less than Max value."
         }
-        $rnD = New-Object System.Random
+        switch ($NumberType) {
+            "Random" {
+                $RnD = New-Object System.Random
+            }
+            "PseudoRandom" {
+                $RnD = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+            }
+        }
     }
     PROCESS {
-        Write-Verbose -Message "Generating random number's..."
+        Write-Verbose -Message "Generating chars/numbers..."
         try {
             $Output = @()
             for ($i = 1; $i -le $Count; $i++) {
-                $rnDnmbr = $rnD.Next($Min, $Max)
-                if ($Encoding) {
-                    switch ($EncodingFormat) {
-                        "Binary" {
-                            Write-Verbose -Message "Generating Binary encoded numbers..."
-                            $rnDnmbr = [System.Text.Encoding]::UTF8.GetBytes($rnDnmbr)
-                        }
-                        "Base64" {
-                            Write-Verbose -Message "Generating Base64 encoded numbers..."
-                            $rnDnmbr = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rnDnmbr))
-                        }
-                        "Hexadecimal" {
-                            Write-Verbose -Message "Generating Hexadecimal encoded numbers..."
-                            $rnDnmbr = [System.BitConverter]::ToString([System.Text.Encoding]::UTF8.GetBytes($rnDnmbr)) -replace '-'
-                        }
-                        "ASCII" {
-                            Write-Verbose -Message "Generating ASCII encoded numbers..."
-                            $rnDnmbr = [System.Text.Encoding]::ASCII.GetBytes($rnDnmbr)
-                        }
-                        "Unicode" {
-                            Write-Verbose -Message "Generating Unicode encoded numbers..."
-                            $rnDnmbr = [System.Text.Encoding]::Unicode.GetBytes($rnDnmbr)
-                        }
-                        "UTF-7" {
-                            Write-Verbose -Message "Generating UTF-7 encoded numbers..."
-                            $rnDnmbr = [System.Text.Encoding]::UTF7.GetBytes($rnDnmbr)
-                        }
-                        "UTF-32" {
-                            Write-Verbose -Message "Generating UTF-32 encoded numbers..."
-                            $rnDnmbr = [System.Text.Encoding]::UTF32.GetBytes($rnDnmbr)
-                        }
+                if ($NumberType -eq "Random") {
+                    $RndNmbr = $RnD.Next($Min, $Max)
+                }
+                elseif ($NumberType -eq "PseudoRandom") {
+                    if ($Seed -ne 0) {
+                        [array]$SeedBytes = [BitConverter]::GetBytes($Seed)
+                        $RnD.GetBytes($SeedBytes)
+                    }
+                    $RndBytes = New-Object Byte[] 4
+                    $RnD.GetBytes($RndBytes)
+                    $RndNmbr = [BitConverter]::ToInt32($RndBytes, 0) % ($Max - $Min + 1) + $Min
+                }
+                $Output += $RndNmbr
+            }
+            if ($Encoding) {
+                switch ($EncodingFormat) {
+                    "Binary" {
+                        Write-Verbose -Message "Generating 'Binary' encoded format..."
+                        $Output = $Output | ForEach-Object { [Convert]::ToString($_, 2) }
+                    }
+                    "Base64" {
+                        Write-Verbose -Message "Generating 'Base64' encoded format..."
+                        $Output = $Output | ForEach-Object { [Convert]::ToBase64String([BitConverter]::GetBytes($_)) }
+                    }
+                    "Hexadecimal" {
+                        Write-Verbose -Message "Generating 'Hexadecimal' encoded format..."
+                        $Output = $Output | ForEach-Object { "{0:X}" -f $_ }
+                    }
+                    "ASCII" {
+                        Write-Verbose -Message "Generating 'ASCII' encoded format..."
+                        $Output = $Output | ForEach-Object { [char][byte]$_ }
+                    }
+                    "Unicode" {
+                        Write-Verbose -Message "Generating 'Unicode' encoded format..."
+                        $Output = $Output | ForEach-Object { [char][ushort]$_ }
+                    }
+                    "UTF-7" {
+                        Write-Verbose -Message "Generating 'UTF-7' encoded format..."
+                        $Output = $Output | ForEach-Object { [Text.Encoding]::UTF7.GetString([BitConverter]::GetBytes($_)) }
+                    }
+                    "UTF-32" {
+                        Write-Verbose -Message "Generating 'UTF-32' encoded format..."
+                        $Output = $Output | ForEach-Object { [Text.Encoding]::UTF32.GetString([BitConverter]::GetBytes($_)) }
                     }
                 }
-                $Out = $Output += $rnDnmbr
-            }
-            if ($Unique) {
-                $Output = $Output | Select-Object -Unique
             }
             if ($Sort) {
                 $Output = $Output | Sort-Object
             }
+            if ($Unique) {
+                $Output = $Output | Select-Object -Unique
+            }
             if ($Export) {
-                $File = Get-Item $Export -ErrorAction SilentlyContinue
-                if ($File.Attributes -band [System.IO.FileAttributes]::Directory) {
-                    throw [System.Exception] "Cannot export to a directory. Please specify a file path."
-                }
-                if ($File.Exists -and !$NoClobber) {
-                    $Confirm = Read-Host "File already exists, do you want to overwrite it? [y/n]"
-                    if ($Confirm -ne "y") {
-                        throw [System.Exception] "Exporting cancelled."
+                if ($NoClobber) {
+                    if (Test-Path $Export) {
+                        throw "The specified file path '$Export' already exists. Use the NoClobber parameter to overwrite the file."
                     }
                 }
-                $Out | Out-File -FilePath $Export -Verbose
+                $Output | Set-Content -Path $Export -Force
             }
-            $Output
+            else {
+                $Output
+            }
         }
         catch [System.Exception] {
             Write-Error $_.Exception.Message
@@ -152,7 +179,6 @@ Function RandomNumberGenerator {
     }
     END {
         Write-Verbose -Message "Finished, cleaning up and exiting..."
-        Clear-Variable -Name rnD, rnDnmbr, Out, Output -Force -Verbose
-        exit
+        Clear-Variable -Name RnD, RndNmbr, Output -Force -Verbose
     }
 }
