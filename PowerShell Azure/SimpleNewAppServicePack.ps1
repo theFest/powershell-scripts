@@ -103,15 +103,20 @@ Function SimpleNewAppServicePack {
         [switch]$AsJob
     )
     BEGIN {
-        if (!(Get-Package -Name "Az*")) {
+        if (!(Get-Package -Name "Az" -ErrorAction SilentlyContinue)) {
             Write-Verbose -Message "PowerShell Azure is missing..."
             [Net.ServicePointManager]::SecurityProtocol = "tls12, tls13"
-            $AzPSurl = "https://github.com/Azure/azure-powershell/releases/download/v9.4.0-February2023/Az-Cmdlets-9.4.0.36911-x64.msi"
-            Invoke-WebRequest -Uri $AzPSurl -OutFile "$env:TEMP\Az-Cmdlets-9.4.0.36911-x64.msi" -Verbose
+            $Latest = (Invoke-WebRequest -Uri https://github.com/Azure/azure-powershell/releases -UseBasicParsing).Links `
+            | Where-Object -Property { $_.href -match 'Az-Cmdlets-\d+\.\d+\.\d+\.\d+-x64\.\d+\.msi' } `
+            | Sort-Object -Property href -Descending `
+            | Select-Object -First 1
+            $AzPSurl = $Latest.href
+            $File = "$env:TEMP\$(Split-Path $AzPSurl -Leaf)"
+            Invoke-WebRequest -Uri $AzPSurl -OutFile $File -Verbose
             $AzInstallerArgs = @{
                 FilePath     = 'msiexec.exe'
                 ArgumentList = @(
-                    "/i $env:TEMP\Az-Cmdlets-9.4.0.36911-x64.msi",
+                    "/i $File",
                     "/qr",
                     "/l* $env:TEMP\Az-Cmdlets.log"
                 )
