@@ -44,10 +44,8 @@ Function SimpleCalc {
     Simple calculator that shows how to use class.
 
     .DESCRIPTION
-    This script block takes in numerical input via the LeftOperand and RightOperand parameters, as well as the Numbers parameter for average calculations.
+    This script block takes in numerical input via the LeftOperand and RightOperand parameters.
     The Operation parameter determines which mathematical operation to perform on the LeftOperand and RightOperand parameters.
-    If the Average switch is specified, the script block will calculate the average of the numbers in the Numbers parameter.
-    If the Percentage switch is specified, the script block will calculate the percentage of the LeftOperand out of the RightOperand.
     
     .PARAMETER Operation
     Mandatory - specifies the mathematical operation to perform.
