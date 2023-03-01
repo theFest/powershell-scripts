@@ -1,14 +1,16 @@
 Class Calculator {
+    ## Input parameters on the class
     [int]$LeftOperand
     [int]$RightOperand
     [string]$Operation
 
-    ## Constructor to initialize object properties
+    ## Constructor to initialize object properties with the given parameters
     Calculator(
         [int]$LeftOperand,
         [int]$RightOperand,
         [string]$Operation
     ) {
+        ## nitializing the Calculator object with the input values passed to the constructor
         $this.LeftOperand = $LeftOperand
         $this.RightOperand = $RightOperand
         $this.Operation = $Operation
@@ -28,13 +30,20 @@ Class Calculator {
     ## Method to perform division
     [int] Divide() {
         if ($this.RightOperand -eq 0) {
-            throw "You can't divide by zero!"
+            throw "Dividing by zero is impossible!"
         }
         return $this.LeftOperand / $this.RightOperand
     }
     ## Method to calculate average
     [int] Average() {
         return ($this.LeftOperand + $this.RightOperand) / 2
+    }
+    ## Method to calculate percentage
+    [int] Percentage() {
+        if ($this.RightOperand -eq 0) {
+            throw "Dividing by zero is impossible!"
+        }
+        return ($this.LeftOperand / $this.RightOperand) * 100
     }
 }
 
@@ -44,37 +53,43 @@ Function SimpleCalc {
     Simple calculator that shows how to use class.
 
     .DESCRIPTION
-    This script block takes in numerical input via the LeftOperand and RightOperand parameters.
-    The Operation parameter determines which mathematical operation to perform on the LeftOperand and RightOperand parameters.
+    Script block takes in numerical input via the LeftOperand and RightOperand parameters.
+    Operation parameter determines which math operation to perform on the LeftOperand and RightOperand parameters.
     
     .PARAMETER Operation
     Mandatory - specifies the mathematical operation to perform.
     .PARAMETER LeftOperand
-    Mandatory - value on the left side of the mathematical operation.
+    Mandatory - value on the left side of the math operation.
     .PARAMETER RightOperand
-    Mandatory - value on the right side of the mathematical operation.
+    Mandatory - value on the right side of the math operation.
+    .PARAMETER Percentage
+    Optional - specifies whether to calculate percentage. If specified, the value of RightOperand should be considered as percentage of LeftOperand.
     
     .EXAMPLE
-    SimpleCalc -Operation Add -LeftOperand 2 -RightOperand 2
-    SimpleCalc -Operation Divide -LeftOperand 10 -RightOperand 1
-    SimpleCalc -Operation Multiply -LeftOperand 5 -RightOperand 3 -Verbose
-    SimpleCalc -Operation Subtract -LeftOperand 5 -RightOperand 3 -Verbose
-    SimpleCalc -Operation Average -LeftOperand 3 -RightOperand 111 -Verbose
+    SimpleCalc -Operation Add -LeftOperand 4 -RightOperand 4
+    SimpleCalc -Operation Subtract -LeftOperand 64 -RightOperand 48
+    SimpleCalc -Operation Multiply -LeftOperand 4 -RightOperand 8
+    SimpleCalc -Operation Divide -LeftOperand 512 -RightOperand 8
+    SimpleCalc -Operation Average -LeftOperand 56 -RightOperand 200
+    SimpleCalc -Operation Percentage -LeftOperand 264 -Percentage 97
     
     .NOTES
-    v0.6.1
+    v0.6.2
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Pick the math operation")]
-        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average")]
+        [Parameter(Mandatory = $true, Position = 0)]
+        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average", "Percentage")]
         [string]$Operation,
 
-        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Enter the left operand")]
+        [Parameter(Mandatory = $true, Position = 1)]
         [int]$LeftOperand,
 
-        [Parameter(Mandatory = $true, Position = 2, HelpMessage = "Enter the right operand")]
-        [int]$RightOperand
+        [Parameter(Mandatory = $false, Position = 2)]
+        [int]$RightOperand,
+
+        [Parameter(Position = 3)]
+        [int]$Percentage
     )
     BEGIN {
         Write-Verbose -Message $Operation
@@ -82,25 +97,34 @@ Function SimpleCalc {
         $SimpleCalc = [Calculator]::new($LeftOperand, $RightOperand, $Operation)
     }
     PROCESS {
-        switch ($Operation) {
+		## Now, we will assign a switch statemant block to a variable called $Res
+        $Res = switch ($Operation) {
             "Add" {
-                $Res = $SimpleCalc.Add()
+                $SimpleCalc.Add()
             }
             "Subtract" {
-                $Res = $SimpleCalc.Subtract()
+                $SimpleCalc.Subtract()
             }
             "Multiply" {
-                $Res = $SimpleCalc.Multiply()
+                $SimpleCalc.Multiply()
             }
             "Divide" {
-                $Res = $SimpleCalc.Divide()
+                $SimpleCalc.Divide()
             }
             "Average" {
-                $Res = $SimpleCalc.Average()
+                $SimpleCalc.Average()
+            }
+            "Percentage" {
+                ($LeftOperand * $Percentage) / 100
             }
         }
     }
     END {
-        Write-Output -InputObject "Result: $Res" 
+        if ($Operation -ne "Percentage") {
+            Write-Output -InputObject "Result: $Res" 
+        }
+        else {
+            Write-Output "$Percentage% of $LeftOperand is $Res"
+        }
     }
 }
