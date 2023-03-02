@@ -10,7 +10,7 @@ Class Calculator {
         [int]$RightOperand,
         [string]$Operation
     ) {
-        ## nitializing the Calculator object with the input values passed to the constructor
+        ## Initializing the Calculator object with the input values passed to the constructor
         $this.LeftOperand = $LeftOperand
         $this.RightOperand = $RightOperand
         $this.Operation = $Operation
@@ -38,6 +38,10 @@ Class Calculator {
     [int] Average() {
         return ($this.LeftOperand + $this.RightOperand) / 2
     }
+    ## Method to perform power calculation
+    [int] Power() {
+        return [Math]::Pow($this.LeftOperand, $this.RightOperand)
+    }
     ## Method to calculate percentage
     [int] Percentage() {
         if ($this.RightOperand -eq 0) {
@@ -61,9 +65,9 @@ Function SimpleCalc {
     .PARAMETER LeftOperand
     Mandatory - value on the left side of the math operation.
     .PARAMETER RightOperand
-    Mandatory - value on the right side of the math operation.
+    NotMandatory - value on the right side of the math operation.
     .PARAMETER Percentage
-    Optional - specifies whether to calculate percentage. If specified, the value of RightOperand should be considered as percentage of LeftOperand.
+    NotMandatory - specifies whether to calculate percentage. If specified, the value of RightOperand should be considered as percentage of LeftOperand.
     
     .EXAMPLE
     SimpleCalc -Operation Add -LeftOperand 4 -RightOperand 4
@@ -71,15 +75,16 @@ Function SimpleCalc {
     SimpleCalc -Operation Multiply -LeftOperand 4 -RightOperand 8
     SimpleCalc -Operation Divide -LeftOperand 512 -RightOperand 8
     SimpleCalc -Operation Average -LeftOperand 56 -RightOperand 200
+    SimpleCalc -Operation Power -LeftOperand 8 -RightOperand 3
     SimpleCalc -Operation Percentage -LeftOperand 264 -Percentage 97
     
     .NOTES
-    v0.6.2
+    v0.6.3
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average", "Percentage")]
+        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average", "Percentage", "Power")]
         [string]$Operation,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -97,7 +102,7 @@ Function SimpleCalc {
         $SimpleCalc = [Calculator]::new($LeftOperand, $RightOperand, $Operation)
     }
     PROCESS {
-		## Now, we will assign a switch statemant block to a variable called $Res
+        ## Now, we will assign a switch statemant block to a variable called $Res
         $Res = switch ($Operation) {
             "Add" {
                 $SimpleCalc.Add()
@@ -114,8 +119,11 @@ Function SimpleCalc {
             "Average" {
                 $SimpleCalc.Average()
             }
+            "Power" {
+                $SimpleCalc.Power()
+            }
             "Percentage" {
-                ($LeftOperand * $Percentage) / 100
+                [Math]::Round(($LeftOperand * $Percentage) / 100)
             }
         }
     }
@@ -124,7 +132,7 @@ Function SimpleCalc {
             Write-Output -InputObject "Result: $Res" 
         }
         else {
-            Write-Output "$Percentage% of $LeftOperand is $Res"
+            Write-Output "Result: $Percentage% of $LeftOperand is $Res"
         }
     }
 }
