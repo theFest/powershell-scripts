@@ -39,16 +39,19 @@ Function RandomPasswordGenerator {
   #RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4 -CustomCharSet "$willworkinFuture"
 
   .NOTES
-  v1.0.2
+  v1.0.3
   #>
   param (
     [Parameter(Mandatory = $true)]
+    [ValidateRange(8, 128)]
     [int]$PasswordLength,
 
     [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 100)]
     [int]$MinUpperCase = 1,
 
     [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 100)]
     [int]$MinLowerCase = 1,
 
     [Parameter(Mandatory = $false)]
@@ -67,9 +70,12 @@ Function RandomPasswordGenerator {
     [switch]$ExcludeAmbiguous,
 
     [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
     [ValidatePattern("^[\w]*$")]
     [string]$CustomCharSet,
 
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(2, 128)]
     [int]$MaxRepeatedChar = 2
   )
   BEGIN {
