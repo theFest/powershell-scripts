@@ -1,4 +1,4 @@
-Class AzureAutomation {
+<# Class AzureAutomation {
   [string]$AutomationAccountName
   [string]$ResourceGroupName
   AzureAutomation(
@@ -87,7 +87,7 @@ Class AzureAutomation {
           -Confirm:$true `
           -WhatIf:$true
         Write-Verbose "Runbook '$RunbookName' started"
-      } 
+      }
       catch {
         Write-Error $_.Exception
       }
@@ -131,15 +131,15 @@ Class AzureAutomation {
       -Force `
       -Verbose
   }
-}
+} #>
 
 Function AzureAutoRunBookManage {
   <#
   .SYNOPSIS
-  Simple example of class usage for purpose of managing Azure Automation Runbook.
+  Simple function for managing Azure Automation Runbook.
 
   .DESCRIPTION
-  Class-based function with which you can create, upload and publish Runbook with it's script.
+  With this function with which you can create, upload and publish Runbook with it's script.
 
   .PARAMETER RunbookName
   Mandatory - name of the runbook being uploaded or created.
@@ -169,7 +169,7 @@ Function AzureAutoRunBookManage {
     -Description "some_description" -Type PowerShell -Publish -Overwrite -Verbose
 
   .NOTES
-  v1.3.2
+  v1.3.3
   #>
   [CmdletBinding()]
   param(
@@ -243,7 +243,7 @@ Function AzureAutoRunBookManage {
       -AutomationAccountName $AutomationAccountName `
       -ResourceGroupName $ResourceGroupName `
       -ErrorAction SilentlyContinue `
-      -Verbose           
+      -Verbose
     if ($Runbook) {
       if ($Overwrite) {
         Remove-AzAutomationRunbook -Name $RunbookName `
@@ -263,7 +263,7 @@ Function AzureAutoRunBookManage {
       -ResourceGroupName $ResourceGroupName `
       -Description $Description `
       -Type $Type `
-      -Verbose         
+      -Verbose
     if ($Publish) {
       Write-Verbose -Message "Publishing runbook, please wait..."
       Publish-AzAutomationRunbook -Name $RunbookName `
