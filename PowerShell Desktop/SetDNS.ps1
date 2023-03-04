@@ -8,43 +8,64 @@ Function SetDNS {
 
     .PARAMETER ConnectionType
     Mandatory - choose connection type.
+    .PARAMETER AdapterSNm
+    Mandatory - adapter manufacturer.
     .PARAMETER PrimaryDNS
     Mandatory - preferred DNS server.
     .PARAMETER SecondaryDNS
     Mandatory - alternate DNS server(fail-safe).
+    .PARAMETER FlushDNS
+    NotMandatory - switch FlushDNS.
+    .PARAMETER RegisterDNS
+    NotMandatory - switch RegisterDNS.
+    .PARAMETER IpConfigAll
+    PNotMandatory - output results.
 
     .EXAMPLE
-    SetDNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8
-    SetDNS -ConnectionType WAN -PrimaryDNS 8.8.8.8 -SecondaryDNS 1.0.0.1
-    SetDNS -ConnectionType VPN -PrimaryDNS 9.9.9.9 -SecondaryDNS 8.8.4.4
-    SetDNS -ConnectionType WiFi -PrimaryDNS 149.112.112.112 -SecondaryDNS 208.67.220.220
-    SetDNS -ConnectionType Ethernet -PrimaryDNS 208.67.222.222 -SecondaryDNS 8.26.56.26
+    SetDNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8 -IpConfigAll
 
     .NOTES
-    v0.3.1
+    v0.3.2
     #>
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $false, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [ValidateSet("LAN", "WAN", "VPN", "WiFi", "Ethernet", "All")]
+        [ValidateSet("LAN", "WAN", "VPN", "WiFi", "Ethernet", "ServiceName", "All")]
         [string]$ConnectionType = "LAN",
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("RTL*", "Intel*", "Broadcom*", "Qualcomm*", "Marvell*", "VIA*", "All")]
+        [string]$AdapterSNm = "",
 
         [Parameter(Mandatory = $true)]
         [ipaddress]$PrimaryDNS,
 
         [Parameter(Mandatory = $true)]
-        [ipaddress]$SecondaryDNS
+        [ipaddress]$SecondaryDNS,
+
+        [Parameter()]
+        [switch]$FlushDNS,
+
+        [Parameter()]
+        [switch]$RegisterDNS,
+
+        [Parameter()]
+        [switch]$IpConfigAll
     )
     $Adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -Filter "IpEnabled = $true"
     switch ($ConnectionType) {
         "LAN" {
             $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*.*.*"
+                $_.IPAddress -like "192.168.*" `
+                    -or $_.IPAddress -like "172.*.*.*" `
+                    -or $_.IPAddress -like "10.*.*.*"
             }
         }
         "WAN" {
             $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -notlike "192.168.*" -and $_.IPAddress -notlike "10.*.*.*"
+                $_.IPAddress -notlike "192.168.*" `
+                    -and $_.IPAddress -like "172.*.*.*" `
+                    -and $_.IPAddress -notlike "10.*.*.*"
                 Write-Host "n/a { route }" -ForegroundColor DarkMagenta
             }
         }
@@ -54,10 +75,17 @@ Function SetDNS {
             }
         }
         "WiFi" {
-            $Adapters = Get-NetAdapter -Physical | Where-Object { $_.MediaType -eq '802.11' }
+            $Adapters = Get-NetAdapter -Physical `
+            | Where-Object { $_.MediaType -eq '802.11' }
         }
         "Ethernet" {
-            $Adapters = Get-NetAdapter -Physical | Where-Object { $_.MediaType -eq '802.3' }
+            $Adapters = Get-NetAdapter -Physical `
+            | Where-Object { $_.MediaType -eq '802.3' }
+        }
+        "ServiceName" {
+            $Adapters = $Adapters | Where-Object {
+                $_.ServiceName -match $AdapterSNm
+            }
         }
         "All" {
             Write-Host "implementation ongoing..." -ForegroundColor DarkGreen
@@ -66,10 +94,27 @@ Function SetDNS {
             throw "Invalid ConnectionType value"
         }
     }
+    $Adapters | ForEach-Object {
+        $AbOut = @{
+            "Adapter"             = $_
+            "DNSServer"           = $_.DNSServerSearchOrder
+            "FullDNSRegistration" = $_.FullDNSRegistrationEnabled
+        }
+        return $AbOut
+    }
     $ServersDNS = $PrimaryDNS, $SecondaryDNS
     $Adapters.SetDNSServerSearchOrder($ServersDNS)
     $Adapters.SetDynamicDNSRegistration($true)
-    Write-Verbose -Message "Flushing and registering DNS..."
-    Start-Process cmd -ArgumentList " /c ipconfig /flushdns" -Wait -WindowStyle Hidden
-    Start-Process cmd -ArgumentList " /c ipconfig /registerdns" -Wait -WindowStyle Hidden
+    if ($FlushDNS) {
+        Write-Verbose -Message "Flushing DNS cache..."
+        ipconfig /flushdns | Out-Null
+    }
+    if ($RegisterDNS) {
+        Write-Host "Registering DNS..."
+        ipconfig /registerdns | Out-Null
+    }
+    if ($IpConfigAll) {
+        Write-Host "Registering DNS..."
+        ipconfig /all | Out-Host
+    }
 }
