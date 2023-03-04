@@ -1,4 +1,4 @@
-#requires -version 5.1
+#Requires -Version 5.1
 Function RandomPasswordGenerator {
   <#
   .SYNOPSIS
@@ -33,9 +33,13 @@ Function RandomPasswordGenerator {
   RandomPasswordGenerator -PasswordLength 10 -MinUpperCase 1
   RandomPasswordGenerator -PasswordLength 12 -MinSpecialChar 2
   RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4
+  RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4 -ExcludeSimilar
+  RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4 -ExcludeConfused
+  RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4 -ExcludeAmbiguous
+  #RandomPasswordGenerator -PasswordLength 14 -MaxRepeatedChar 4 -CustomCharSet "$willworkinFuture"
 
   .NOTES
-  v1.0.1
+  v1.0.2
   #>
   param (
     [Parameter(Mandatory = $true)]
@@ -63,57 +67,65 @@ Function RandomPasswordGenerator {
     [switch]$ExcludeAmbiguous,
 
     [Parameter(Mandatory = $false)]
+    [ValidatePattern("^[\w]*$")]
     [string]$CustomCharSet,
 
     [int]$MaxRepeatedChar = 2
   )
-  ## Character sets to be used
-  $UpperCase = '[A-Z\p{Lu}]' ; $LowerCase = '[a-z\p{Ll}]'
-  $Numeric = '[\d]' ; $Special = '[^\w]'
-  ## Exclude similar characters
-  if ($ExcludeSimilar) {
-    $UpperCase = '[A-HJ-NP-Z\p{Lu}]'
-    $lowerCase = '[a-hj-np-z\p{Ll}]'
-    $Numeric = '[\d\S]'
-    $Special = '[^\w\s]'
+  BEGIN {
+    $ReqEdition = 'Desktop'
+    if ($ReqEdition -gt $PSVersionTable.PSEdition) {
+      throw "This script requires PowerShell $ReqEdition to be able to execute!"
+    }
   }
-  ## Exclude easily confused characters
-  if ($ExcludeConfused) {
-    $UpperCase = '[A-HJ-NP-Z\p{Lu}]'
-    $Numeric = '[\d\S]'
-  }
-  ## Exclude ambiguous characters
-  if ($ExcludeAmbiguous) {
-    $Special = '[^\w\s]'
-  }
-  ## Include custom character set
-  if ($CustomCharSet) {
-    $Custom = "[$CustomCharSet]"
-  }
-  else {
-    $Custom = ''
-  }
-  $ReqEdition = 'Desktop'
-  if ($ReqEdition -gt $PSVersionTable.PSEdition) {
-    throw "This script requires PowerShell $ReqEdition to be able to execute!"
-  }
-  Add-Type -AssemblyName System.Web
-  #$Pass = [System.Web.Security.Membership]::GeneratePassword($PasswordLength, 0)
-  ## Check if the password meets the requirements
-  while ($(([regex]::Matches($Pass, $upperCase) `
+  PROCESS {
+    ## Character sets to be used
+    $UpperCase = '[A-Z\p{Lu}]' ; $LowerCase = '[a-z\p{Ll}]'
+    $Numeric = '[\d]' ; $Special = '[^\w]'
+    ## Exclude similar characters
+    if ($ExcludeSimilar) {
+      $UpperCase = '[A-HJ-NP-Z\p{Lu}]'
+      $lowerCase = '[a-hj-np-z\p{Ll}]'
+      $Numeric = '[\d\S]'
+      $Special = '[^\w\s]'
+    }
+    ## Exclude easily confused characters
+    if ($ExcludeConfused) {
+      $UpperCase = '[A-HJ-NP-Z\p{Lu}]'
+      $Numeric = '[\d\S]'
+    }
+    ## Exclude ambiguous characters
+    if ($ExcludeAmbiguous) {
+      $Special = '[^\w\s]'
+    }
+    ## Include custom character set
+    if ($CustomCharSet) {
+      $Custom = "[$CustomCharSet]"
+    }
+    else {
+      $Custom = ''
+    }
+    Add-Type -AssemblyName System.Web
+    ## Check if the password meets the requirements
+    while ($(([regex]::Matches($Pass, $UpperCase) `
         | ForEach-Object { $_.Value }).Count -lt $MinUpperCase) -or `
-    $(([regex]::Matches($Pass, $lowerCase) `
+      $(([regex]::Matches($Pass, $LowerCase) `
         | ForEach-Object { $_.Value }).Count -lt $MinLowerCase) -or `
-    $(([regex]::Matches($Pass, $numeric) `
+      $(([regex]::Matches($Pass, $Numeric) `
         | ForEach-Object { $_.Value }).Count -lt $MinNumeric) -or `
-    $(([regex]::Matches($Pass, $special) `
+      $(([regex]::Matches($Pass, $Special) `
         | ForEach-Object { $_.Value }).Count -lt $MinSpecialChar) -or `
-    ($CustomCharSet -and $(([regex]::Matches($Pass, $Custom) `
-        | ForEach-Object { $_.Value }).Count -lt [math]::Min($PasswordLength, `
-            [int][char[]]$CustomCharSet.Length))) -or `
-    ($Pass -match "(.)\1{$MaxRepeatedChar,}")
-  ) {
-    $Pass = [System.Web.Security.Membership]::GeneratePassword($PasswordLength, 0)
+      ($CustomCharSet -and $(([regex]::Matches($Pass, $Custom) `
+            | ForEach-Object { $_.Value }).Count -lt [math]::Min($PasswordLength, `
+              [int][string]$CustomCharSet.Length))) -or `
+      ($Pass -match "(.)\1{$MaxRepeatedChar,}")
+    ) {
+      $Pass = [System.Web.Security.Membership]::GeneratePassword($PasswordLength, 0)
+    }
   }
-  return $Pass
+  END {
+    return $Pass
+    Clear-History -Verbose
+    Clear-Variable -Name Pass -Force -Verbose
+  }
 }
