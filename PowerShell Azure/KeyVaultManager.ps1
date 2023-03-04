@@ -1,17 +1,15 @@
 Function KeyVaultManager {
     <#
     .SYNOPSIS
-    Manages Azure Key Vault.
-    
+    Simple Azure Key Vault Manager.
+
     .DESCRIPTION
     With this function you can manage Azure Key Vault instance, given the vault name, secret name, certificates and more.
-    
-    .PARAMETER Subscription
-    NotMandatory - specifies the Azure subscription to use, defaults to "Visual Studio Enterprise Subscription".
-    .PARAMETER VaultName
-    NotMandatory - specify the name of the key vault, if not specified, the function will prompt the user to select a key vault from those available in the subscription.
+
     .PARAMETER ResourceGroupName
     Mandatory - name of the resource group to use.
+    .PARAMETER VaultName
+    NotMandatory - specify the name of the key vault, if not specified, the function will prompt the user to select a key vault from those available in the subscription.
     .PARAMETER CreateKeyVaultName
     NotMandatory - name of a new key vault to create, if specified, the function will create the key vault and exit.
     .PARAMETER Location
@@ -42,43 +40,42 @@ Function KeyVaultManager {
     NotMandatory - the path to a certificate file.
     .PARAMETER RemoveCertificate
     NotMandatory - removes a certificate from the key vault, requires the CertificateName parameter.
-    
+
     .EXAMPLE
-    KeyVaultManager -CreateKeyVaultName "create_your_keyvault_name" -ResourceGroupName "your_rg"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -ListSecrets
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -GetSecret "your_secret"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -ListCertificates
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -GetCertificate "your_cert"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -AddSecret -SecretName "SecretKey" -SecretValue "Secret Value"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -RemoveSecret -SecretName "SecretKey"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -AddCertificate Default -CertificateName "you_cert_name" -CertificatePath "$env:SystemDrive\Temp\you_dn.com.pfx" -CertPass "mySecretPass12345"
-    KeyVaultManager -VaultName "your_keyvault" -ResourceGroupName "your_rg" -RemoveCertificate -CertificateName "you_cert_name"
-    
+    KeyVaultManager -ResourceGroupName "your_rg" -CreateKeyVaultName "create_your_keyvault_name"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListSecrets
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetSecret "your_secret"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListCertificates
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetCertificate "your_cert"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddSecret -SecretName "SecretKey" -SecretValue "Secret Value"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveSecret -SecretName "SecretKey"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddCertificate Default -CertificateName "you_cert_name" -CertificatePath "$env:SystemDrive\Temp\your_dn.com.pfx" -CertPass "mySecretPass12345!"
+    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveCertificate -CertificateName "you_cert_name"
+
     .NOTES
-    v1.0
+    v1.0.1
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("Visual Studio Enterprise Subscription", "Visual Studio Professional Subscription")] 
-        [string]$Subscription = "Visual Studio Enterprise Subscription",
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
         [string]$VaultName,
-
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [string]$ResourceGroupName,
 
         [Parameter(Mandatory = $false)]
         [ValidatePattern('^[a-zA-Z0-9-]{3,24}$')]
         [string]$CreateKeyVaultName,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("West Europe", "West US", "East US")]
+        [ValidateSet("West Europe", "North Europe", "West US", "East US", "Central US" , "Southeast Asia", "Brazil South")]
         [string]$Location = "West Europe",
 
         [Parameter(Mandatory = $false)]
         [string]$SecretName,
+
+        [Parameter(Mandatory = $false)]
+        [string]$SecretValue,
 
         [Parameter(Mandatory = $false)]
         [string]$CertificateName,
@@ -87,60 +84,63 @@ Function KeyVaultManager {
         [string]$CertPass,
 
         [Parameter(Mandatory = $false)]
-        [switch]$ListSecrets,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$GetSecret,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$ListCertificates,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$GetCertificate,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$AddSecret,
-
-        [Parameter(Mandatory = $false)]
-        [string]$SecretValue,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$RemoveSecret,
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("Default", "CertificateString")] 
+        [ValidateSet("Default", "CertificateString")]
         [string]$AddCertificate = "Default",
 
         [Parameter(Mandatory = $false)]
         [string]$CertificatePath,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter()]
+        [switch]$ListSecrets,
+
+        [Parameter()]
+        [switch]$GetSecret,
+
+        [Parameter()]
+        [switch]$ListCertificates,
+
+        [Parameter()]
+        [switch]$GetCertificate,
+
+        [Parameter()]
+        [switch]$AddSecret,
+
+        [Parameter()]
+        [switch]$RemoveSecret,
+
+        [Parameter()]
         [switch]$RemoveCertificate
     )
     BEGIN {
-        if (!(Get-Package -Name "Az*")) {
-            [Net.ServicePointManager]::SecurityProtocol = "tls12, tls13"
-            $AzPSurl = "https://github.com/Azure/azure-powershell/releases/download/v9.4.0-February2023/Az-Cmdlets-9.4.0.36911-x64.msi"
-            Invoke-WebRequest -Uri $AzPSurl -OutFile "$env:TEMP\Az-Cmdlets-9.4.0.36911-x64.msi" -Verbose
-            $AzInstallerArgs = @{
-                FilePath     = 'msiexec.exe'
-                ArgumentList = @(
-                    "/i $env:TEMP\Az-Cmdlets-9.4.0.36911-x64.msi",
-                    "/qr",
-                    "/l* $env:TEMP\Az-Cmdlets.log"
-                )
-                Wait         = $true
+        if (!(Get-InstalledModule -Name "Az")) {
+            Write-Verbose -Message "Installing the Az PowerShell module..."
+            try {
+                Install-Module -Name "Az" -Scope CurrentUser -Verbose
             }
-            Start-Process @AzInstallerArgs -NoNewWindow
+            catch {
+                Write-Error "Failed to import 'Az' module. Error: $_"
+                return
+            }
         }
-        Write-Verbose -Message "Checking authentification context against Azure..."
-        if (!((Get-AzContext).Subscription.Name -eq $Subscription)) {
-            Write-Host "You're not connected to Azure, please login interactively..." -ForegroundColor Yellow
-            Connect-AzAccount -Verbose
+        Write-Warning -Message "Checking authentification context against Azure..."
+        if (!(Get-AzContext -ErrorAction SilentlyContinue)) {
+            try {
+                Connect-AzAccount -ErrorAction Stop
+            }
+            catch {
+                Write-Error "Failed to authenticate user. Error: $_"
+                return
+            }
         }
         if ($CreateKeyVaultName) {
-            New-AzKeyVault -VaultName $CreateKeyVaultName -ResourceGroupName $ResourceGroupName -Location $Location -Verbose
-            continue
+            try {
+                New-AzKeyVault -VaultName $CreateKeyVaultName -ResourceGroupName $ResourceGroupName -Location $Location -Verbose
+            }
+            catch {
+                Write-Error "Failed to create Key Vault. Error: $_"
+                return
+            }
+            return
         }
     }
     PROCESS {
@@ -164,7 +164,7 @@ Function KeyVaultManager {
                     return
                 }
                 Write-Output "Retrieving the certificate '$CertificateName' from Key Vault $VaultName..."
-                Get-AzKeyVaultCertificate -VaultName $VaultName -Name $CertificateName 
+                Get-AzKeyVaultCertificate -VaultName $VaultName -Name $CertificateName
             } { $AddSecret } {
                 if (!$SecretName -or !$SecretValue) {
                     Write-Error "SecretName and SecretValue parameters are required when using AddSecret switch."
@@ -191,13 +191,13 @@ Function KeyVaultManager {
                     if ($AddCertificate -eq "Default") {
                         Import-AzKeyVaultCertificate -VaultName $VaultName -Name $CertificateName -FilePath $CertificatePath -Password $SecCertPass
                     }
-                    elseif ($AddCertificate -eq "CertificateString") {    
+                    elseif ($AddCertificate -eq "CertificateString") {
                         $Base64String = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes("$CertificateName"))
                         Import-AzKeyVaultCertificate -VaultName $VaultName -Name $CertificateName -CertificateString $Base64String -Password $SecCertPass
                     }
                 }
                 catch {
-                    Write-Error "Failed to add certificate '$CertificateName' to Key Vault $VaultName : $"
+                    Write-Error "Failed to add certificate '$CertificateName' to Key Vault $VaultName : $_"
                 }
             } $RemoveCertificate {
                 if (!$CertificateName) {
@@ -220,7 +220,7 @@ Function KeyVaultManager {
     }
     END {
         Clear-Variable -Name VaultName, ResourceGroupName, SecretName, SecretValue, CertificateName, CertPass `
-            -Force -ErrorAction SilentlyContinue 
+            -Force -ErrorAction SilentlyContinue
         Write-Verbose -Message "Finished processing Key Vault commands, closing connection and exiting."
         Disconnect-AzAccount -Verbose
     }
