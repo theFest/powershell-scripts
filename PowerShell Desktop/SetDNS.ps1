@@ -1,3 +1,4 @@
+#Requires -Version 5.1
 Function SetDNS {
     <#
     .SYNOPSIS
@@ -25,7 +26,7 @@ Function SetDNS {
     SetDNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8 -IpConfigAll
 
     .NOTES
-    v0.3.2
+    v0.3.3
     #>
     [CmdletBinding()]
     Param(
@@ -64,7 +65,7 @@ Function SetDNS {
         "WAN" {
             $Adapters = $Adapters | Where-Object {
                 $_.IPAddress -notlike "192.168.*" `
-                    -and $_.IPAddress -like "172.*.*.*" `
+                    -and $_.IPAddress -notlike "172.*.*.*" `
                     -and $_.IPAddress -notlike "10.*.*.*"
                 Write-Host "n/a { route }" -ForegroundColor DarkMagenta
             }
@@ -103,18 +104,23 @@ Function SetDNS {
         return $AbOut
     }
     $ServersDNS = $PrimaryDNS, $SecondaryDNS
-    $Adapters.SetDNSServerSearchOrder($ServersDNS)
-    $Adapters.SetDynamicDNSRegistration($true)
+    foreach ($Adapter in $Adapters) {
+        #Set-DnsClientServerAddress -InterfaceAlias $Adapter.InterfaceAlias -ServerAddresses $ServersDNS
+        $Adapters.SetDNSServerSearchOrder($ServersDNS)
+        $Adapters.SetDynamicDNSRegistration($true)
+    }
     if ($FlushDNS) {
         Write-Verbose -Message "Flushing DNS cache..."
         ipconfig /flushdns | Out-Null
+        Clear-DnsClientCache -Verbose -ErrorAction SilentlyContinue
     }
     if ($RegisterDNS) {
-        Write-Host "Registering DNS..."
+        Write-Verbose -Message "Registering DNS..."
         ipconfig /registerdns | Out-Null
+        Register-DnsClient -Verbose -ErrorAction SilentlyContinue
     }
     if ($IpConfigAll) {
-        Write-Host "Registering DNS..."
+        Write-Verbose -Message "Results..."
         ipconfig /all | Out-Host
     }
 }
