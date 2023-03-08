@@ -1,7 +1,7 @@
 Function GetGitRepoProgLang {
     <#
     .SYNOPSIS
-    Count of programming files by language in a given Git repository path.
+    Count of programming files by language in a given Git repository.
 
     .DESCRIPTION
     This function takes a Git repository path and an optional language parameter as input and returns a hashtable containing the count of programming files in the repository filtered by language.
@@ -15,7 +15,7 @@ Function GetGitRepoProgLang {
     GetGitRepoProgLang -RepoPath "$env:SystemDrive\your_repo_path"
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     param(
@@ -23,7 +23,8 @@ Function GetGitRepoProgLang {
         [string]$RepoPath,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", "javascript", "php", "python", "ruby", "rust", "powershell")]
+        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", "javascript", `
+                "php", "python", "ruby", "rust", "powershell", "html", "css", "xml")]
         [string]$Language = "all"
     )
     ## Change the working directory to the Git repository path
@@ -43,6 +44,9 @@ Function GetGitRepoProgLang {
         "ruby"       = ($Files | Where-Object { $_.Extension -in ".rb" }).Count
         "rust"       = ($Files | Where-Object { $_.Extension -in ".rs" }).Count
         "powershell" = ($Files | Where-Object { $_.Extension -in ".ps1" }).Count
+        "html"       = ($Files | Where-Object { $_.Extension -in ".html" }).Count
+        "css"        = ($Files | Where-Object { $_.Extension -in ".css" }).Count
+        "xml"        = ($Files | Where-Object { $_.Extension -in ".xml" }).Count
     }
     ## Filtering counts by the specified language parameter
     if ($Language -ne "all") {
