@@ -15,7 +15,7 @@ Function GetGitRepoProgLang {
     GetGitRepoProgLang -RepoPath "$env:SystemDrive\your_repo_path"
 
     .NOTES
-    v0.1.1
+    v0.1.2
     #>
     [CmdletBinding()]
     param(
@@ -23,8 +23,9 @@ Function GetGitRepoProgLang {
         [string]$RepoPath,
 
         [Parameter(Mandatory = $false, Position = 1)]
-        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", "javascript", `
-                "php", "python", "ruby", "rust", "powershell", "html", "css", "xml")]
+        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", `
+                "javascript", "php", "python", "kotlin", "ruby", `
+                "typescript", "rust", "powershell", "html", "css", "xml", "swift")]
         [string]$Language = "all"
     )
     ## Change the working directory to the Git repository path
@@ -47,6 +48,9 @@ Function GetGitRepoProgLang {
         "html"       = ($Files | Where-Object { $_.Extension -in ".html" }).Count
         "css"        = ($Files | Where-Object { $_.Extension -in ".css" }).Count
         "xml"        = ($Files | Where-Object { $_.Extension -in ".xml" }).Count
+        "swift"      = ($Files | Where-Object { $_.Extension -in ".swift" }).Count
+        "kotlin"     = ($Files | Where-Object { $_.Extension -in ".kt" }).Count
+        "typescript" = ($Files | Where-Object { $_.Extension -in ".ts" }).Count
     }
     ## Filtering counts by the specified language parameter
     if ($Language -ne "all") {
