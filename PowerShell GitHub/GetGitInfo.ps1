@@ -12,25 +12,39 @@ Function GetGitInfo {
     NotMandatory - either this or LocalPath, the function will set the remote URL of the repository to the specified value.
     .PARAMETER LocalPath
     NotMandatory - either this or RemoteUrl, the function will move the repository to the specified local path.
+    .PARAMETER Branch
+    NotMandatory - main is predefined, choose what's your default.
+    .PARAMETER ListBranches
+    NotMandatory - switch parameter for listing branches.
 
     .EXAMPLE
-    GetGitInfo -LocalPath "$env:SystemDrive\your_local_repo"
-    GetGitInfo -RemoteUrl "https://github.com/your/remote_repo"
+    GetGitInfo -LocalPath "$env:SystemDrive\Repos\your_local_repo"
+    GetGitInfo -Remote "https://github.com/powershell/powershell" -Verbose
+    GetGitInfo -Remote "https://github.com/powershell/powershell" -ListBranches -Verbose
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Remote")]
     [OutputType("GitInfo")]
     Param (
-        [Parameter(Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [string]$Path = ".",
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [string]$Path = (Get-Location).Path,
+
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline, ValueFromPipelineByPropertyName, ParameterSetName = "Local")]
+        [ValidateScript({ Test-Path $_ -PathType Container })]
+        [string]$Local,
+
+        [Parameter(Mandatory = $true, Position = 2, ValueFromPipeline, ValueFromPipelineByPropertyName, ParameterSetName = "Remote")]
+        [ValidateNotNullOrEmpty()]
+        [string]$Remote,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("main", "master", "all")]
+        [string]$Branch = "main",
 
         [Parameter()]
-        [string]$RemoteUrl,
-
-        [Parameter()]
-        [string]$LocalPath
+        [switch]$ListBranches
     )
     BEGIN {
         Write-Verbose -Message "Starting $($MyInvocation.MyCommand)"
@@ -46,54 +60,61 @@ Function GetGitInfo {
         }
     }
     PROCESS {
-        if ($RemoteUrl) {
-            Write-Verbose "Retrieving information about remote Git repository $RemoteUrl"
-            $Output = git ls-remote $RemoteUrl
-            $RepoName = $RemoteUrl.Split('/')[-1].Split('.')[0]
-            $Object = [PSCustomObject]@{
-                PSTypeName   = "GitInfo"
-                Name         = $RepoName
-                Url          = $RemoteUrl
-                Branches     = ($Output -replace '^.*refs/heads/', '' -replace '\s.*$' , '' | Select-Object -Unique) -join ', '
-                Commits      = ($Output | Measure-Object).Count
-                ComputerName = $env:COMPUTERNAME
-                Date         = Get-Date
-            }
-        }
-        elseif ($LocalPath) {
-            $FullPath = Resolve-Path -Path $LocalPath
-            Write-Verbose -Message "Processing path $FullPath"
-            $GitPath = Join-Path $FullPath ".git"
-            Write-Verbose -Message  "Checking if $GitPath exists"
-            if (Test-Path -Path $GitPath) {
-                Write-Verbose "Retrieving information about local Git repository $FullPath"
-                $CommitCount = git -C $FullPath rev-list --count HEAD
-                $Stat = Get-ChildItem -Path $GitPath -Recurse -File `
-                | Measure-Object -Property Length -Sum
+        try {
+            if ($PSCmdlet.ParameterSetName -eq "Remote") {
+                Write-Verbose "Retrieving information about remote Git repository $Remote"
+                $Output = git ls-remote $Remote
+                $RepoName = $Remote.Split('/')[-1].Split('.')[0]
+                $Branches = $output -replace '^.*refs/heads/', '' -replace '\s.*$' , '' | Select-Object -Unique
+                $BranchesCount = $Branches.Count
+                $CommitsCount = ($output | Measure-Object).Count
                 $Object = [PSCustomObject]@{
-                    PSTypeName   = "GitInfo"
-                    Path         = $FullPath
-                    Name         = Split-Path -Path $FullPath -Leaf
-                    Files        = $Stat.Count
-                    Size         = $Stat.Sum
-                    SizeKB       = $Stat.Sum / 1KB
-                    SizeMB       = $Stat.Sum / 1MB
-                    SizeGB       = $Stat.Sum / 1GB
-                    Commits      = $CommitCount
-                    ComputerName = $env:COMPUTERNAME
-                    Date         = Get-Date
+                    PSTypeName    = "GitInfo"
+                    Name          = $RepoName
+                    Url           = $Remote
+                    Branch        = $Branch
+                    Branches      = $Branches
+                    BranchesCount = $BranchesCount
+                    Commits       = $CommitsCount
+                    Date          = Get-Date
                 }
             }
-            else {
-                Write-Verbose -Message "Git repository not found in $FullPath"
+            elseif ($PSCmdlet.ParameterSetName -eq "Local") {
+                $FullPath = Resolve-Path -Path $Local
+                Write-Verbose -Message "Processing path $FullPath"
+                $GitPath = Join-Path $FullPath ".git"
+                Write-Verbose -Message  "Checking if $GitPath exists, running on $env:COMPUTERNAME"
+                if (Test-Path -Path $GitPath) {
+                    Write-Verbose "Retrieving information about local Git repository $FullPath"
+                    $CommitCount = git -C $FullPath rev-list --count HEAD
+                    $Stat = Get-ChildItem -Path $GitPath -Recurse -File `
+                    | Measure-Object -Property Length -Sum
+                    $Object = [PSCustomObject]@{
+                        PSTypeName = "GitInfo"
+                        Path       = $FullPath
+                        Name       = Split-Path -Path $FullPath -Leaf
+                        Files      = $Stat.Count
+                        Size       = $Stat.Sum
+                        SizeKB     = $Stat.Sum / 1KB
+                        SizeMB     = $Stat.Sum / 1MB
+                        SizeGB     = $Stat.Sum / 1GB
+                        Branch     = $Branch
+                        Commits    = $CommitCount
+                        Date       = Get-Date
+                    }
+                }
+                else {
+                    Write-Verbose -Message "Git repository not found in $FullPath"
+                }
             }
+            if ($ListBranches) {
+                Write-Output -InputObject $Object.Branches
+            }
+            return $Object
         }
-        else {
-            Write-Verbose -Message "No Git repository specified"
+        catch {
+            Write-Verbose -Message "Error: $($_.Exception.Message)"
+            Write-Error "Failed to retrieve repository size information for $_"
         }
-        return $Object
-    }
-    END {
-        Write-Verbose -Message "Ending $($MyInvocation.MyCommand)"
     }
 }
