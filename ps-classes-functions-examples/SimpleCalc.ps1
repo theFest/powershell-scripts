@@ -10,6 +10,16 @@ Class Calculator {
         [int]$RightOperand,
         [string]$Operation
     ) {
+        ## Add input parameter checks
+        if (-not [int]::TryParse($LeftOperand, [ref]$null)) {
+            throw "LeftOperand must be an integer."
+        }
+        if (-not [int]::TryParse($RightOperand, [ref]$null)) {
+            throw "RightOperand must be an integer."
+        }
+        if ($Operation -notin @("Add", "Subtract", "Multiply", "Divide", "Average", "Remainder", "Power", "Percentage", "Modulus")) {
+            throw "Operation must be a valid option."
+        }
         ## Initializing the Calculator object with the input values passed to the constructor
         $this.LeftOperand = $LeftOperand
         $this.RightOperand = $RightOperand
@@ -38,6 +48,10 @@ Class Calculator {
     [int] Average() {
         return ($this.LeftOperand + $this.RightOperand) / 2
     }
+    ## Method to calculate remainder
+    [int] Remainder() {
+        return $this.LeftOperand % $this.RightOperand
+    }
     ## Method to perform power calculation
     [int] Power() {
         return [Math]::Pow($this.LeftOperand, $this.RightOperand)
@@ -47,7 +61,14 @@ Class Calculator {
         if ($this.RightOperand -eq 0) {
             throw "Dividing by zero is impossible!"
         }
-        return ($this.LeftOperand / $this.RightOperand) * 100
+        return [Math]::Round(($this.LeftOperand * $this.Percentage) / 100)
+    }
+    ## Method to perform modulus calculation
+    [int] Modulus() {
+        if ($this.RightOperand -eq 0) {
+            throw "Dividing by zero is impossible!"
+        }
+        return $this.LeftOperand % $this.RightOperand
     }
 }
 
@@ -57,9 +78,8 @@ Function SimpleCalc {
     Simple calculator that shows how to use class.
 
     .DESCRIPTION
-    Script block takes in numerical input via the LeftOperand and RightOperand parameters.
-    Operation parameter determines which math operation to perform on the LeftOperand and RightOperand parameters.
-    
+    Numerical input via the LeftOperand and RightOperand parameters with Operation parameter determines which math operation.
+
     .PARAMETER Operation
     Mandatory - specifies the mathematical operation to perform.
     .PARAMETER LeftOperand
@@ -68,41 +88,48 @@ Function SimpleCalc {
     NotMandatory - value on the right side of the math operation.
     .PARAMETER Percentage
     NotMandatory - specifies whether to calculate percentage. If specified, the value of RightOperand should be considered as percentage of LeftOperand.
-    
+
     .EXAMPLE
     SimpleCalc -Operation Add -LeftOperand 4 -RightOperand 4
     SimpleCalc -Operation Subtract -LeftOperand 64 -RightOperand 48
     SimpleCalc -Operation Multiply -LeftOperand 4 -RightOperand 8
+    SimpleCalc -Operation Remainder -LeftOperand 10 -RightOperand 3
     SimpleCalc -Operation Divide -LeftOperand 512 -RightOperand 8
     SimpleCalc -Operation Average -LeftOperand 56 -RightOperand 200
     SimpleCalc -Operation Power -LeftOperand 8 -RightOperand 3
-    SimpleCalc -Operation Percentage -LeftOperand 264 -Percentage 97
-    
+    SimpleCalc -Operation Percentage -LeftOperand 1600 -Percentage 64
+    SimpleCalc -Operation Modulus -LeftOperand 20048 -RightOperand 3000
+
     .NOTES
-    v0.6.3
+    v0.6.5
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average", "Percentage", "Power")]
+        [ValidateSet("Add", "Subtract", "Multiply", "Divide", "Average", "Remainder", "Power", "Percentage", "Modulus")]
         [string]$Operation,
 
         [Parameter(Mandatory = $true, Position = 1)]
+        [ValidateScript({ [int]::TryParse($_, [ref]$null) })]
         [int]$LeftOperand,
 
         [Parameter(Mandatory = $false, Position = 2)]
+        [ValidateScript({ [int]::TryParse($_, [ref]$null) })]
         [int]$RightOperand,
 
         [Parameter(Position = 3)]
+        [ValidateRange(0, 100)]
         [int]$Percentage
     )
     BEGIN {
-        Write-Verbose -Message $Operation
-        ## Here we can now initialize a new calculator object based on our class
-        $SimpleCalc = [Calculator]::new($LeftOperand, $RightOperand, $Operation)
+        try {
+            $SimpleCalc = [Calculator]::new($LeftOperand, $RightOperand, $Operation)
+        }
+        catch {
+            throw "Error: $_"
+        }
     }
     PROCESS {
-        ## Now, we will assign a switch statemant block to a variable called $Res
         $Res = switch ($Operation) {
             "Add" {
                 $SimpleCalc.Add()
@@ -119,17 +146,23 @@ Function SimpleCalc {
             "Average" {
                 $SimpleCalc.Average()
             }
+            "Remainder" {
+                $SimpleCalc.Remainder()
+            }
             "Power" {
                 $SimpleCalc.Power()
             }
             "Percentage" {
                 [Math]::Round(($LeftOperand * $Percentage) / 100)
             }
+            "Modulus" {
+                $LeftOperand % $RightOperand
+            }
         }
     }
     END {
         if ($Operation -ne "Percentage") {
-            Write-Output -InputObject "Result: $Res" 
+            Write-Output -InputObject "Result: $Res"
         }
         else {
             Write-Output "Result: $Percentage% of $LeftOperand is $Res"
