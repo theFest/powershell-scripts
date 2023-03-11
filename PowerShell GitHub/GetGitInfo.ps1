@@ -51,8 +51,8 @@ Function GetGitInfo {
         ## Check if Git is installed on the system
         if (-not (Get-Command git.exe -ErrorAction SilentlyContinue)) {
             ## If Git is not installed, download the Git for Windows installer
-            $GitInstallURL = 'https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe'
-            $GitInstallPath = 'C:\Temp\Git-Installer.exe'
+            $GitInstallURL = "https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe"
+            $GitInstallPath = "$env:TEMP\Git-2.31.1-64-bit.exe"
             Invoke-WebRequest -Uri $GitInstallURL -OutFile $GitInstallPath
             ## Install Git silently using the downloaded installer
             $Arguments = '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-'
@@ -60,6 +60,11 @@ Function GetGitInfo {
         }
     }
     PROCESS {
+        ## Verify connectivity
+        if ($Remote -and (!(Test-NetConnection -ComputerName $Remote -InformationLevel Quiet))) {
+            Write-Error "Unable to establish secure connection. Exiting function."
+            return
+        }
         try {
             if ($PSCmdlet.ParameterSetName -eq "Remote") {
                 Write-Verbose "Retrieving information about remote Git repository $Remote"
