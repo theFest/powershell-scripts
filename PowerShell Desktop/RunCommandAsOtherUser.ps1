@@ -18,16 +18,16 @@ Function RunCommandAsOtherUser {
     NotMandatory - specifies whether to wait for the command to complete or not.
 
     .EXAMPLE
-    $Command = "powershell"
+    $Command = "PowerShell"
     $Arguments = "-noExit"
     $Username = "Administrator"
     $Pass = "_Pass1234!"
     $ExecXc = RunCommandAsOtherUser -Command $Command -Arguments $Arguments -Username $Username -Pass $Pass -Wait
     if ($ExecXc -eq 0) {
-        Write-Host "Command executed successfully."
+        Write-Host "Command executed successfully." -ForegroundColor Green
     }
     else {
-        Write-Host "Command failed with exit code $($exitCode)."
+        Write-Host "Command failed with exit code $($ExecXc)." -ForegroundColor DarkRed
     }
 
     .NOTES
