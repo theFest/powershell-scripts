@@ -31,12 +31,11 @@ Function GetGitRepoProgLang {
     NotMandatory - switch to enable recursive searching of subdirectories.
 
     .EXAMPLE
-    GetGitRepoProgLang -RemoteRepoPath "https://github.com/tensorflow/tensorflow.git"
-    GetGitRepoProgLang -LocalRepoPath "C:\your_git_repo" -Language "csharp" -MaxDepth 2 -Recurse
-    GetGitRepoProgLang -RemoteRepoPath "https://github.com/facebook/react.git" -Language "javascript" -Exclude "test"
+    GetGitRepoProgLang -RemoteRepoPath "https://github.com/powershell/powershell"
+    GetGitRepoProgLang -LocalRepoPath "C:\your_git_repo" -Language "powershell" -MaxDepth 2 -Recurse
 
     .NOTES
-    v0.1.3
+    v0.1.4
     #>
     [CmdletBinding()]
     param (
@@ -53,11 +52,10 @@ Function GetGitRepoProgLang {
         [string]$CloneRemoteRepoPath = "$env:TEMP",
 
         [Parameter(Mandatory = $false, Position = 2)]
-        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", `
-                "javascript", "php", "python", "ruby", "rust", `
-                "powershell", "html", "css", "xml", "swift", `
-                "kotlin", "typescript", "dart", "groovy", "lua", "scala", `
-                "shell", "sql", "yaml", "perl", "r", "vb.net", "matlab", "f#", "objective-c")]
+        [ValidateSet("all", "c", "cpp", "csharp", "go", "java", "javascript", "php", `
+                "python", "ruby", "rust", "powershell", "html", "css", "xml", "swift", "kotlin", `
+                "typescript", "dart", "groovy", "lua", "scala", "shell", "sql", "yaml", "perl", "r", `
+                "vb.net", "matlab", "f#", "objective-c", "vbscript", "batch", "haskell", "visualbasic")]
         [string]$Language = "all",
 
         [Parameter(Mandatory = $false)]
@@ -93,7 +91,7 @@ Function GetGitRepoProgLang {
         Write-Verbose -Message "Cloning $RemoteRepoPath to $RepoClonePath ..."
         if (!(Test-Path -Path $RepoClonePath)) {
             $GitProcess = Start-Process -FilePath "git" -ArgumentList "clone", $RemoteRepoPath, $RepoClonePath `
-                -PassThru -RedirectStandardOutput $RedirectStandardOutput -RedirectStandardError $RedirectStandardError -WindowStyle Hidden #-NoNewWindow
+                -PassThru -RedirectStandardOutput $RedirectStandardOutput -RedirectStandardError $RedirectStandardError -WindowStyle Hidden
             Write-Warning -Message "Downloading Repository: $RemoteRepoPath to $RepoClonePath ..."
             $GitProcess.WaitForExit()
         }
@@ -135,6 +133,10 @@ Function GetGitRepoProgLang {
             "matlab"      = ".m"
             "f#"          = ".fs"
             "objective-c" = ".m"
+            "vbscript"    = ".vbs"
+            "batch"       = ".bat"
+            "haskell"     = ".hs"
+            "visualbasic" = ".vb"
         }
         $Counts = @{}
         foreach ($Lang in $Languages.Keys) {
