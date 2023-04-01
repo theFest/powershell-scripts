@@ -1,17 +1,17 @@
 Function ADMembershipManager {
     <#
     .SYNOPSIS
-    Manage Active Directory users and groups. 
-    
+    Manage Active Directory users and groups.
+
     .DESCRIPTION
-    With this function you can add or remove multiple users to/from multiple groups, includes information.
-    
+    This function you can add or remove multiple users to/from multiple groups, includes information.
+
     .PARAMETER Action
     NotMandatory - choose operation type.
     .PARAMETER Users
-    NotMandatory - multiple AD users that will be added to defined groups. 
+    NotMandatory - multiple AD users that will be added to defined groups.
     .PARAMETER Groups
-    NotMandatory - add multiple AD groups in which users will be added. 
+    NotMandatory - add multiple AD groups in which users will be added.
     .PARAMETER UserAD
     NotMandatory - username used for authentication to Active Directory.
     .PARAMETER PassAD
@@ -28,53 +28,53 @@ Function ADMembershipManager {
     NotMandatory - specifies whether the script will prompt for confirmation before performing the action.
     .PARAMETER WhatIf
     NotMandatory - perform a dry run and display what actions would be performed, without actually making any changes.
-    
+
     .EXAMPLE
     ADMembershipManager -Action Add -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group1' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify
     ADMembershipManager -Action Remove -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group2' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify -WhatIf
     ADMembershipManager -Action Information -UserAD "your_AD_user" -PassAD "your_AD_password" -ResultOutput "$env:TEMP\ResultOutput.csv" -Verbose -Verify
-    
+
     .NOTES
-    v1.0
+    v1.0.1
     #>
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0)]
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipelineByPropertyName = $true, HelpMessage = "the action to perform")]
         [ValidateSet("Add", "Remove", "Information")]
         [string]$Action,
-    
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Users to modify")]
         [string[]]$Users,
-  
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Groups to modify")]
         [string[]]$Groups,
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "an Active Directory user to authenticate with")]
         [string]$UserAD,
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "password for the Active Directory user to authenticate with")]
         [string]$PassAD,
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "the search base for the Active Directory query")]
         [ValidateNotNullOrEmpty()]
         [string]$SearchBase,
-  
-        [Parameter(ValueFromPipeline = $false, Mandatory = $false)]
+
+        [Parameter(ValueFromPipeline = $false, Mandatory = $false, HelpMessage = "type of user filter to use")]
         [ValidateSet("DisplayName", "SamAccountName", "Email", "UserPrincipalName")]
         [string]$UserFilter = "SamAccountName",
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "choose authentication type to use")]
         [ValidateSet("Basic", "Negotiate")]
         [string]$AuthType = "Negotiate",
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "the output file to save results to")]
         [string]$ResultOutput,
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "verify that the command is valid, but do not perform the action")]
         [switch]$Verify,
-  
-        [Parameter(Mandatory = $false)]
+
+        [Parameter(Mandatory = $false, HelpMessage = "shows what would happen if the cmdlet runs")]
         [switch]$WhatIf
     )
     BEGIN {
@@ -97,20 +97,26 @@ Function ADMembershipManager {
                 Wait         = $true
             }
             Start-Process @RsatInstallerArgs -WindowStyle Normal
-        } 
+        }
         else {
             Write-Host "Remote Server Administration Tools are installed." -ForegroundColor Green
             if ($Rsat.Name -contains "Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0") {
                 Write-Verbose -Message "Active Directory Users and Computers tools are included in RSAT."
-            } 
+            }
             else {
                 Write-Warning -Message "Active Directory Users and Computers tools are not included in RSAT!"
             }
         }
     }
     PROCESS {
-        $SecPass = ConvertTo-SecureString -AsPlainText $PassAD -Force -Verbose
-        $SecuredCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $UserAD, $SecPass
+        try {
+            $SecPass = ConvertTo-SecureString -AsPlainText $PassAD -Force -Verbose
+            $SecuredCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $UserAD, $SecPass
+        }
+        catch {
+            Write-Error $_
+            return
+        }
         $UserBlock = { foreach ($User in $Users) {
                 $UserCheck = (Get-ADuser -Filter "$UserFilter -eq '$User'" -AuthType $AuthType -Credential $SecuredCredentials).ObjectGUID
                 if ($UserCheck) {
@@ -140,7 +146,7 @@ Function ADMembershipManager {
                 $Users | ForEach-Object {
                     try {
                         Write-Verbose -Message "User  --> '$_'running..."
-                        foreach ($G in $Groups) {  
+                        foreach ($G in $Groups) {
                             Add-ADGroupMember -Identity $G -Members $_ `
                                 -Credential $SecuredCredentials -AuthType $AuthType -Verbose -WhatIf:$WhatIf
                         }
@@ -151,7 +157,7 @@ Function ADMembershipManager {
                     finally {
                         if ($Verify) {
                             Write-Verbose -Message "Verifying added users; $_..."
-                            Get-ADUser -Identity $_ -Properties * -Credential $SecuredCredentials -AuthType $AuthType -Verbose                  
+                            Get-ADUser -Identity $_ -Properties * -Credential $SecuredCredentials -AuthType $AuthType -Verbose
                             foreach ($G in $Groups) {
                                 $AddedUser = Get-ADGroupMember -Identity $G -Recursive -Credential $SecuredCredentials -AuthType Negotiate -ErrorAction SilentlyContinue
                                 if ($AddedUser) {
@@ -171,7 +177,7 @@ Function ADMembershipManager {
                         Write-Verbose -Message "Group --> '$_'running..."
                         foreach ($U in $Users) {
                             Remove-ADGroupMember -Identity $_ -Members $Users `
-                                -Credential $SecuredCredentials -AuthType $AuthType -Verbose -WhatIf:$WhatIf -Confirm:$false 
+                                -Credential $SecuredCredentials -AuthType $AuthType -Verbose -WhatIf:$WhatIf -Confirm:$false
                             if ($Verify) {
                                 $RemUser = Get-ADGroupMember -Identity $_ -Recursive -Credential $SecuredCredentials -AuthType Negotiate -ErrorAction SilentlyContinue
                                 if ($RemUser) {
@@ -189,7 +195,7 @@ Function ADMembershipManager {
                 }
             }
             "Information" {
-                Write-Verbose -Message "Gathering required information, please wait..."  
+                Write-Verbose -Message "Gathering required information, please wait..."
                 $Table = @() ; $Record = @{
                     "Group Name" = ""
                     "Name"       = ""
