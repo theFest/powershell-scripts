@@ -16,15 +16,22 @@ Function SimpleWeatherReport {
     NotMandatory - units of measurement to use.
     .PARAMETER Encoding
     NotMandatory - choose encoding to use for the output file.
+    .PARAMETER Days
+    NotMandatory - number of days to retrieve weather information for when the report type is set to daily.
+    .PARAMETER Lang
+    NotMandatory - language for the weather report when the report type is set to daily.
     .PARAMETER OutputFile
     NotMandatory - output file to which the weather report should be saved.
+    .PARAMETER ShowInBrowser
+    NotMandatory - if specified, opens the weather report URL in the default web browser.
 
     .EXAMPLE
-    SimpleWeatherReport -City Zagreb -Provider wttr -Units imperial -Verbose
-    "$env:USERPROFILE\Desktop\Weather_Report.csv" | SimpleWeatherReport -City Zagreb -Units imperial -Verbose
+    SimpleWeatherReport -City Amsterdam -Provider wttrin -ShowInBrowser -Verbose
+    SimpleWeatherReport -City Rome -Provider wttr -Units imperial -Verbose
+    "$env:USERPROFILE\Desktop\Weather_Report.csv" | SimpleWeatherReport -City London -Provider wttr
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param(
@@ -50,37 +57,61 @@ Function SimpleWeatherReport {
                 "unicode", "unknown", "utf32", "utf7", "utf8")]
         [string]$Encoding = "unicode",
 
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 365)]
+        [int]$Days = 1,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("en", "fr", "de", "it", "ja", "pt", "ru", "tr", "ar", "zh")]
+        [string]$Lang = "en",
+
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [string]$OutputFile
+        [string]$OutputFile,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowInBrowser
     )
-    Write-Verbose -Message "Starting"
-    $Url = $null
+    $Url = $null ; Clear-Host
+    Write-Verbose -Message "Starting..."
     switch ($Provider) {
         "wttrin" {
-            $Url = "https://wttr.in/$City?format=j1"
+            $Url = "https://wttr.in/$City"
         }
         "wttr" {
             $Url = "https://wttr.in/$City?format=%C+%t"
         }
         default {
-            Write-Error "Invalid provider: $Provider" ; return
+            Write-Error "Invalid provider: $Provider"
+            return
         }
     }
-    Write-Verbose -Message "Querying for weather, please wait"
+    Write-Verbose -Message "Adding report type and units to the URL"
+    if ($Provider -eq "wttrin") {
+        $Url += "?$ReportType"
+        if ($Units -eq "imperial") {
+            $Url += "I"
+        }
+    }
+    Write-Verbose -Message "Adding number of days and language to the URL"
+    if ($ReportType -eq "daily") {
+        $Url += "&n=$Days&lang=$Lang"
+    }
+    Write-Host "Querying for weather, please wait..." -ForegroundColor Cyan
     try {
         $Result = Invoke-RestMethod $Url
+        if ($ShowInBrowser) {
+            Write-Output "Opening report in the default browser"
+            Start-Process $Url -Wait
+        }
         if ($OutputFile) {
             $Result | Out-File $OutputFile -Encoding $Encoding -Force
-        }
-        else {
-            $Result | Format-Table -AutoSize
-            Write-Verbose -Message $Result
         }
     }
     catch {
         Write-Error "Error accessing $Provider API: $($_.Exception.Message)"
     }
     finally {
-        Write-Host "Finished, goodbye :)" -ForegroundColor DarkBlue
+        Write-Verbose -Message $Result | Format-Table -AutoSize
+        Write-Host "Finished, goodbye :)" -ForegroundColor DarkCyan
     }
 }
