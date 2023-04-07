@@ -26,7 +26,7 @@ Function RemoveGitHubRepositories {
     RemoveGitHubRepositories -InputFile "$env:USERPROFILE\Desktop\ght.txt" -Token -Verbose
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -82,6 +82,7 @@ Function RemoveGitHubRepositories {
                 Write-Error "Failed to install GitHub CLI: $($_.Exception.Message)"
             }
         }
+        Write-Verbose -Message "Logging in, please wait..."
         Set-Content -Value $Token -Path "$env:USERPROFILE\Desktop\ght.txt" -Force -Verbose
         Start-Process -FilePath "cmd" -ArgumentList "/c gh auth login --with-token < $env:USERPROFILE\Desktop\ght.txt" -WindowStyle Hidden -Wait
         Start-Sleep -Seconds 3
@@ -117,6 +118,7 @@ Function RemoveGitHubRepositories {
         Write-Verbose -Message "Cleaning up, closing connection and exiting!"
         gh auth logout --hostname "github.com"
         Remove-Item -Path "$env:USERPROFILE\Desktop\ght.txt" -Force -Verbose
-        Clear-Variable -Name Repositories, Token -Force -ErrorAction SilentlyContinue
+        Clear-Variable -Name Repositories, Token -Scope Global -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name Repositories, Token -Scope Global -Force -Verbose -ErrorAction SilentlyContinue
     }
 }
