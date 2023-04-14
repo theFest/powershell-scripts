@@ -1,3 +1,6 @@
+#Requires -Version 5.1
+Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
+Set-StrictMode -Version Latest -Verbose
 Function ManageRepositoryBranches {
     <#
     .SYNOPSIS
@@ -23,7 +26,7 @@ Function ManageRepositoryBranches {
     ManageRepositoryBranches -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -DeleteBranchName "your_new_branch_1", "your_new_branch_2"
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -81,7 +84,7 @@ Function ManageRepositoryBranches {
         Write-Verbose -Message "checking if token is valid..."
         Set-Content -Value $Token -Path "$env:USERPROFILE\Desktop\ght.txt" -Force -Verbose
         Start-Process -FilePath "cmd" -ArgumentList "/c gh auth login --with-token < $env:USERPROFILE\Desktop\ght.txt" -WindowStyle Hidden -Wait
-        Write-Verbose -Message "logged in to GitHub, continuing with selected operation $($Operation)..."
+        Write-Verbose -Message "logged in to GitHub, continuing with selected operation $($Action)..."
     }
     PROCESS {
         Write-Verbose -Message "splitting the repository URL to get owner and repository name"
@@ -160,8 +163,7 @@ Function ManageRepositoryBranches {
     }
     END {
         Write-Verbose -Message "Cleaning up, closing connection and exiting..."
-        gh auth logout --hostname "github.com"
-        Clear-History -Verbose -ErrorAction SilentlyContinue
+        gh auth logout --hostname "github.com" ; Clear-History -Verbose -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:USERPROFILE\Desktop\ght.txt" -Force -Verbose -ErrorAction SilentlyContinue
         Clear-Variable -Name Repository, Token, NewBranchName, DeleteBranchName -Scope Global -Force -Verbose -ErrorAction SilentlyContinue
         Remove-Variable -Name Repository, Token, NewBranchName, DeleteBranchName -Scope Global -Force -Verbose -ErrorAction SilentlyContinue
