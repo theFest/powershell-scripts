@@ -1,10 +1,10 @@
-Function GitHubSecretsManager {
+Function ManageSecrets {
     <#
     .SYNOPSIS
     Manage secrets stored in GitHub repositories using the GitHub API. It can be used to create, retrieve, update, and delete secrets.
 
     .DESCRIPTION
-    This GitHubSecretsManager enables you to manage secrets stored in GitHub repositories using the GitHub API, you can use it to create, retrieve, update, and delete repository secrets, requires a GitHub personal access token with appropriate permissions.
+    This ManageSecrets enables you to manage secrets stored in GitHub repositories using the GitHub API, you can use it to create, retrieve, update, and delete repository secrets, requires a GitHub personal access token with appropriate permissions.
 
     .PARAMETER Token
     Mandatory - GitHub personal access token to use for authentication, token must have the repo scope to access repository secrets.
@@ -24,14 +24,14 @@ Function GitHubSecretsManager {
     NotMandatory - returns the updated secret object after an Update operation.
 
     .EXAMPLE
-    GitHubSecretsManager -Operation Get -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
-    GitHubSecretsManager -Operation List -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Verbose
-    GitHubSecretsManager -Operation Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_TOKEN_VALUE"
-    GitHubSecretsManager -Operation Update -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_NEW_TOKEN_VALUE"
-    GitHubSecretsManager -Operation Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
+    "https://github.com/your_user/your_repo" | ManageSecrets -Operation Get -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
+    "https://github.com/your_user/your_repo" | ManageSecrets -Operation List -Token "ghp_xyz" -Verbose
+    ManageSecrets -Operation Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_TOKEN_VALUE"
+    ManageSecrets -Operation Update -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_NEW_TOKEN_VALUE"
+    ManageSecrets -Operation Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -43,7 +43,7 @@ Function GitHubSecretsManager {
         [ValidateNotNullOrEmpty()]
         [string]$Token,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [ValidateNotNullOrEmpty()]
         [string]$Repository,
 
@@ -201,14 +201,13 @@ Function GitHubSecretsManager {
                 }
             }
             default {
-                throw "Invalid operation: $Operation specified. Use -Operation Create/Update/Delete/List!"
+                throw "Invalid operation: $Operation specified. Use -Operation 'Create', 'Update', 'Delete' or 'List'!"
             }
         }
     }
     END {
         Write-Verbose -Message "Cleaning up, closing connection and exiting..."
-        gh auth logout --hostname "github.com"
-        Clear-History -Verbose -ErrorAction SilentlyContinue
+        gh auth logout --hostname "github.com" ; Clear-History -Verbose -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:USERPROFILE\Desktop\fsr.txt" -Force -Verbose -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:USERPROFILE\Desktop\ght.txt" -Force -Verbose -ErrorAction SilentlyContinue
         Clear-Variable -Name Repository, Secret, Token, Name, Value -Scope Global -Force -Verbose -ErrorAction SilentlyContinue
