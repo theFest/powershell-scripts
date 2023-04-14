@@ -1,3 +1,6 @@
+#Requires -Version 5.1
+Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
+Set-StrictMode -Version Latest -Verbose
 Function ManageFollowers {
     <#
     .SYNOPSIS
@@ -23,7 +26,7 @@ Function ManageFollowers {
     ManageFollowers -Action RemoveFollower -Username "your_GitHub_user" -Token "ghp_xyz" -FollowerUsername "user_to_unfollow"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
