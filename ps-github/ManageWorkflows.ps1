@@ -1,3 +1,6 @@
+#Requires -Version 5.1
+Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
+Set-StrictMode -Version Latest -Verbose
 Function ManageWorkflows {
     <#
     .SYNOPSIS
@@ -25,7 +28,7 @@ Function ManageWorkflows {
     "https://github.com/your_user/your_repo" | ManageWorkflows -Action List -Token "ghp_xyz" -ExportPath "$env:USERPROFILE\Desktop\your_workflows_output.csv" -Verbose
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
