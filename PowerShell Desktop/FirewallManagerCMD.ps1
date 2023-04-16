@@ -29,6 +29,8 @@ Function FirewallManagerCMD {
     NotMandatory - specifies whether the firewall rule is enabled or disabled, valid values are True or False.
     .PARAMETER NewName
     NotMandatory - when renaming, use this parameter to define new rule name.
+    .PARAMETER ImportExportPath
+    NotMandatory - path for either importing or exporting rules from/to csv file.
     .PARAMETER Force
     NotMandatory - specifies whether to force the action or not.
 
@@ -42,16 +44,17 @@ Function FirewallManagerCMD {
     FirewallManagerCMD -Action Enable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
     FirewallManagerCMD -Action Disable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
     FirewallManagerCMD -Action Rename -Name "old_name" -NewName "new_name"
+    FirewallManagerCMD -Action Export -ImportExportPath "$env:USERPROFILE\Desktop\fw_rules_ex.csv"
     FirewallManagerCMD -Action Start
     FirewallManagerCMD -Action Stop
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet("List", "Get", "Show", "Add", "Remove", "Modify", "Enable", "Disable", "Rename", "Start", "Stop")]
+        [ValidateSet("List", "Get", "Show", "Add", "Remove", "Modify", "Enable", "Disable", "Rename", "Export", "Start", "Stop")]
         [string]$Action,
 
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
@@ -69,20 +72,16 @@ Function FirewallManagerCMD {
         [string]$Protocol,
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 65535)]
-        [int]$LocalPort,
+        [string]$LocalPort = "Any",
 
         [Parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$LocalAddress,
+        [string]$LocalAddress = "Any",
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 65535)]
-        [int]$RemotePort,
+        [string]$RemotePort = "Any",
 
         [Parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$RemoteAddress,
+        [string]$RemoteAddress = "Any",
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("True", "False")]
@@ -92,9 +91,12 @@ Function FirewallManagerCMD {
         [string]$NewName,
 
         [Parameter(Mandatory = $false)]
+        [string]$ImportExportPath,
+
+        [Parameter(Mandatory = $false)]
         [switch]$Force
     )
-    if ($Action -eq "List" -or $Action -eq "Show" -or $Action -eq "Start" -or $Action -eq "Stop") {
+    if ($Action -in "List", "Show", "Import", "Export", "Start", "Stop") {
         Write-Verbose -Message "Listing or showing rules..."
     }
     else {
@@ -166,6 +168,10 @@ Function FirewallManagerCMD {
                 $CurrentName = $Rule.Name
                 Rename-NetFirewallRule -Name $CurrentName -NewName $NewName -Verbose
             }
+        }
+        "Export" {
+            Get-NetFirewallRule | Select-Object * `
+            | Export-Csv -Path $ImportExportPath -NoTypeInformation -Verbose
         }
         "Start" {
             netsh advfirewall set allprofiles state on
