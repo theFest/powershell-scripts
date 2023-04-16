@@ -8,7 +8,7 @@ Function FirewallManagerCMD {
     This PowerShell function is used to manage Windows Firewall rules, it allows you to add, remove, modify, enable or disable a firewall rule.
 
     .PARAMETER Action
-    Mandatory - action to be taken, valid values are Add, Remove, Modify, Enable or Disable.
+    Mandatory - action to be taken, valid values are declared in validate set.
     .PARAMETER Name
     Mandatory - name of the firewall rule to manage.
     .PARAMETER Description
@@ -27,52 +27,60 @@ Function FirewallManagerCMD {
     Mandatory - the remote address to be used by the firewall rule.
     .PARAMETER Enabled
     NotMandatory - specifies whether the firewall rule is enabled or disabled, valid values are True or False.
+    .PARAMETER NewName
+    NotMandatory - when renaming, use this parameter to define new rule name.
     .PARAMETER Force
     NotMandatory - specifies whether to force the action or not.
 
     .EXAMPLE
+    FirewallManagerCMD -Action List
+    FirewallManagerCMD -Action Show
+    FirewallManagerCMD -Action Get -Name "your_rule"
     FirewallManagerCMD -Action Add -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
     FirewallManagerCMD -Action Remove -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
     FirewallManagerCMD -Action Modify -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol UDP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
     FirewallManagerCMD -Action Enable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
     FirewallManagerCMD -Action Disable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
+    FirewallManagerCMD -Action Rename -Name "old_name" -NewName "new_name"
+    FirewallManagerCMD -Action Start
+    FirewallManagerCMD -Action Stop
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet("Add", "Remove", "Modify", "Enable", "Disable")]
+        [ValidateSet("List", "Get", "Show", "Add", "Remove", "Modify", "Enable", "Disable", "Rename", "Start", "Stop")]
         [string]$Action,
 
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [string]$Name,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$Description,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateSet("Inbound", "Outbound")]
         [string]$Direction,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateSet("TCP", "UDP", "ICMPV4", "ICMPV6", "Any")]
         [string]$Protocol,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 65535)]
         [int]$LocalPort,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$LocalAddress,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 65535)]
         [int]$RemotePort,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$RemoteAddress,
 
@@ -81,10 +89,27 @@ Function FirewallManagerCMD {
         [string]$Enabled,
 
         [Parameter(Mandatory = $false)]
+        [string]$NewName,
+
+        [Parameter(Mandatory = $false)]
         [switch]$Force
     )
-    $RuleCheck = Get-NetFirewallRule -DisplayName $Name -ErrorAction SilentlyContinue
+    if ($Action -eq "List" -or $Action -eq "Show" -or $Action -eq "Start" -or $Action -eq "Stop") {
+        Write-Verbose -Message "Listing or showing rules..."
+    }
+    else {
+        $RuleCheck = Get-NetFirewallRule -DisplayName $Name -ErrorAction SilentlyContinue
+    }
     switch ($Action) {
+        "Get" {
+            return $RuleCheck
+        }
+        "List" {
+            Get-NetFirewallRule | Format-Table -AutoSize
+        }
+        "Show" {
+            Show-NetFirewallRule -PolicyStore ActiveStore | Format-Table -AutoSize
+        }
         "Add" {
             if ($RuleCheck -and $Force) {
                 Write-Warning -Message "A firewall rule with name '$Name' already exists. Skipping 'Add' action."
@@ -134,6 +159,21 @@ Function FirewallManagerCMD {
             else {
                 Write-Warning -Message "No firewall rule with name '$Name' found. Skipping 'Disable' action."
             }
+        }
+        "Rename" {
+            $Rules = Get-NetFirewallRule -DisplayName $Name
+            foreach ($Rule in $Rules) {
+                $CurrentName = $Rule.Name
+                Rename-NetFirewallRule -Name $CurrentName -NewName $NewName -Verbose
+            }
+        }
+        "Start" {
+            netsh advfirewall set allprofiles state on
+            Get-Service -Name mpssvc -Verbose | Start-Service -Verbose -PassThru
+        }
+        "Stop" {
+            netsh advfirewall set allprofiles state off
+            ## reg add hklm\system\currentcontrolset\services\mpssvc /t reg_dword /v start /d 4 /f
         }
         default {
             Write-Error "Invalid action. Please use one"
