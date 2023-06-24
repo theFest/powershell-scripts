@@ -16,10 +16,10 @@ Function RemoteImportRegKey {
     NotMandatory - password for authentication when connecting to a remote computer. This parameter is not mandatory and is only required when the ComputerName parameter is provided.
     
     .EXAMPLE
-    RemoteImportRegKey -ImportPath "$env:USERPROFILE\Desktop\import.reg" -ComputerName "remote_hostename" -Username "remote_user" -Password "remote_pass" -Verbose
+    RemoteImportRegKey -ImportPath "$env:USERPROFILE\Desktop\import.reg" -ComputerName "remote_hostename" -Username "remote_user" -Pass "remote_pass" -Verbose
     
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -40,7 +40,7 @@ Function RemoteImportRegKey {
         if ($ComputerName) {
             $Session = New-PSSession -ComputerName $ComputerName -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Pass -AsPlainText -Force))
             $TestConnectionScriptBlock = {
-                Test-Connection -ComputerName $Using:ComputerName -Count 1 -Quiet -Verbose
+                (Test-Connection -ComputerName $Using:ComputerName -Count 1 -Quiet) -and (Test-WSMan -ComputerName $Using:ComputerName -Authentication Default)
             }
             $isComputerReachable = Invoke-Command -Session $Session -ScriptBlock $TestConnectionScriptBlock
             if ($isComputerReachable) {
