@@ -36,6 +36,12 @@ Function RemoteEventViewer {
     NotMandatory - filters events based on the event source.
     .PARAMETER EventMessage
     NotMandatory - filters events based on the event message.
+    .PARAMETER EventCategory
+	NotMandatory - specify the event category to filter.
+	.PARAMETER EventUser
+	NotMandatory - specify the event user to filter.
+	.PARAMETER EventKeyword
+	NotMandatory - keyword to filter events based on event message text.
     .PARAMETER IncludeEventDescription
     NotMandatory - includes the event description in the output.
     .PARAMETER UseCredentialManager
@@ -51,7 +57,7 @@ Function RemoteEventViewer {
     RemoteEventViewer -ComputerName "remote_host" -UserName "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -72,16 +78,20 @@ Function RemoteEventViewer {
         [Parameter(Mandatory = $false)]
         [datetime]$EndTime = (Get-Date),
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$ComputerName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$UserName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Pass,
 
         [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 10000)]
         [int]$MaxEvents = 100,
 
         [Parameter(Mandatory = $false)]
@@ -89,6 +99,7 @@ Function RemoteEventViewer {
         [string]$OutputFormat,
 
         [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 3650)]
         [TimeSpan]$MaxAge = [System.TimeSpan]::FromDays(30),
 
         [Parameter(Mandatory = $false)]
@@ -101,6 +112,15 @@ Function RemoteEventViewer {
         [string]$EventMessage,
 
         [Parameter(Mandatory = $false)]
+        [string]$EventCategory,
+
+        [Parameter(Mandatory = $false)]
+        [string]$EventUser,
+
+        [Parameter(Mandatory = $false)]
+        [string]$EventKeyword,
+
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeEventDescription,
 
         [Parameter(Mandatory = $false)]
@@ -110,9 +130,11 @@ Function RemoteEventViewer {
         [switch]$UseRemoteEventSubscriptions,
 
         [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 1000)]
         [int]$PageSize = 100,
 
         [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
         [string]$OutputDirectory = "$env:USERPROFILE\Desktop"
     )
     BEGIN {
@@ -144,6 +166,15 @@ Function RemoteEventViewer {
             $EventIdString = $EventID -join ','
             $EventFilter += " and System/EventID=($EventIdString)"
         }
+        if ($EventCategory) {
+            $EventFilter += " and System/Channel=$EventCategory"
+        }
+        if ($EventUser) {
+            $EventFilter += " and System/SecurityUserID='$EventUser'"
+        }
+        if ($EventKeyword) {
+            $EventFilter += " and *[System/EventData/Data and *[System/EventData/Data[contains(.,'$EventKeyword')]]]"
+        }
     }
     PROCESS {
         Write-Verbose -Message "Querying events from each remote computer..."
@@ -162,11 +193,21 @@ Function RemoteEventViewer {
                         Credential   = $Credential
                         ErrorAction  = "Stop"
                     }
-                    Get-WinEvent @EventParams | Where-Object { $_.TimeCreated -ge $StartTime -and $_.TimeCreated -le $EndTime }
+                    $FetchedEvents = Get-WinEvent @EventParams | Where-Object { $_.TimeCreated -ge $StartTime -and $_.TimeCreated -le $EndTime }
+                    if ($EventUser) {
+                        $FetchedEvents = $FetchedEvents | Where-Object { $_.Properties[1].Value -eq $EventUser }
+                    }
+                    if ($EventCategory) {
+                        $FetchedEvents = $FetchedEvents | Where-Object { $_.ProviderName -eq $EventCategory }
+                    }
+                    if ($EventKeyword) {
+                        $FetchedEvents = $FetchedEvents | Where-Object { $_.Message -like "*$EventKeyword*" }
+                    }
+                    $FetchedEvents
                 }
             }
             catch {
-                if ($PSCmdlet.ShouldContinue("Failed to get events from computer $computer with filter: $eventFilter. Do you want to continue?", "Warning")) {
+                if ($PSCmdlet.ShouldContinue("Failed to get events from computer $Computer with filter: $EventFilter. Do you want to continue?", "Warning")) {
                     continue
                 }
                 else {
