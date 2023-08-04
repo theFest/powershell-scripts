@@ -1,6 +1,14 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+Function Show-AboutDialog {
+    [System.Windows.Forms.MessageBox]::Show("File Creation Form`nVersion 1.1", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+}
+
+Function Show-HelpDialog {
+    [System.Windows.Forms.MessageBox]::Show("This application allows you to create multiple files with custom content.`nFill in the details and click 'Create Files' to begin.`nIf 'Open files after creation' is checked, the files will be opened after they are created.`nYou can also provide a content template to apply custom content to each file.", "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+}
+
 Function FileCreationForm {
     param (
         [string]$DefaultPath = "$env:USERPROFILE\Desktop",
@@ -9,32 +17,103 @@ Function FileCreationForm {
         [string]$DefaultExtension = "txt",
         [int]$DefaultNumberOfFiles = 5
     )
+
     $Form = New-Object Windows.Forms.Form
     $Form.Text = "File Creation Form"
     $Form.Size = New-Object Drawing.Size(840, 580)
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
-    $Form.BackColor = [System.Drawing.Color]::FromArgb(41, 41, 41)
-    $Form.ForeColor = [System.Drawing.Color]::White 
-    
+    $Form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $Form.ForeColor = [System.Drawing.Color]::White
+
+    $Style = [System.Windows.Forms.FlatStyle]::Flat
+
+    $MenuBar = New-Object System.Windows.Forms.MenuStrip
+    $MenuBar.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+    $FileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+    $HelpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+
+    $FileMenu.Text = "&File"
+    $HelpMenu.Text = "&Help"
+
+    $FileMenuItem_CreateFiles = New-Object System.Windows.Forms.ToolStripMenuItem
+    $FileMenuItem_Browse = New-Object System.Windows.Forms.ToolStripMenuItem
+    $FileMenuItem_Exit = New-Object System.Windows.Forms.ToolStripMenuItem
+
+    $FileMenuItem_CreateFiles.Text = "Create Files"
+    $FileMenuItem_Browse.Text = "Browse..."
+    $FileMenuItem_Exit.Text = "Exit"
+
+    $FileMenuItem_CreateFiles.Add_Click({
+            $StatusBarLabel.Text = "Creating files..."
+            $StatusBar.Refresh()
+            CreateFiles -Path $textBoxPath.Text `
+                -Prefix $TextBoxPrefix.Text `
+                -Suffix $TextBoxSuffix.Text `
+                -Extension $TextBoxExtension.Text `
+                -NumberOfFiles ([int]$TextBoxNumberOfFiles.Text) `
+                -OverwriteExisting $CheckBoxOverwrite.Checked `
+                -OpenFiles $CheckBoxOpenFiles.Checked `
+                -ContentTemplate $TextBoxContentTemplate.Text `
+                -CreationDate $DateTimePickerCreationDate.Value
+            $StatusBarLabel.Text = "Files created successfully!"
+        })
+
+    $FileMenuItem_Browse.Add_Click({
+            $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
+            $Result = $FolderBrowserDialog.ShowDialog()
+
+            if ($Result -eq [Windows.Forms.DialogResult]::OK) {
+                $TextBoxPath.Text = $FolderBrowserDialog.SelectedPath
+            }
+        })
+
+    $FileMenuItem_Exit.Add_Click({
+            $Form.Close()
+        })
+
+    $FileMenu.DropDownItems.Add($FileMenuItem_CreateFiles)
+    $FileMenu.DropDownItems.Add($FileMenuItem_Browse)
+    $FileMenu.DropDownItems.Add($FileMenuItem_Exit)
+
+    $HelpMenuItem_About = New-Object System.Windows.Forms.ToolStripMenuItem
+    $HelpMenuItem_Help = New-Object System.Windows.Forms.ToolStripMenuItem
+
+    $HelpMenuItem_About.Text = "About"
+    $HelpMenuItem_Help.Text = "Help"
+
+    $HelpMenuItem_About.Add_Click({ Show-AboutDialog })
+    $HelpMenuItem_Help.Add_Click({ Show-HelpDialog })
+
+    $HelpMenu.DropDownItems.Add($HelpMenuItem_About)
+    $HelpMenu.DropDownItems.Add($HelpMenuItem_Help)
+
+    $MenuBar.Items.Add($FileMenu)
+    $MenuBar.Items.Add($HelpMenu)
+
+    $Form.Controls.Add($MenuBar)
     $Style = [System.Windows.Forms.FlatStyle]::Flat
 
     $LabelPath = New-Object Windows.Forms.Label
     $LabelPath.Text = "Path:"
     $LabelPath.Location = New-Object Drawing.Point(20, 25)
     $LabelPath.AutoSize = $true
+    $LabelPath.Padding = New-Object System.Windows.Forms.Padding(10, 10, 10, 10)
+    $LabelPath.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelPath)
 
     $TextBoxPath = New-Object Windows.Forms.TextBox
     $TextBoxPath.Text = $DefaultPath
-    $TextBoxPath.Location = New-Object Drawing.Point(100, 25)
+    $TextBoxPath.Location = New-Object Drawing.Point(100, 30)
     $TextBoxPath.Size = New-Object Drawing.Size(550, 30)
     $Form.Controls.Add($TextBoxPath)
 
     $ButtonBrowse = New-Object Windows.Forms.Button
     $ButtonBrowse.Text = "Browse..."
-    $ButtonBrowse.Location = New-Object Drawing.Point(660, 25)
-    $ButtonBrowse.Size = New-Object Drawing.Size(100, 30)
+    $ButtonBrowse.Location = New-Object Drawing.Point(700, 25)
+    $ButtonBrowse.Size = New-Object Drawing.Size(100, 50)
     $ButtonBrowse.FlatStyle = $style
+    $ButtonBrowse.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+    $ButtonBrowse.ForeColor = [System.Drawing.Color]::White
     $ButtonBrowse.Add_Click({
             $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
             $Result = $FolderBrowserDialog.ShowDialog()
@@ -50,6 +129,7 @@ Function FileCreationForm {
     $CheckBoxPrefix.Location = New-Object Drawing.Point(20, 80)
     $CheckBoxPrefix.AutoSize = $true
     $CheckBoxPrefix.Checked = $false
+    $CheckBoxPrefix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxPrefix.Add_CheckStateChanged({
             $TextBoxPrefix.Enabled = $CheckBoxPrefix.Checked
         })
@@ -68,6 +148,7 @@ Function FileCreationForm {
     $CheckBoxSuffix.Location = New-Object Drawing.Point(420, 80)
     $CheckBoxSuffix.AutoSize = $true
     $CheckBoxSuffix.Checked = $false
+    $CheckBoxSuffix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxSuffix.Add_CheckStateChanged({
             $TextBoxSuffix.Enabled = $CheckBoxSuffix.Checked
         })
@@ -84,6 +165,7 @@ Function FileCreationForm {
     $LabelExtension.Text = "Extension:"
     $LabelExtension.Location = New-Object Drawing.Point(20, 130)
     $LabelExtension.AutoSize = $true
+    $LabelExtension.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelExtension)
 
     $TextBoxExtension = New-Object Windows.Forms.TextBox
@@ -96,6 +178,7 @@ Function FileCreationForm {
     $LabelNumberOfFiles.Text = "Number of Files:"
     $LabelNumberOfFiles.Location = New-Object Drawing.Point(420, 130)
     $LabelNumberOfFiles.AutoSize = $true
+    $LabelNumberOfFiles.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelNumberOfFiles)
 
     $TextBoxNumberOfFiles = New-Object Windows.Forms.TextBox
@@ -107,20 +190,23 @@ Function FileCreationForm {
     $CheckBoxOverwrite = New-Object Windows.Forms.CheckBox
     $CheckBoxOverwrite.Text = "Overwrite existing files"
     $CheckBoxOverwrite.Location = New-Object Drawing.Point(20, 180)
-    $CheckBoxOverwrite.Size = New-Object Drawing.Size(100, 30)
+    $CheckBoxOverwrite.Size = New-Object Drawing.Size(200, 30)
     $CheckBoxOverwrite.Checked = $true
+    $CheckBoxOverwrite.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($CheckBoxOverwrite)
 
     $CheckBoxOpenFiles = New-Object Windows.Forms.CheckBox
     $CheckBoxOpenFiles.Text = "Open files after creation"
     $CheckBoxOpenFiles.Location = New-Object Drawing.Point(20, 220)
-    $CheckBoxOpenFiles.Size = New-Object Drawing.Size(100, 30)
+    $CheckBoxOpenFiles.Size = New-Object Drawing.Size(200, 30)
+    $CheckBoxOpenFiles.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($CheckBoxOpenFiles)
 
     $LabelContentTemplate = New-Object Windows.Forms.Label
     $LabelContentTemplate.Text = "Content Template:"
     $LabelContentTemplate.Location = New-Object Drawing.Point(20, 260)
     $LabelContentTemplate.AutoSize = $true
+    $LabelContentTemplate.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelContentTemplate)
 
     $TextBoxContentTemplate = New-Object Windows.Forms.TextBox
@@ -133,6 +219,7 @@ Function FileCreationForm {
     $LabelCreationDate.Text = "Creation Date:"
     $LabelCreationDate.Location = New-Object Drawing.Point(20, 380)
     $LabelCreationDate.AutoSize = $true
+    $LabelCreationDate.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelCreationDate)
 
     $DateTimePickerCreationDate = New-Object Windows.Forms.DateTimePicker
@@ -146,6 +233,8 @@ Function FileCreationForm {
     $ButtonCreate.Location = New-Object Drawing.Point(330, 460)
     $ButtonCreate.Size = New-Object Drawing.Size(150, 40)
     $ButtonCreate.FlatStyle = $Style
+    $ButtonCreate.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+    $ButtonCreate.ForeColor = [System.Drawing.Color]::White
     $ButtonCreate.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $ButtonCreate.Add_Click({
             if ([string]::IsNullOrWhiteSpace($TextBoxPath.Text) -or
@@ -158,6 +247,8 @@ Function FileCreationForm {
             else {
                 $Prefix = if ($CheckBoxPrefix.Checked) { $TextBoxPrefix.Text } else { "" }
                 $Suffix = if ($CheckBoxSuffix.Checked) { $TextBoxSuffix.Text } else { "" }
+                $StatusBarLabel.Text = "Creating files..."
+                $StatusBar.Refresh()
                 CreateFiles -Path $textBoxPath.Text `
                     -Prefix $Prefix `
                     -Suffix $Suffix `
@@ -167,13 +258,31 @@ Function FileCreationForm {
                     -OpenFiles $CheckBoxOpenFiles.Checked `
                     -ContentTemplate $TextBoxContentTemplate.Text `
                     -CreationDate $DateTimePickerCreationDate.Value
-                [System.Windows.Forms.MessageBox]::Show("Files created successfully!", "Success", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Information)
+                $StatusBarLabel.Text = "Files created successfully!"
             }
         })
     $Form.Controls.Add($ButtonCreate)
+
+    $StatusBar = New-Object System.Windows.Forms.StatusStrip
+    $StatusBar.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+    $StatusBar.ForeColor = [System.Drawing.Color]::White
+    $StatusBarLabel = New-Object System.Windows.Forms.ToolStripStatusLabel
+    $StatusBarLabel.Text = ""
+    $StatusBar.Items.Add($StatusBarLabel)
+    $Form.Controls.Add($StatusBar)
+
+    $Timer = New-Object System.Windows.Forms.Timer
+    $Timer.Interval = 1000
+    $Timer.Add_Tick({
+            $StatusBarLabel.Text = "Current Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        })
+    $Timer.Start()
+
     $Form.ShowDialog()
 }
+
 Function CreateFiles {
+    [CmdletBinding()]
     param (
         [string]$Path,
         [string]$Prefix,
