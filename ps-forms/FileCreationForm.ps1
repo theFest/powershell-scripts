@@ -2,22 +2,15 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 Function ShowAboutDialog {
-    [System.Windows.Forms.MessageBox]::Show("File Creation Form`nVersion 0.0.0.3", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.4", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function ShowHelpDialog {
     [System.Windows.Forms.MessageBox]::Show(@"
 This application allows you to create multiple files with custom content.
-Fill in the details and click 'Create Files' to begin.
-If 'Open files after creation' is checked, the files will be opened after they are created.
-You can also provide a content template to apply custom content to each file.
-The 'Creation Date' field lets you set the creation date of the files.
 
-Enhancements in Version 2.0:
+Enhancements in Version 0.0.0.4:
 - Added support for setting custom Prefix, Suffix, and Extension.
-- Improved error handling and validation.
-- Enhanced UI and overall user experience.
-- Displays current time in the status bar.
 "@, "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
@@ -25,13 +18,14 @@ Function FileCreationForm {
     [CmdletBinding()]
     param (
         [string]$DefaultPath = "$env:USERPROFILE\Desktop",
-        [string]$DefaultPrefix = "File",
+        [string]$DefaultPrefix = "",
         [string]$DefaultSuffix = "",
         [string]$DefaultExtension = "txt",
         [int]$DefaultNumberOfFiles = 5
     )
+
     $Form = New-Object Windows.Forms.Form
-    $Form.Text = "File Creation Form"
+    $Form.Text = "FW File Creation Form"
     $Form.Size = New-Object Drawing.Size(840, 580)
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
     $Form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
@@ -40,38 +34,22 @@ Function FileCreationForm {
     $Style = [System.Windows.Forms.FlatStyle]::Flat
 
     $MenuBar = New-Object System.Windows.Forms.MenuStrip
+    $MenuBar.ForeColor = [System.Drawing.Color]::White
     $MenuBar.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
-    $FileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-    $HelpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 
+    $FileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenu.Text = "&File"
+
+    $HelpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
     $HelpMenu.Text = "&Help"
 
     $FileMenuItem_CreateFiles = New-Object System.Windows.Forms.ToolStripMenuItem
-    $FileMenuItem_Browse = New-Object System.Windows.Forms.ToolStripMenuItem
-    $FileMenuItem_Exit = New-Object System.Windows.Forms.ToolStripMenuItem
-
     $FileMenuItem_CreateFiles.Text = "Create Files"
+    $FileMenuItem_CreateFiles.Add_Click({ CreateFiles })
+    $FileMenu.DropDownItems.Add($FileMenuItem_CreateFiles)
+
+    $FileMenuItem_Browse = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenuItem_Browse.Text = "Browse..."
-    $FileMenuItem_Exit.Text = "Exit"
-
-    $FileMenuItem_CreateFiles.Add_Click({
-            if (ValidateFormFields) {
-                $StatusBarLabel.Text = "Creating files..."
-                $StatusBar.Refresh()
-                CreateFiles -Path $TextBoxPath.Text `
-                    -Prefix $TextBoxPrefix.Text `
-                    -Suffix $TextBoxSuffix.Text `
-                    -Extension $TextBoxExtension.Text `
-                    -NumberOfFiles ([int]$TextBoxNumberOfFiles.Text) `
-                    -OverwriteExisting $CheckBoxOverwrite.Checked `
-                    -OpenFiles $CheckBoxOpenFiles.Checked `
-                    -ContentTemplate $TextBoxContentTemplate.Text `
-                    -CreationDate $DateTimePickerCreationDate.Value
-                $StatusBarLabel.Text = "Files created successfully!"
-            }
-        })
-
     $FileMenuItem_Browse.Add_Click({
             $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
             $Result = $FolderBrowserDialog.ShowDialog()
@@ -80,25 +58,21 @@ Function FileCreationForm {
                 $TextBoxPath.Text = $FolderBrowserDialog.SelectedPath
             }
         })
-
-    $FileMenuItem_Exit.Add_Click({
-            $Form.Close()
-        })
-
-    $FileMenu.DropDownItems.Add($FileMenuItem_CreateFiles)
     $FileMenu.DropDownItems.Add($FileMenuItem_Browse)
+
+    $FileMenuItem_Exit = New-Object System.Windows.Forms.ToolStripMenuItem
+    $FileMenuItem_Exit.Text = "Exit"
+    $FileMenuItem_Exit.Add_Click({ $Form.Close() })
     $FileMenu.DropDownItems.Add($FileMenuItem_Exit)
 
     $HelpMenuItem_About = New-Object System.Windows.Forms.ToolStripMenuItem
-    $HelpMenuItem_Help = New-Object System.Windows.Forms.ToolStripMenuItem
-
     $HelpMenuItem_About.Text = "About"
-    $HelpMenuItem_Help.Text = "Help"
-
     $HelpMenuItem_About.Add_Click({ ShowAboutDialog })
-    $HelpMenuItem_Help.Add_Click({ ShowHelpDialog })
-
     $HelpMenu.DropDownItems.Add($HelpMenuItem_About)
+
+    $HelpMenuItem_Help = New-Object System.Windows.Forms.ToolStripMenuItem
+    $HelpMenuItem_Help.Text = "Help"
+    $HelpMenuItem_Help.Add_Click({ ShowHelpDialog })
     $HelpMenu.DropDownItems.Add($HelpMenuItem_Help)
 
     $MenuBar.Items.Add($FileMenu)
@@ -178,11 +152,10 @@ Function FileCreationForm {
     $LabelExtension.ForeColor = [System.Drawing.Color]::White
     $Form.Controls.Add($LabelExtension)
 
-    $TextBoxExtension = New-Object Windows.Forms.TextBox
-    $TextBoxExtension.Text = $DefaultExtension
-    $TextBoxExtension.Location = New-Object Drawing.Point(100, 130)
-    $TextBoxExtension.Size = New-Object Drawing.Size(300, 30)
-    $Form.Controls.Add($TextBoxExtension)
+    $ComboBoxExtension = New-Object Windows.Forms.ComboBox
+    $ComboBoxExtension.Location = New-Object Drawing.Point(100, 130)
+    $ComboBoxExtension.Size = New-Object Drawing.Size(300, 30)
+    $Form.Controls.Add($ComboBoxExtension)
 
     $LabelNumberOfFiles = New-Object Windows.Forms.Label
     $LabelNumberOfFiles.Text = "Number of Files:"
@@ -246,22 +219,7 @@ Function FileCreationForm {
     $ButtonCreate.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
     $ButtonCreate.ForeColor = [System.Drawing.Color]::White
     $ButtonCreate.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $ButtonCreate.Add_Click({
-            if (ValidateFormFields) {
-                $StatusBarLabel.Text = "Creating files..."
-                $StatusBar.Refresh()
-                CreateFiles -Path $textBoxPath.Text `
-                    -Prefix $TextBoxPrefix.Text `
-                    -Suffix $TextBoxSuffix.Text `
-                    -Extension $TextBoxExtension.Text `
-                    -NumberOfFiles ([int]$TextBoxNumberOfFiles.Text) `
-                    -OverwriteExisting $CheckBoxOverwrite.Checked `
-                    -OpenFiles $CheckBoxOpenFiles.Checked `
-                    -ContentTemplate $TextBoxContentTemplate.Text `
-                    -CreationDate $DateTimePickerCreationDate.Value
-                $StatusBarLabel.Text = "Files created successfully!"
-            }
-        })
+    $ButtonCreate.Add_Click({ CreateFiles })
     $Form.Controls.Add($ButtonCreate)
 
     $StatusBar = New-Object System.Windows.Forms.StatusStrip
@@ -273,56 +231,73 @@ Function FileCreationForm {
     $Form.Controls.Add($StatusBar)
 
     $Form.Add_Shown({ $Form.Activate() })
+    PopulateExtensionComboBox
 
     $Form.ShowDialog()
+
+}
+
+Function PopulateExtensionComboBox {
+    $standardExtensions = @("ps1", "py", "sh", "txt", "exe", "docx", "xlsx", "csv", "pdf", "jpg", "png", "zip", "mp3", "mp4")
+    $ComboBoxExtension.Items.AddRange($standardExtensions)
 }
 
 Function ValidateFormFields {
     if ([string]::IsNullOrWhiteSpace($TextBoxPath.Text) -or
-        [string]::IsNullOrWhiteSpace($TextBoxExtension.Text) -or
+        ($CheckBoxPrefix.Checked -and [string]::IsNullOrWhiteSpace($TextBoxPrefix.Text)) -or
+        ($CheckBoxSuffix.Checked -and [string]::IsNullOrWhiteSpace($TextBoxSuffix.Text)) -or
+        [string]::IsNullOrWhiteSpace($ComboBoxExtension.SelectedItem) -or
         [string]::IsNullOrWhiteSpace($TextBoxNumberOfFiles.Text) -or
-        -not [int]::TryParse($TextBoxNumberOfFiles.Text, [ref]$null) -or
-        ([string]::IsNullOrWhiteSpace($TextBoxContentTemplate.Text) -and $CheckBoxOpenFiles.Checked)) {
-        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values.", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+        ($TextBoxNumberOfFiles.Text -match '\D')) {
         return $false
     }
     return $true
 }
 
 Function CreateFiles {
-    [CmdletBinding()]
-    param (
-        [string]$Path,
-        [string]$Prefix,
-        [string]$Suffix,
-        [string]$Extension,
-        [int]$NumberOfFiles,
-        [bool]$OverwriteExisting,
-        [bool]$OpenFiles,
-        [string]$ContentTemplate,
-        [datetime]$CreationDate
-    )
-    for ($i = 1; $i -le $NumberOfFiles; $i++) {
-        $FileName = "{0}{1}{2}.{3}" -f $Prefix, $i, $Suffix, $Extension
-        $FullFilePath = Join-Path -Path $Path -ChildPath $FileName
-        if (-not (Test-Path -Path $FullFilePath) -or $OverwriteExisting) {
-            if ($ContentTemplate) {
-                $FileContent = $ContentTemplate -replace '\$FileName', $FileName -replace '\$Index', $i
-                Set-Content -Path $FullFilePath -Value $FileContent -Force
+    if (ValidateFormFields) {
+        $Path = $TextBoxPath.Text
+        $Prefix = $TextBoxPrefix.Text
+        $Suffix = $TextBoxSuffix.Text
+        $Extension = $ComboBoxExtension.SelectedItem
+        $NumberOfFiles = [int]$TextBoxNumberOfFiles.Text
+        $OverwriteExisting = $CheckBoxOverwrite.Checked
+        $OpenFiles = $CheckBoxOpenFiles.Checked
+        $ContentTemplate = $TextBoxContentTemplate.Text
+        $CreationDate = $DateTimePickerCreationDate.Value
+        $FilesCreated = 0
+        for ($i = 1; $i -le $NumberOfFiles; $i++) {
+            $FileName = "{0}{1}{2}.{3}" -f $Prefix, $i, $Suffix, $Extension
+            $FullFilePath = Join-Path -Path $Path -ChildPath $FileName
+            if (-not (Test-Path -Path $FullFilePath) -or $OverwriteExisting) {
+                if ($ContentTemplate) {
+                    $FileContent = $ContentTemplate -replace '\$FileName', $FileName -replace '\$Index', $i
+                    Set-Content -Path $FullFilePath -Value $FileContent -Force
+                }
+                else {
+                    New-Item -ItemType File -Path $FullFilePath -Force | Out-Null
+                }
+                if ($CreationDate) {
+                    $FileInfo = Get-Item -Path $FullFilePath
+                    $FileInfo.LastWriteTime = $CreationDate
+                    $FileInfo.LastAccessTime = $CreationDate
+                    [System.IO.File]::SetCreationTime($FullFilePath, $CreationDate)
+                }
+                $FilesCreated++
             }
-            else {
-                New-Item -ItemType File -Path $FullFilePath -Force | Out-Null
-            }
-            if ($CreationDate) {
-                $FileInfo = Get-Item -Path $FullFilePath
-                $FileInfo.LastWriteTime = $CreationDate
-                $FileInfo.LastAccessTime = $CreationDate
-                [System.IO.File]::SetCreationTime($FullFilePath, $CreationDate)
+            if ($OpenFiles) {
+                Invoke-Item -Path $FullFilePath
             }
         }
-        if ($OpenFiles) {
-            Invoke-Item -Path $FullFilePath
+        if ($FilesCreated -gt 0) {
+            [System.Windows.Forms.MessageBox]::Show("Files created successfully!", "Success", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Information)
         }
+        else {
+            [System.Windows.Forms.MessageBox]::Show("No files were created. Please check the form fields and try again.", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+        }
+    }
+    else {
+        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values.", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
     }
 }
 
