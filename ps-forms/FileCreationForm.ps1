@@ -2,29 +2,31 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 Function ShowAboutDialog {
-    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.5", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.6", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function ShowHelpDialog {
     [System.Windows.Forms.MessageBox]::Show(@"
 This application allows you to create multiple files with custom content.
 
-Enhancements in Version 0.0.0.5:
+Enhancements in Version 0.0.0.6:
 - Added support for setting custom Prefix, Suffix, and Extension.
+- Improved styling and layout.
+- Clock dynamically placed on the right side of the status bar.
 "@, "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function FileCreationForm {
     param (
         [string]$DefaultPath = "$env:USERPROFILE\Desktop",
-        [string]$DefaultPrefix = "File",
+        [string]$DefaultPrefix = "",
         [string]$DefaultSuffix = "",
         [string]$DefaultExtension = "txt",
         [int]$DefaultNumberOfFiles = 5
     )
     $Form = New-Object Windows.Forms.Form
     $Form.Text = "FW File Creation Form"
-    $Form.Size = New-Object Drawing.Size(800, 600)
+    $Form.Size = New-Object Drawing.Size(815, 600)
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
     $Form.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
     $Form.ForeColor = [System.Drawing.Color]::White
@@ -119,9 +121,6 @@ Function FileCreationForm {
     $CheckBoxPrefix.Checked = $false
     $CheckBoxPrefix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxPrefix.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $CheckBoxPrefix.Add_CheckStateChanged({
-            $TextBoxPrefix.Enabled = $CheckBoxPrefix.Checked
-        })
     $Form.Controls.Add($CheckBoxPrefix)
 
     $TextBoxPrefix = New-Object Windows.Forms.TextBox
@@ -138,9 +137,6 @@ Function FileCreationForm {
     $CheckBoxSuffix.Checked = $false
     $CheckBoxSuffix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxSuffix.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $CheckBoxSuffix.Add_CheckStateChanged({
-            $TextBoxSuffix.Enabled = $CheckBoxSuffix.Checked
-        })
     $Form.Controls.Add($CheckBoxSuffix)
 
     $TextBoxSuffix = New-Object Windows.Forms.TextBox
@@ -241,9 +237,18 @@ Function FileCreationForm {
     $StatusBar.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
     $StatusBar.ForeColor = [System.Drawing.Color]::White
     $StatusBarLabel = New-Object System.Windows.Forms.ToolStripStatusLabel
-    $StatusBarLabel.Text = "Current Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    $StatusBarLabel.AutoSize = $false
+    $StatusBarLabel.Spring = $true
+    $StatusBarLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
     $StatusBar.Items.Add($StatusBarLabel)
     $Form.Controls.Add($StatusBar)
+
+    $ClockTimer = New-Object System.Windows.Forms.Timer
+    $ClockTimer.Interval = 1000
+    $ClockTimer.Add_Tick({
+            $StatusBarLabel.Text = "Current Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        })
+    $ClockTimer.Start()
 
     $Form.Add_Shown({ $Form.Activate() })
     PopulateExtensionComboBox
@@ -311,7 +316,7 @@ Function CreateFiles {
         }
     }
     else {
-        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values.", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
     }
 }
 
