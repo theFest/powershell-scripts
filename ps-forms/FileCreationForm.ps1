@@ -2,18 +2,17 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 Function ShowAboutDialog {
-    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.7", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.8", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function ShowHelpDialog {
     [System.Windows.Forms.MessageBox]::Show(@"
-This application allows you to create multiple files with custom content and advanced options.
+This application allows you to create multiple files with custom content.
 
-Enhancements in Version 0.0.0.7:
-- Added support for specifying a custom date and time for file creation.
-- Option to create files with incremental numbering.
-- Improved error handling and user prompts.
-- Enhanced user interface and visual improvements.
+Enhancements in Version 0.0.0.8:
+...
+Enjoy creating files with even more features and options!
+
 "@, "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
@@ -27,7 +26,7 @@ Function FileCreationForm {
     )
     $Form = New-Object Windows.Forms.Form
     $Form.Text = "FW File Creation Form"
-    $Form.Size = New-Object Drawing.Size(815, 635)
+    $Form.Size = New-Object Drawing.Size(815, 755)
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
     $Form.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
     $Form.ForeColor = [System.Drawing.Color]::White
@@ -55,6 +54,7 @@ Function FileCreationForm {
     $FileMenuItem_Browse.Add_Click({
             $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
             $Result = $FolderBrowserDialog.ShowDialog()
+
             if ($Result -eq [Windows.Forms.DialogResult]::OK) {
                 $TextBoxPath.Text = $FolderBrowserDialog.SelectedPath
             }
@@ -203,6 +203,7 @@ Function FileCreationForm {
     $TextBoxContentTemplate = New-Object Windows.Forms.TextBox
     $TextBoxContentTemplate.Location = New-Object Drawing.Point(20, 280)
     $TextBoxContentTemplate.Multiline = $true
+    $TextBoxContentTemplate.ScrollBars = "Both" # Add auto-scroll functionality
     $TextBoxContentTemplate.Size = New-Object Drawing.Size(760, 120)
     $TextBoxContentTemplate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxContentTemplate)
@@ -223,16 +224,101 @@ Function FileCreationForm {
     $Form.Controls.Add($DateTimePickerCreationDate)
 
     $CheckBoxIncrementalNumbering = New-Object Windows.Forms.CheckBox
-    $CheckBoxIncrementalNumbering.Text = "Use incremental numbering"
+    $CheckBoxIncrementalNumbering.Text = "Use Incremental Numbering"
     $CheckBoxIncrementalNumbering.Location = New-Object Drawing.Point(20, 460)
     $CheckBoxIncrementalNumbering.AutoSize = $true
     $CheckBoxIncrementalNumbering.ForeColor = [System.Drawing.Color]::White
     $CheckBoxIncrementalNumbering.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxIncrementalNumbering)
 
+    $CheckBoxRandomizeContent = New-Object Windows.Forms.CheckBox
+    $CheckBoxRandomizeContent.Text = "Randomize File Content"
+    $CheckBoxRandomizeContent.Location = New-Object Drawing.Point(20, 490)
+    $CheckBoxRandomizeContent.AutoSize = $true
+    $CheckBoxRandomizeContent.ForeColor = [System.Drawing.Color]::White
+    $CheckBoxRandomizeContent.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($CheckBoxRandomizeContent)
+
+    $LabelFileSize = New-Object Windows.Forms.Label
+    $LabelFileSize.Text = "File Size (KB):"
+    $LabelFileSize.Location = New-Object Drawing.Point(296, 460)
+    $LabelFileSize.AutoSize = $true
+    $LabelFileSize.ForeColor = [System.Drawing.Color]::White
+    $LabelFileSize.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($LabelFileSize)
+
+    $NumericUpDownFileSize = New-Object Windows.Forms.NumericUpDown
+    $NumericUpDownFileSize.Location = New-Object Drawing.Point(450, 455)
+    $NumericUpDownFileSize.Size = New-Object Drawing.Size(70, 30)
+    $NumericUpDownFileSize.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
+    $Form.Controls.Add($NumericUpDownFileSize)
+
+    $CheckBoxCompressFiles = New-Object Windows.Forms.CheckBox
+    $CheckBoxCompressFiles.Text = "Compress Files"
+    $CheckBoxCompressFiles.Location = New-Object Drawing.Point(20, 520)
+    $CheckBoxCompressFiles.AutoSize = $true
+    $CheckBoxCompressFiles.ForeColor = [System.Drawing.Color]::White
+    $CheckBoxCompressFiles.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($CheckBoxCompressFiles)
+
+    $LabelFilePermissions = New-Object Windows.Forms.Label
+    $LabelFilePermissions.Text = "File Permissions:"
+    $LabelFilePermissions.Location = New-Object Drawing.Point(296, 490)
+    $LabelFilePermissions.AutoSize = $true
+    $LabelFilePermissions.ForeColor = [System.Drawing.Color]::White
+    $LabelFilePermissions.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($LabelFilePermissions)
+
+    $ComboBoxFilePermissions = New-Object Windows.Forms.ComboBox
+    $ComboBoxFilePermissions.Location = New-Object Drawing.Point(450, 485)
+    $ComboBoxFilePermissions.Size = New-Object Drawing.Size(200, 30)
+    $ComboBoxFilePermissions.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
+    $ComboBoxFilePermissions.Items.Add("Read-Only")
+    $ComboBoxFilePermissions.Items.Add("Read-Write")
+    $ComboBoxFilePermissions.Items.Add("Full Control")
+    $Form.Controls.Add($ComboBoxFilePermissions)
+
+    $CheckBoxEncryption = New-Object Windows.Forms.CheckBox
+    $CheckBoxEncryption.Text = "Encrypt Files"
+    $CheckBoxEncryption.Location = New-Object Drawing.Point(20, 550)
+    $CheckBoxEncryption.AutoSize = $true
+    $CheckBoxEncryption.ForeColor = [System.Drawing.Color]::White
+    $CheckBoxEncryption.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($CheckBoxEncryption)
+
+    $LabelCreationDateRange = New-Object Windows.Forms.Label
+    $LabelCreationDateRange.Text = "Creation Date Range:"
+    $LabelCreationDateRange.Location = New-Object Drawing.Point(20, 590)
+    $LabelCreationDateRange.AutoSize = $true
+    $LabelCreationDateRange.ForeColor = [System.Drawing.Color]::White
+    $LabelCreationDateRange.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($LabelCreationDateRange)
+
+    $DateTimePickerStartDate = New-Object Windows.Forms.DateTimePicker
+    $DateTimePickerStartDate.Format = [Windows.Forms.DateTimePickerFormat]::Custom
+    $DateTimePickerStartDate.CustomFormat = "yyyy-MM-dd HH:mm:ss"
+    $DateTimePickerStartDate.Location = New-Object Drawing.Point(200, 585)
+    $DateTimePickerStartDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
+    $Form.Controls.Add($DateTimePickerStartDate)
+
+    $LabelTo = New-Object Windows.Forms.Label
+    $LabelTo.Text = "to"
+    $LabelTo.Location = New-Object Drawing.Point(330, 590)
+    $LabelTo.AutoSize = $true
+    $LabelTo.ForeColor = [System.Drawing.Color]::White
+    $LabelTo.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($LabelTo)
+
+    $DateTimePickerEndDate = New-Object Windows.Forms.DateTimePicker
+    $DateTimePickerEndDate.Format = [Windows.Forms.DateTimePickerFormat]::Custom
+    $DateTimePickerEndDate.CustomFormat = "yyyy-MM-dd HH:mm:ss"
+    $DateTimePickerEndDate.Location = New-Object Drawing.Point(415, 585)
+    $DateTimePickerEndDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
+    $Form.Controls.Add($DateTimePickerEndDate)
+
     $ButtonCreate = New-Object Windows.Forms.Button
     $ButtonCreate.Text = "Create Files"
-    $ButtonCreate.Location = New-Object Drawing.Point(330, 510)
+    $ButtonCreate.Location = New-Object Drawing.Point(330, 630)
     $ButtonCreate.Size = New-Object Drawing.Size(150, 40)
     $ButtonCreate.FlatStyle = $Style
     $ButtonCreate.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
@@ -284,29 +370,100 @@ Function ValidateFormFields {
 Function CreateFiles {
     if (ValidateFormFields) {
         $Path = $TextBoxPath.Text
-        $Prefix = $TextBoxPrefix.Text
-        $Suffix = $TextBoxSuffix.Text
-        $Extension = $ComboBoxExtension.SelectedItem
+        $Prefix = if ($CheckBoxPrefix.Checked) { $TextBoxPrefix.Text } else { "" }
+        $Suffix = if ($CheckBoxSuffix.Checked) { $TextBoxSuffix.Text } else { "" }
+        $Extension = if ($ComboBoxExtension.SelectedItem) { $ComboBoxExtension.SelectedItem.ToString() } else { "" }
         $NumberOfFiles = [int]$TextBoxNumberOfFiles.Text
-        $OverwriteExisting = $CheckBoxOverwrite.Checked
+        $Overwrite = $CheckBoxOverwrite.Checked
         $OpenFiles = $CheckBoxOpenFiles.Checked
         $ContentTemplate = $TextBoxContentTemplate.Text
         $CreationDate = $DateTimePickerCreationDate.Value
-        $UseIncrementalNumbering = $CheckBoxIncrementalNumbering.Checked
+        $IncrementalNumbering = $CheckBoxIncrementalNumbering.Checked
+        $RandomizeContent = $CheckBoxRandomizeContent.Checked
+        $FileSizeKB = if ($RandomizeContent) { $NumericUpDownFileSize.Value } else { 0 }
+        $CompressFiles = $CheckBoxCompressFiles.Checked
+        $FilePermissions = if ($ComboBoxFilePermissions.SelectedItem) { $ComboBoxFilePermissions.SelectedItem.ToString() } else { "" }
+        $EncryptFiles = $CheckBoxEncryption.Checked
+        $CreationDateRange = $CheckBoxCreationDateRange.Checked
+        $StartDate = $DateTimePickerStartDate.Value
+        $EndDate = $DateTimePickerEndDate.Value
         $FilesCreated = 0
         for ($i = 1; $i -le $NumberOfFiles; $i++) {
-            $FileNumber = if ($UseIncrementalNumbering) { $i } else { $i - 1 }
-            $FileName = "{0}{1}{2}.{3}" -f $Prefix, $FileNumber, $Suffix, $Extension
+            $FileName = "{0}{1}{2}.{3}" -f $Prefix, $i, $Suffix, $Extension
             $FullFilePath = Join-Path -Path $Path -ChildPath $FileName
-            if (-not (Test-Path -Path $FullFilePath) -or $OverwriteExisting) {
+            if (-not (Test-Path -Path $FullFilePath) -or $Overwrite) {
                 if ($ContentTemplate) {
                     $FileContent = $ContentTemplate -replace '\$FileName', $FileName -replace '\$Index', $i
+                    if ($RandomizeContent) {
+                        $RandomContent = Get-Random -Count $FileSizeKB -InputObject $FileContent.ToCharArray()
+                        $FileContent = $RandomContent -join ''
+                    }
                     Set-Content -Path $FullFilePath -Value $FileContent -Force
                 }
                 else {
                     New-Item -ItemType File -Path $FullFilePath -Force | Out-Null
                 }
+                if ($FilePermissions -eq "Read-Only") {
+                (Get-Item $FullFilePath).IsReadOnly = $true
+                }
+                elseif ($FilePermissions -eq "Read-Write") {
+                (Get-Item $FullFilePath).IsReadOnly = $false
+                }
+                elseif ($FilePermissions -eq "Full Control") {
+                    $acl = Get-Acl $FullFilePath
+                    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", "Allow")
+                    $acl.SetAccessRule($rule)
+                    Set-Acl -Path $FullFilePath -AclObject $acl
+                }
                 if ($CreationDate) {
+                    $FileInfo = Get-Item -Path $FullFilePath
+                    $FileInfo.LastWriteTime = $CreationDate
+                    $FileInfo.LastAccessTime = $CreationDate
+                    [System.IO.File]::SetCreationTime($FullFilePath, $CreationDate)
+                }
+                if ($IncrementalNumbering) {
+                    $FileName = "{0}{1}{2}.{3}" -f $Prefix, ($i + 1), $Suffix, $Extension
+                    $FullFilePath = Join-Path -Path $Path -ChildPath $FileName
+                }
+                if ($CompressFiles) {
+                    $CompressedFilePath = $FullFilePath + ".gz"
+                    Write-Host "Compressing file: $FullFilePath"
+                    try {
+                        $FileContent = Get-Content -Path $FullFilePath -Raw
+                        $gzipStream = New-Object IO.Compression.GZipStream([IO.File]::Create($CompressedFilePath), [IO.Compression.CompressionMode]::Compress)
+                        $gzipStream.Write($FileContent, 0, $FileContent.Length)
+                        $gzipStream.Close()
+                    }
+                    catch {
+                        Write-Host "Error compressing file: $_"
+                    }
+                }
+                if ($EncryptFiles) {
+                    $EncryptedFilePath = $FullFilePath + ".enc"
+                    Write-Host "Encrypting file: $FullFilePath"
+                    try {
+                        $FileContent = Get-Content -Path $FullFilePath -Raw
+                        $encryptionKey = New-Object Byte[] 32
+                        $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::Create()
+                        $rng.GetBytes($encryptionKey)
+                        $aes = New-Object Security.Cryptography.AesManaged
+                        $aes.Key = $encryptionKey
+                        $aes.IV = $aes.BlockSize / 8
+                        $encryptor = $aes.CreateEncryptor()
+                        $memoryStream = New-Object IO.MemoryStream
+                        $cryptoStream = New-Object Security.Cryptography.CryptoStream $memoryStream, $encryptor, [Security.Cryptography.CryptoStreamMode]::Write
+                        $cryptoStream.Write($FileContent, 0, $FileContent.Length)
+                        $cryptoStream.FlushFinalBlock()
+                        $cryptoStream.Close()
+                        [IO.File]::WriteAllBytes($EncryptedFilePath, $memoryStream.ToArray())
+                    }
+                    catch {
+                        Write-Host "Error encrypting file: $_"
+                    }
+                }
+                if ($CreationDateRange) {
+                    $RandomDate = Get-Random -Minimum $StartDate.Ticks -Maximum $EndDate.Ticks
+                    $CreationDate = Get-Date -Date ([System.DateTime]::new($RandomDate))
                     $FileInfo = Get-Item -Path $FullFilePath
                     $FileInfo.LastWriteTime = $CreationDate
                     $FileInfo.LastAccessTime = $CreationDate
@@ -319,14 +476,14 @@ Function CreateFiles {
             }
         }
         if ($FilesCreated -gt 0) {
-            [System.Windows.Forms.MessageBox]::Show("Files created successfully!", "Success", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Information)
+            [System.Windows.Forms.MessageBox]::Show("Files created successfully!", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         }
         else {
-            [System.Windows.Forms.MessageBox]::Show("No files were created. Please check the form fields and try again.", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+            [System.Windows.Forms.MessageBox]::Show("No files were created. Please check the form fields and try again.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
         }
     }
     else {
-        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+        [System.Windows.Forms.MessageBox]::Show("Please fill all fields with valid values!`n(at least choose File Extension from dropdown)", "Error", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
     }
 }
 
