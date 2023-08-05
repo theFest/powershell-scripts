@@ -4,30 +4,27 @@ Function ExportDriversPnpUtil {
     Export driver package(s) from the driver store into a target directory using PnPUtil.
 
     .DESCRIPTION
-    This function exports driver package(s) from the driver store into a specified target directory
-    using PnPUtil. The target directory will be created if it does not exist.
+    This function exports driver package(s) from the driver store into a specified target directory using PnPUtil. The target directory will be created if it does not exist.
 
     .PARAMETER DriverName
     Mandatory - The name of the driver package to export. Use "*" to export all driver packages.
-
     .PARAMETER TargetDirectory
     Mandatory - The directory where the driver package(s) will be exported.
-
     .PARAMETER ComputerName
-    The name of the remote computer from which to export the driver packages. If not provided, the function will run on the local machine.
-
+    NotMandatory - name of the remote computer from which to export the driver packages. If not provided, the function will run on the local machine.
     .PARAMETER Username
-    The username used for authentication when connecting to the remote machine. Required if the ComputerName parameter is specified.
-
+    NotMandatory - username used for authentication when connecting to the remote machine. Required if the ComputerName parameter is specified.
     .PARAMETER Pass
-    The password for the specified username. Required if the ComputerName parameter is specified.
+    NotMandatory - password for the specified username. Required if the ComputerName parameter is specified.
+    .PARAMETER CopyToLocalMachine
+    NotMandatory - if provided, the exported driver packages will be copied to the local machine after exporting.
 
     .EXAMPLE
     ExportDriversPnpUtil -DriverName "oem12.inf" -TargetDirectory "$env:USERPROFILE\Desktop\Driver" -Verbose
     ExportDriversPnpUtil -DriverName "*" -TargetDirectory "C:\remote_host\targer_folder" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
@@ -44,7 +41,10 @@ Function ExportDriversPnpUtil {
         [string]$Username,
 
         [Parameter(Mandatory = $false)]
-        [string]$Pass
+        [string]$Pass,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$CopyToLocalMachine
     )
     if ($ComputerName -ne $env:COMPUTERNAME) {
         Write-Verbose -Message "Testing connection to remote computer $ComputerName..."
@@ -100,5 +100,14 @@ Function ExportDriversPnpUtil {
         $PnpUtilCommand = "pnputil.exe /export-driver $DriverName '$TargetDirectory'"
         Invoke-Expression -Command $PnpUtilCommand
         Write-Host "Driver package(s) exported successfully to: $TargetDirectory" -ForegroundColor Green
+    }
+    if ($CopyToLocalMachine -and $ComputerName -ne $env:COMPUTERNAME) {
+        Write-Verbose -Message "Copying exported driver packages from $ComputerName to the local machine..."
+        $ZipFileName = "$TargetDirectory\DriverPackages.zip"
+        $LocalCopyPath = Join-Path -Path $env:TEMP -ChildPath "DriverPackages"
+        Compress-Archive -Path "$TargetDirectory\*" -DestinationPath $ZipFileName -Force
+        New-Item -Path $LocalCopyPath -ItemType Directory | Out-Null
+        Copy-Item -Path $ZipFileName -Destination $LocalCopyPath -Force
+        Write-Host "Driver packages copied from $ComputerName to: $LocalCopyPath" -ForegroundColor Green
     }
 }
