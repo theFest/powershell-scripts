@@ -21,7 +21,7 @@ Function FileCreationForm {
         [string]$DefaultPath = "$env:USERPROFILE\Desktop",
         [string]$DefaultPrefix = "",
         [string]$DefaultSuffix = "",
-        [string]$DefaultExtension = "txt",
+        [string]$DefaultExtension = "ps1",
         [int]$DefaultNumberOfFiles = 5
     )
     $Form = New-Object Windows.Forms.Form
@@ -157,6 +157,7 @@ Function FileCreationForm {
     $ComboBoxExtension = New-Object Windows.Forms.ComboBox
     $ComboBoxExtension.Location = New-Object Drawing.Point(130, 125)
     $ComboBoxExtension.Size = New-Object Drawing.Size(100, 30)
+    $ComboBoxExtension.Text = $DefaultExtension
     $ComboBoxExtension.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($ComboBoxExtension)
 
