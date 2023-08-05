@@ -2,17 +2,18 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 Function ShowAboutDialog {
-    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.6", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.7", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function ShowHelpDialog {
     [System.Windows.Forms.MessageBox]::Show(@"
-This application allows you to create multiple files with custom content.
+This application allows you to create multiple files with custom content and advanced options.
 
-Enhancements in Version 0.0.0.6:
-- Added support for setting custom Prefix, Suffix, and Extension.
-- Improved styling and layout.
-- Clock dynamically placed on the right side of the status bar.
+Enhancements in Version 0.0.0.7:
+- Added support for specifying a custom date and time for file creation.
+- Option to create files with incremental numbering.
+- Improved error handling and user prompts.
+- Enhanced user interface and visual improvements.
 "@, "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
@@ -26,7 +27,7 @@ Function FileCreationForm {
     )
     $Form = New-Object Windows.Forms.Form
     $Form.Text = "FW File Creation Form"
-    $Form.Size = New-Object Drawing.Size(815, 600)
+    $Form.Size = New-Object Drawing.Size(815, 635)
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
     $Form.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
     $Form.ForeColor = [System.Drawing.Color]::White
@@ -54,7 +55,6 @@ Function FileCreationForm {
     $FileMenuItem_Browse.Add_Click({
             $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
             $Result = $FolderBrowserDialog.ShowDialog()
-
             if ($Result -eq [Windows.Forms.DialogResult]::OK) {
                 $TextBoxPath.Text = $FolderBrowserDialog.SelectedPath
             }
@@ -222,9 +222,17 @@ Function FileCreationForm {
     $DateTimePickerCreationDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($DateTimePickerCreationDate)
 
+    $CheckBoxIncrementalNumbering = New-Object Windows.Forms.CheckBox
+    $CheckBoxIncrementalNumbering.Text = "Use incremental numbering"
+    $CheckBoxIncrementalNumbering.Location = New-Object Drawing.Point(20, 460)
+    $CheckBoxIncrementalNumbering.AutoSize = $true
+    $CheckBoxIncrementalNumbering.ForeColor = [System.Drawing.Color]::White
+    $CheckBoxIncrementalNumbering.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $Form.Controls.Add($CheckBoxIncrementalNumbering)
+
     $ButtonCreate = New-Object Windows.Forms.Button
     $ButtonCreate.Text = "Create Files"
-    $ButtonCreate.Location = New-Object Drawing.Point(330, 470)
+    $ButtonCreate.Location = New-Object Drawing.Point(330, 510)
     $ButtonCreate.Size = New-Object Drawing.Size(150, 40)
     $ButtonCreate.FlatStyle = $Style
     $ButtonCreate.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
@@ -284,9 +292,11 @@ Function CreateFiles {
         $OpenFiles = $CheckBoxOpenFiles.Checked
         $ContentTemplate = $TextBoxContentTemplate.Text
         $CreationDate = $DateTimePickerCreationDate.Value
+        $UseIncrementalNumbering = $CheckBoxIncrementalNumbering.Checked
         $FilesCreated = 0
         for ($i = 1; $i -le $NumberOfFiles; $i++) {
-            $FileName = "{0}{1}{2}.{3}" -f $Prefix, $i, $Suffix, $Extension
+            $FileNumber = if ($UseIncrementalNumbering) { $i } else { $i - 1 }
+            $FileName = "{0}{1}{2}.{3}" -f $Prefix, $FileNumber, $Suffix, $Extension
             $FullFilePath = Join-Path -Path $Path -ChildPath $FileName
             if (-not (Test-Path -Path $FullFilePath) -or $OverwriteExisting) {
                 if ($ContentTemplate) {
