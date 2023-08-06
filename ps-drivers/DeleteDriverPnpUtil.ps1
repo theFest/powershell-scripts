@@ -26,7 +26,7 @@ Function DeleteDriverPnpUtil {
     DeleteDriverPnpUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverInfFile "C:\Windows\INF\oem26.inf" -Uninstall -Force -Reboot -Verbose
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -59,19 +59,19 @@ Function DeleteDriverPnpUtil {
     if ($ComputerName -ne $env:COMPUTERNAME) {
         Write-Verbose -Message "Testing connection to remote computer $ComputerName..."
         if (-not (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet)) {
-            Write-Error "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity." -ForegroundColor Red
+            Write-Error "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity."
             return
         }
         Write-Verbose -Message "Testing WSMan connection to remote computer $ComputerName..."
         if (-not (Test-WSMan -ComputerName $ComputerName -ErrorAction SilentlyContinue)) {
-            Write-Error "Unable to establish a WSMan connection to the remote computer $ComputerName. Make sure WSMan is properly configured on the remote machine." -ForegroundColor Red
+            Write-Error "Unable to establish a WSMan connection to the remote computer $ComputerName. Make sure WSMan is properly configured on the remote machine."
             return
         }
         $Credential = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
     }
     Write-Verbose -Message "Checking if pnputil.exe is in the environment variables and add it if not found"
     if (-not (Get-Command -Name "pnputil" -ErrorAction SilentlyContinue)) {
-        Write-Warning "pnputil.exe not found in the environment variables. Adding it to the PATH..." -ForegroundColor Yellow
+        Write-Warning -Message "pnputil.exe not found in the environment variables. Adding it to the PATH..."
         $env:Path += ";$($env:SystemRoot)\System32"
     }
     $PnpUtilCommand = "pnputil.exe"
@@ -92,7 +92,7 @@ Function DeleteDriverPnpUtil {
             Write-Output "Driver deletion on the local machine completed successfully."
         }
         catch {
-            Write-Error "Failed to delete driver on the local machine: $_" -ForegroundColor Red
+            Write-Error "Failed to delete driver on the local machine: $_"
         }
     }
     else {
@@ -105,7 +105,7 @@ Function DeleteDriverPnpUtil {
             Write-Output "Driver deletion on remote machine $ComputerName completed successfully."
         }
         catch {
-            Write-Error "Failed to delete driver on remote machine $ComputerName : $_" -ForegroundColor Red
+            Write-Error -Message "Failed to delete driver on remote machine $ComputerName : $_"
         }
     }
 }
