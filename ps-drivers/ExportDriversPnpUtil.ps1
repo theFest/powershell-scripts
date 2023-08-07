@@ -28,7 +28,7 @@ Function ExportDriversPnpUtil {
     ExportDriversPnpUtil -DriverName "*" -TargetDirectory "C:\remote_host\targer_folder" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.4
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
@@ -59,7 +59,7 @@ Function ExportDriversPnpUtil {
     if ($ComputerName -ne $env:COMPUTERNAME) {
         Write-Verbose -Message "Testing connection to remote computer $ComputerName..."
         if (-not (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet)) {
-            Write-Error "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity." -ForegroundColor Red
+            Write-Error "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity."
             return
         }
         Write-Verbose -Message "Creating remote session to $ComputerName..."
@@ -118,7 +118,7 @@ Function ExportDriversPnpUtil {
             Write-Host "Driver packages compressed to: $ZipFileName" -ForegroundColor Green
         }
         else {
-            Write-Warning "The specified target directory '$TargetDirectory' does not exist. Cannot create the ZIP file." -ForegroundColor Yellow
+            Write-Warning "The specified target directory '$TargetDirectory' does not exist. Cannot create the ZIP file."
         }
     }
     if ($CopyToLocalMachine -and $ComputerName -ne $env:COMPUTERNAME) {
@@ -132,7 +132,7 @@ Function ExportDriversPnpUtil {
             Write-Host "Driver packages copied from $ComputerName to: $LocalCopyPath" -ForegroundColor Green
         }
         else {
-            Write-Warning "The ZIP file '$ZipFileName' does not exist on the remote machine. Cannot copy the driver packages." -ForegroundColor Yellow
+            Write-Warning "The ZIP file '$ZipFileName' does not exist on the remote machine. Cannot copy the driver packages."
         }
     }
 }
