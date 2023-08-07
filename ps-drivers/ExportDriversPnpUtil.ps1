@@ -18,33 +18,43 @@ Function ExportDriversPnpUtil {
     NotMandatory - password for the specified username. Required if the ComputerName parameter is specified.
     .PARAMETER CopyToLocalMachine
     NotMandatory - if provided, the exported driver packages will be copied to the local machine after exporting.
+    .PARAMETER CompressZip
+    NotMandatory - if provided, the exported driver packages will be compressed into a ZIP file.
+    .PARAMETER LocalCopyPath
+    NotMandatory - path to the directory where the exported driver packages will be copied on the local machine.
 
     .EXAMPLE
     ExportDriversPnpUtil -DriverName "oem12.inf" -TargetDirectory "$env:USERPROFILE\Desktop\Driver" -Verbose
     ExportDriversPnpUtil -DriverName "*" -TargetDirectory "C:\remote_host\targer_folder" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [string]$DriverName,
-
+    
         [Parameter(Mandatory = $true)]
         [string]$TargetDirectory,
-
+    
         [Parameter(Mandatory = $false)]
         [string]$ComputerName = $env:COMPUTERNAME,
-
+    
         [Parameter(Mandatory = $false)]
         [string]$Username,
-
+    
         [Parameter(Mandatory = $false)]
         [string]$Pass,
-
+    
         [Parameter(Mandatory = $false)]
-        [switch]$CopyToLocalMachine
+        [switch]$CopyToLocalMachine,
+    
+        [Parameter(Mandatory = $false)]
+        [switch]$CompressZip,
+    
+        [Parameter(Mandatory = $false)]
+        [string]$LocalCopyPath = $env:TEMP
     )
     if ($ComputerName -ne $env:COMPUTERNAME) {
         Write-Verbose -Message "Testing connection to remote computer $ComputerName..."
@@ -101,13 +111,28 @@ Function ExportDriversPnpUtil {
         Invoke-Expression -Command $PnpUtilCommand
         Write-Host "Driver package(s) exported successfully to: $TargetDirectory" -ForegroundColor Green
     }
+    if ($CompressZip) {
+        if (Test-Path $TargetDirectory) {
+            $ZipFileName = Join-Path -Path $TargetDirectory -ChildPath "DriverPackages.zip"
+            Compress-Archive -Path "$TargetDirectory\*" -DestinationPath $ZipFileName -Force
+            Write-Host "Driver packages compressed to: $ZipFileName" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "The specified target directory '$TargetDirectory' does not exist. Cannot create the ZIP file." -ForegroundColor Yellow
+        }
+    }
     if ($CopyToLocalMachine -and $ComputerName -ne $env:COMPUTERNAME) {
         Write-Verbose -Message "Copying exported driver packages from $ComputerName to the local machine..."
-        $ZipFileName = "$TargetDirectory\DriverPackages.zip"
-        $LocalCopyPath = Join-Path -Path $env:TEMP -ChildPath "DriverPackages"
-        Compress-Archive -Path "$TargetDirectory\*" -DestinationPath $ZipFileName -Force
-        New-Item -Path $LocalCopyPath -ItemType Directory | Out-Null
-        Copy-Item -Path $ZipFileName -Destination $LocalCopyPath -Force
-        Write-Host "Driver packages copied from $ComputerName to: $LocalCopyPath" -ForegroundColor Green
+        if (-not (Test-Path $LocalCopyPath -PathType Container)) {
+            Write-Host "Creating local copy directory: $LocalCopyPath" -ForegroundColor DarkGreen
+            New-Item -Path $LocalCopyPath -ItemType Directory | Out-Null
+        }
+        if (Test-Path $ZipFileName) {
+            Copy-Item -Path $ZipFileName -Destination $LocalCopyPath -Force
+            Write-Host "Driver packages copied from $ComputerName to: $LocalCopyPath" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "The ZIP file '$ZipFileName' does not exist on the remote machine. Cannot copy the driver packages." -ForegroundColor Yellow
+        }
     }
 }
