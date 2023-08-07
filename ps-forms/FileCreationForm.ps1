@@ -411,10 +411,10 @@ Function CreateFiles {
                 (Get-Item $FullFilePath).IsReadOnly = $false
                 }
                 elseif ($FilePermissions -eq "Full Control") {
-                    $acl = Get-Acl $FullFilePath
-                    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", "Allow")
-                    $acl.SetAccessRule($rule)
-                    Set-Acl -Path $FullFilePath -AclObject $acl
+                    $Acl = Get-Acl $FullFilePath
+                    $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", "Allow")
+                    $Acl.SetAccessRule($Rule)
+                    Set-Acl -Path $FullFilePath -AclObject $Acl
                 }
                 if ($CreationDate) {
                     $FileInfo = Get-Item -Path $FullFilePath
@@ -431,9 +431,9 @@ Function CreateFiles {
                     Write-Host "Compressing file: $FullFilePath"
                     try {
                         $FileContent = Get-Content -Path $FullFilePath -Raw
-                        $gzipStream = New-Object IO.Compression.GZipStream([IO.File]::Create($CompressedFilePath), [IO.Compression.CompressionMode]::Compress)
-                        $gzipStream.Write($FileContent, 0, $FileContent.Length)
-                        $gzipStream.Close()
+                        $GzipStream = New-Object IO.Compression.GZipStream([IO.File]::Create($CompressedFilePath), [IO.Compression.CompressionMode]::Compress)
+                        $GzipStream.Write($FileContent, 0, $FileContent.Length)
+                        $GzipStream.Close()
                     }
                     catch {
                         Write-Host "Error compressing file: $_"
@@ -444,22 +444,22 @@ Function CreateFiles {
                     Write-Host "Encrypting file: $FullFilePath"
                     try {
                         $FileContent = Get-Content -Path $FullFilePath -Raw
-                        $encryptionKey = New-Object Byte[] 32
-                        $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::Create()
-                        $rng.GetBytes($encryptionKey)
-                        $aes = New-Object Security.Cryptography.AesManaged
-                        $aes.Key = $encryptionKey
-                        $aes.IV = $aes.BlockSize / 8
-                        $encryptor = $aes.CreateEncryptor()
-                        $memoryStream = New-Object IO.MemoryStream
-                        $cryptoStream = New-Object Security.Cryptography.CryptoStream $memoryStream, $encryptor, [Security.Cryptography.CryptoStreamMode]::Write
-                        $cryptoStream.Write($FileContent, 0, $FileContent.Length)
-                        $cryptoStream.FlushFinalBlock()
-                        $cryptoStream.Close()
+                        $EncryptionKey = New-Object Byte[] 32
+                        $Rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::Create()
+                        $Rng.GetBytes($EncryptionKey)
+                        $Aes = New-Object Security.Cryptography.AesManaged
+                        $Aes.Key = $EncryptionKey
+                        $Aes.IV = $Aes.BlockSize / 8
+                        $Encryptor = $Aes.CreateEncryptor()
+                        $MemoryStream = New-Object IO.MemoryStream
+                        $CryptoStream = New-Object Security.Cryptography.CryptoStream $MemoryStream, $Encryptor, [Security.Cryptography.CryptoStreamMode]::Write
+                        $CryptoStream.Write($FileContent, 0, $FileContent.Length)
+                        $CryptoStream.FlushFinalBlock()
+                        $CryptoStream.Close()
                         [IO.File]::WriteAllBytes($EncryptedFilePath, $memoryStream.ToArray())
                     }
                     catch {
-                        Write-Host "Error encrypting file: $_"
+                        Write-Host "Error encrypting file: $_" -ForegroundColor Red
                     }
                 }
                 if ($CreationDateRange) {
