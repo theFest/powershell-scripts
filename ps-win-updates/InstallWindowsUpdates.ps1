@@ -25,12 +25,14 @@ Function InstallWindowsUpdates {
     NotMandatory - specify the delay in seconds before initiating a reboot.
     .PARAMETER Wait
     NotMandatory - if specified, wait for the specified number of seconds before proceeding with installation.
+    .PARAMETER ShowProgress
+    NotMandatory - if specified, show progress of update installation.
     
     .EXAMPLE
-    InstallWindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -IncludeRebootRequired -Reboot -RebootDelay 300 -Wait 60 -Verbose
+    InstallWindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -IncludeRebootRequired -Reboot -RebootDelay 300 -Wait 60 -ShowProgress -Verbose
     
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
@@ -59,7 +61,10 @@ Function InstallWindowsUpdates {
         [int]$RebootDelay = 300,
 
         [Parameter(Mandatory = $false, HelpMessage = "Wait for the specified number of seconds before proceeding with installation")]
-        [int]$Wait = 0
+        [int]$Wait = 0,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Show progress of update installation")]
+        [switch]$ShowProgress
     )
     try {
         $UsingCred = $null
@@ -74,7 +79,8 @@ Function InstallWindowsUpdates {
             param (
                 $IncludeHidden,
                 $IncludeInstalled,
-                $IncludeRebootRequired
+                $IncludeRebootRequired,
+                $ShowProgress
             )
             $UpdateSession = New-Object -ComObject Microsoft.Update.Session
             $Searcher = $UpdateSession.CreateUpdateSearcher()
@@ -89,16 +95,22 @@ Function InstallWindowsUpdates {
                 $Criteria += " or RebootRequired=1"
             }
             $SearchResult = $Searcher.Search($Criteria)
-            $SearchResult.Updates | ForEach-Object {
-                $_.AcceptEula()
-                $_.Install()
+            $TotalUpdates = $SearchResult.Updates.Count
+            $UpdatesInstalled = 0
+            foreach ($Update in $SearchResult.Updates) {
+                $Update.AcceptEula()
+                $Update.Install()
+                $UpdatesInstalled++
+                if ($ShowProgress) {
+                    Write-Progress -PercentComplete (($UpdatesInstalled / $TotalUpdates) * 100) -Status "Installing updates" -CurrentOperation "$UpdatesInstalled of $TotalUpdates updates installed"
+                }
             }
         }
         if ($UsingCred) {
             Write-Verbose -Message "Establishing a remote session with $ComputerName..."
             $Session = New-PSSession -ComputerName $ComputerName -Credential $UsingCred -ErrorAction Stop
             Write-Verbose -Message "Installing Windows updates remotely..."
-            Invoke-Command -Session $Session -ScriptBlock $ScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired
+            Invoke-Command -Session $Session -ScriptBlock $ScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired, $ShowProgress
             if ($Session) {
                 Write-Verbose -Message "Removing the remote session with $ComputerName..."
                 Remove-PSSession -Session $Session -ErrorAction SilentlyContinue
@@ -106,7 +118,7 @@ Function InstallWindowsUpdates {
         }
         else {
             Write-Verbose -Message "Installing Windows updates locally..."
-            & $ScriptBlock -IncludeHidden $IncludeHidden -IncludeInstalled $IncludeInstalled -IncludeRebootRequired $IncludeRebootRequired
+            & $ScriptBlock -IncludeHidden $IncludeHidden -IncludeInstalled $IncludeInstalled -IncludeRebootRequired $IncludeRebootRequired -ShowProgress $ShowProgress
         }
         if ($Reboot) {
             Write-Verbose -Message "Rebooting the computer in $RebootDelay seconds..."
