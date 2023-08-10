@@ -5,7 +5,7 @@ Function InstallWindowsUpdates {
     
     .DESCRIPTION
     This function connects to a remote computer and installs available Windows updates.
-    It provides various options to control the installation process.
+    It provides various options to control the installation process and display update details.
     
     .PARAMETER ComputerName
     NotMandatory - name of the remote computer where updates will be installed.
@@ -27,12 +27,14 @@ Function InstallWindowsUpdates {
     NotMandatory - if specified, wait for the specified number of seconds before proceeding with installation.
     .PARAMETER ShowProgress
     NotMandatory - if specified, show progress of update installation.
+    .PARAMETER ShowUpdateDetails
+    NotMandatory - if specified, show details about available updates on the remote computer.
     
     .EXAMPLE
-    InstallWindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -IncludeRebootRequired -Reboot -RebootDelay 300 -Wait 60 -ShowProgress -Verbose
+    InstallWindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -IncludeRebootRequired -Reboot -RebootDelay 300 -Wait 60 -ShowProgress -ShowUpdateDetails -Verbose
     
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -64,18 +66,24 @@ Function InstallWindowsUpdates {
         [int]$Wait = 0,
 
         [Parameter(Mandatory = $false, HelpMessage = "Show progress of update installation")]
-        [switch]$ShowProgress
+        [switch]$ShowProgress,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Show details about available updates on the remote computer")]
+        [switch]$ShowUpdateDetails
     )
     try {
-        $UsingCred = $null
-        if ($ComputerName -ne $env:COMPUTERNAME) {
-            Write-Verbose -Message "Creating PSCredential object..."
-            if ($Username -and $Pass) {
-                $SecurePassword = ConvertTo-SecureString -String $Pass -AsPlainText -Force
-                $UsingCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePassword
-            }
+        $Credential = $null
+        if ($Username -and $Pass) {
+            $SecurePassword = ConvertTo-SecureString -String $Pass -AsPlainText -Force
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePassword
         }
-        $ScriptBlock = {
+        if ($ShowUpdateDetails) {
+            $UpdateSession = New-Object -ComObject Microsoft.Update.Session
+            $Searcher = $UpdateSession.CreateUpdateSearcher()
+            $SearchResult = $Searcher.Search("IsInstalled=0")
+            $SearchResult.Updates | Select-Object Title, Description, IsHidden, IsMandatory, RebootRequired, LastDeploymentChangeTime, MoreInfoUrls
+        }
+        $InstallScriptBlock = {
             param (
                 $IncludeHidden,
                 $IncludeInstalled,
@@ -98,19 +106,25 @@ Function InstallWindowsUpdates {
             $TotalUpdates = $SearchResult.Updates.Count
             $UpdatesInstalled = 0
             foreach ($Update in $SearchResult.Updates) {
-                $Update.AcceptEula()
-                $Update.Install()
-                $UpdatesInstalled++
-                if ($ShowProgress) {
-                    Write-Progress -PercentComplete (($UpdatesInstalled / $TotalUpdates) * 100) -Status "Installing updates" -CurrentOperation "$UpdatesInstalled of $TotalUpdates updates installed"
+                if (-not $Update.IsInstalled) {
+                    if ($ShowProgress) {
+                        $ProgressStatus = "Installing update: $($Update.Title)"
+                        $PercentComplete = ($UpdatesInstalled / $TotalUpdates) * 100
+                        Write-Host -NoNewline "$ProgressStatus [$PercentComplete%] "
+                    }
+                    if ($Update.PSObject.Methods -match 'GetInstaller') {
+                        $Installer = $Update.GetInstaller()
+                        $Installer.Install()
+                    }
+                    $UpdatesInstalled++
                 }
             }
         }
-        if ($UsingCred) {
+        if ($ComputerName -ne $env:COMPUTERNAME) {
             Write-Verbose -Message "Establishing a remote session with $ComputerName..."
-            $Session = New-PSSession -ComputerName $ComputerName -Credential $UsingCred -ErrorAction Stop
+            $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential -ErrorAction Stop
             Write-Verbose -Message "Installing Windows updates remotely..."
-            Invoke-Command -Session $Session -ScriptBlock $ScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired, $ShowProgress
+            Invoke-Command -Session $Session -ScriptBlock $InstallScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired, $ShowProgress
             if ($Session) {
                 Write-Verbose -Message "Removing the remote session with $ComputerName..."
                 Remove-PSSession -Session $Session -ErrorAction SilentlyContinue
@@ -118,7 +132,7 @@ Function InstallWindowsUpdates {
         }
         else {
             Write-Verbose -Message "Installing Windows updates locally..."
-            & $ScriptBlock -IncludeHidden $IncludeHidden -IncludeInstalled $IncludeInstalled -IncludeRebootRequired $IncludeRebootRequired -ShowProgress $ShowProgress
+            & $InstallScriptBlock -IncludeHidden $IncludeHidden -IncludeInstalled $IncludeInstalled -IncludeRebootRequired $IncludeRebootRequired -ShowProgress $ShowProgress
         }
         if ($Reboot) {
             Write-Verbose -Message "Rebooting the computer in $RebootDelay seconds..."
