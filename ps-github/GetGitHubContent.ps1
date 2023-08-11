@@ -77,6 +77,7 @@ Function GetGitHubContent {
         [string]$AuthMethod = "PAT"
     )
     BEGIN {
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
         if (-not (Test-Path -Path $DestinationPath)) {
             Write-Verbose -Message "Creating new folder..."
             New-Item -ItemType Directory -Path $DestinationPath -InformationAction SilentlyContinue -Verbose
@@ -114,6 +115,7 @@ Function GetGitHubContent {
                     }
                     $Response = Invoke-WebRequest -Uri $ContentUrl -Headers $Headers -UseBasicParsing -ErrorAction Stop
                     if ($Response.StatusCode -eq 200) {
+                        Write-Information "Network check passed, starting download..."
                         $ContentBytes = [System.Text.Encoding]::UTF8.GetBytes($Response.Content)
                         [System.IO.File]::WriteAllBytes($DestinationFile, $ContentBytes)
                         Write-Output -InputObject "Downloaded: $($Response.BaseResponse.ResponseUri.AbsoluteUri)"
