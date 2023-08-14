@@ -1,4 +1,4 @@
-Function ServiceManager {
+function ServiceManager {
     <#
     .SYNOPSIS
     Perform various operations on Windows services.
@@ -19,6 +19,8 @@ Function ServiceManager {
     - EnableAutoStart
     - DisableAutoStart
     - SetRecovery
+    - GetDescription
+    - GetDependencies
     .PARAMETER Force
     NotMandatory - forces the specified action, even if it may result in unintended consequences.
     .PARAMETER WhatIf
@@ -37,10 +39,12 @@ Function ServiceManager {
     NotMandatory - the delay in seconds between recovery attempts.
 
     .EXAMPLE
-    ServiceManager -ServiceName "wuauserv" -Action "Start"
+    ServiceManager -ServiceName "wuauserv" -Action Start
+    ServiceManager -ServiceName "wuauserv" -Action GetDescription
+    ServiceManager -ServiceName "wuauserv" -Action GetDependencies
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -48,7 +52,7 @@ Function ServiceManager {
         [string]$ServiceName,
 
         [Parameter(Mandatory = $true, HelpMessage = "Specify the action to perform.")]
-        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery")]
+        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies")]
         [string]$Action,
 
         [Parameter(Mandatory = $false, HelpMessage = "Forcefully perform actions")]
@@ -123,7 +127,7 @@ Function ServiceManager {
                     Write-Output "Simulating: Would continue service '$ServiceName'."
                 }
                 else {
-                    $service | Resume-Service
+                    $Service | Resume-Service
                     Write-Output "Service '$ServiceName' has been continued."
                 }
             }
@@ -154,6 +158,15 @@ Function ServiceManager {
                     Set-Service -Name $ServiceName -Recovery $RecoveryOptions
                     Write-Output "Recovery options have been set for service '$ServiceName'."
                 }
+            }
+            "GetDescription" {
+                $Description = $Service.Description
+                Write-Output "Description of service '$ServiceName': $Description"
+            }
+            "GetDependencies" {
+                $Dependencies = $Service.DependentServices
+                $DependencyNames = $Dependencies | ForEach-Object { $_.DisplayName }
+                Write-Output "Dependencies of service '$ServiceName': $($DependencyNames -join ', ')"
             }
         }
         if ($IncludeLogs) {
