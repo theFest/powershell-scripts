@@ -41,7 +41,7 @@ Function ServiceManager {
     ServiceManager -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
 
     .NOTES
-    v0.0.5
+    v0.0.6
     #>
     [CmdletBinding()]
     param (
@@ -50,7 +50,7 @@ Function ServiceManager {
 
         [Parameter(Mandatory = $true, HelpMessage = "Specify the action to perform.")]
         [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies", `
-                "GetLogOnAccount", "SetLogOnAccount", "GetDisplayName", "SetDisplayName", "GetStartupType", "GetServiceAccountInfo", "ListAllServices", "SetRecoveryActions")]
+                "GetLogOnAccount", "SetLogOnAccount", "GetDisplayName", "SetDisplayName", "GetStartupType", "GetServiceAccountInfo", "ListAllServices", "SetRecoveryActions", "ListRunningServices")]
         [string]$Action,
 
         [Parameter(Mandatory = $false, HelpMessage = "Forcefully perform actions")]
@@ -219,11 +219,11 @@ Function ServiceManager {
                 Write-Output "Account Domain: $AccountDomain"
                 Write-Output "Account SID: $AccountSID"
             }
-            "ListAllServices" {
-                $AllServices = Get-Service
-                $ServiceInfo = $AllServices | Select-Object DisplayName, Status
-                Write-Output "List of all services:"
-                $ServiceInfo | Format-Table -AutoSize
+            "ListRunningServices" {
+                $RunningServices = Get-Service | Where-Object { $_.Status -eq 'Running' }
+                $RunningServiceInfo = $RunningServices | Select-Object DisplayName, Status
+                Write-Output "List of running services:"
+                $RunningServiceInfo | Format-Table -AutoSize
             }
             "SetRecoveryActions" {
                 if ($WhatIf) {
