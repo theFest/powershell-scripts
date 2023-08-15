@@ -5,23 +5,11 @@ Function ServiceManager {
 
     .DESCRIPTION
     This function allows you to perform different operations on Windows services, such as starting, stopping, restarting, pausing, continuing, enabling or disabling auto-start, setting recovery options, retrieving service description and dependencies, and more.
+    
     .PARAMETER ServiceName
     Mandatory - specifies the name of the Windows service to be managed.
     .PARAMETER Action
-    Mandatory - specifies the action to perform on the service. Valid values include:
-    - Start
-    - Stop
-    - Restart
-    - Status
-    - Pause
-    - Continue
-    - EnableAutoStart
-    - DisableAutoStart
-    - SetRecovery
-    - GetDescription
-    - GetDependencies
-    - GetLogOnAccount
-    - SetLogOnAccount
+    Mandatory - specifies the action to perform on the service.
     .PARAMETER Force
     NotMandatory - forces the specified action, even if it may result in unintended consequences.
     .PARAMETER WhatIf
@@ -40,16 +28,20 @@ Function ServiceManager {
     NotMandatory - the delay in seconds between recovery attempts.
     .PARAMETER DisplayName
     NotMandatory - display name of the Windows service, use this parameter to provide a user-friendly name for the service that is different from its actual name.
+    .PARAMETER RecoveryActions
+    NotMandatory - specifies the recovery actions to be configured for the service during recovery.
+    .PARAMETER Command
+    NotMandatory - command to be executed during recovery if the specified recovery actions are triggered.
 
     .EXAMPLE
     ServiceManager -ServiceName "wuauserv" -Action Start
-    ServiceManager -ServiceName "wuauserv" -Action GetDescription
-    ServiceManager -ServiceName "wuauserv" -Action GetDependencies
-    ServiceManager -ServiceName "wuauserv" -Action GetLogOnAccount
     ServiceManager -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
+    ServiceManager -ServiceName "wuauserv" -Action GetStartupType
+    ServiceManager -ServiceName "wuauserv" -Action GetServiceAccountInfo
+    ServiceManager -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
 
     .NOTES
-    v0.0.4
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
@@ -57,7 +49,8 @@ Function ServiceManager {
         [string]$ServiceName,
 
         [Parameter(Mandatory = $true, HelpMessage = "Specify the action to perform.")]
-        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies", "GetLogOnAccount", "SetLogOnAccount", "GetDisplayName", "SetDisplayName")]
+        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies", `
+                "GetLogOnAccount", "SetLogOnAccount", "GetDisplayName", "SetDisplayName", "GetStartupType", "GetServiceAccountInfo", "ListAllServices", "SetRecoveryActions")]
         [string]$Action,
 
         [Parameter(Mandatory = $false, HelpMessage = "Forcefully perform actions")]
@@ -88,7 +81,13 @@ Function ServiceManager {
         [string]$LogOnAccount,
 
         [Parameter(Mandatory = $false, HelpMessage = "Display name of the service")]
-        [string]$DisplayName
+        [string]$DisplayName,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Specific recovery actions for the service")]
+        [string]$RecoveryActions,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Command to execute during recovery")]
+        [string]$Command
     )
     $LogFilePath = "$env:TEMP\ServiceManager.log"
     try {
@@ -204,6 +203,36 @@ Function ServiceManager {
                 else {
                     $Service | Set-Service -DisplayName $DisplayName -Verbose
                     Write-Output "Display name for service '$ServiceName' has been set to '$DisplayName'."
+                }
+            }
+            "GetStartupType" {
+                $StartupType = $Service.StartType
+                Write-Output "Startup type of service '$ServiceName': $StartupType"
+            }
+            "GetServiceAccountInfo" {
+                $AccountInfo = Get-WmiObject Win32_Service | Where-Object { $_.Name -eq $ServiceName }
+                $AccountName = $AccountInfo.StartName
+                $AccountDomain = $AccountInfo.StartName.Split("\")[0]
+                $AccountSID = $AccountInfo.StartNameSid
+                Write-Output "Account information for service '$ServiceName':"
+                Write-Output "Account Name: $AccountName"
+                Write-Output "Account Domain: $AccountDomain"
+                Write-Output "Account SID: $AccountSID"
+            }
+            "ListAllServices" {
+                $AllServices = Get-Service
+                $ServiceInfo = $AllServices | Select-Object DisplayName, Status
+                Write-Output "List of all services:"
+                $ServiceInfo | Format-Table -AutoSize
+            }
+            "SetRecoveryActions" {
+                if ($WhatIf) {
+                    Write-Output "Simulating: Would set recovery actions for service '$ServiceName'."
+                }
+                else {
+                    $RecoveryOptions = New-ServiceRecoveryOptions -Action $RecoveryActions -Command $Command
+                    Set-Service -Name $ServiceName -Recovery $RecoveryOptions -Verbose
+                    Write-Output "Recovery actions have been set for service '$ServiceName'."
                 }
             }
         }
