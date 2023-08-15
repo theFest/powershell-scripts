@@ -38,6 +38,8 @@ Function ServiceManager {
     NotMandatory - the number of recovery attempts during service recovery.
     .PARAMETER RecoveryDelay
     NotMandatory - the delay in seconds between recovery attempts.
+    .PARAMETER DisplayName
+    NotMandatory - display name of the Windows service, use this parameter to provide a user-friendly name for the service that is different from its actual name.
 
     .EXAMPLE
     ServiceManager -ServiceName "wuauserv" -Action Start
@@ -47,7 +49,7 @@ Function ServiceManager {
     ServiceManager -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -55,7 +57,7 @@ Function ServiceManager {
         [string]$ServiceName,
 
         [Parameter(Mandatory = $true, HelpMessage = "Specify the action to perform.")]
-        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies", "GetLogOnAccount", "SetLogOnAccount")]
+        [ValidateSet("Start", "Stop", "Restart", "Status", "Pause", "Continue", "EnableAutoStart", "DisableAutoStart", "SetRecovery", "GetDescription", "GetDependencies", "GetLogOnAccount", "SetLogOnAccount", "GetDisplayName", "SetDisplayName")]
         [string]$Action,
 
         [Parameter(Mandatory = $false, HelpMessage = "Forcefully perform actions")]
@@ -83,8 +85,12 @@ Function ServiceManager {
         [int]$RecoveryDelay,
 
         [Parameter(Mandatory = $false, HelpMessage = "Account under which the service runs")]
-        [string]$LogOnAccount
+        [string]$LogOnAccount,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Display name of the service")]
+        [string]$DisplayName
     )
+    $LogFilePath = "$env:TEMP\ServiceManager.log"
     try {
         $Service = Get-Service -Name $ServiceName -ErrorAction Stop
         switch ($Action) {
@@ -187,6 +193,19 @@ Function ServiceManager {
                     Write-Output "Log-on account for service '$ServiceName' has been set to '$LogOnAccount'."
                 }
             }
+            "GetDisplayName" {
+                $DisplayName = $Service.DisplayName
+                Write-Output "Display name of service '$ServiceName': $DisplayName"
+            }
+            "SetDisplayName" {
+                if ($WhatIf) {
+                    Write-Output "Simulating: Would set display name for service '$ServiceName' to '$DisplayName'."
+                }
+                else {
+                    $Service | Set-Service -DisplayName $DisplayName -Verbose
+                    Write-Output "Display name for service '$ServiceName' has been set to '$DisplayName'."
+                }
+            }
         }
         if ($IncludeLogs) {
             $LogMessage = "Performed action: $Action on service '$ServiceName'"
@@ -194,6 +213,8 @@ Function ServiceManager {
         }
     }
     catch {
-        Write-Error -Message "An error occurred: $_"
+        $ErrorMessage = "An error occurred: $_"
+        Write-Error -Message $ErrorMessage
+        $ErrorMessage | Out-File -Append -FilePath $LogFilePath
     }
 }
