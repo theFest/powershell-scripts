@@ -25,6 +25,8 @@ Function ManageRestorePoint {
     NotMandatory - provides a custom name for the restore point. Only used when Action is "Save".
     .PARAMETER BackupPath
     NotMandatory - specifies a custom backup path for the restore point. Only used when Action is "Save".
+    .PARAMETER TargetDrive
+    NotMandatory - specifies the target drive where the restore point should be created. Only used when Action is "Create" or "Save".
 
     .EXAMPLE
     ManageRestorePoint -Action Create -Description "Before software installation"
@@ -32,7 +34,7 @@ Function ManageRestorePoint {
     ManageRestorePoint -Action Remove -Description "Unwanted Restore Point"
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param(
@@ -53,17 +55,20 @@ Function ManageRestorePoint {
         [string]$CustomName,
 
         [Parameter(Mandatory = $false)]
-        [string]$BackupPath
+        [string]$BackupPath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$TargetDrive
     )
     switch ($Action) {
         "Create" {
             Write-Host "Creating a new system restore point..."
-            $null = Checkpoint-Computer -Description $Description
+            $null = Checkpoint-Computer -Description $Description -TargetPath $TargetDrive
             Write-Host "System restore point created." -ForegroundColor Green
         }
         "Save" {
             Write-Host "Creating a custom system restore point..." -ForegroundColor Yellow
-            $null = Checkpoint-Computer -Description $Description -IncludeRegistry:$IncludeRegistry -IncludeDrivers:$IncludeDrivers -CustomName $CustomName -BackupPath $BackupPath
+            $null = Checkpoint-Computer -Description $Description -IncludeRegistry:$IncludeRegistry -IncludeDrivers:$IncludeDrivers -CustomName $CustomName -BackupPath $BackupPath -TargetPath $TargetDrive
             Write-Host "Custom system restore point created."
         }
         "Restore" {
