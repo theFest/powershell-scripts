@@ -21,6 +21,10 @@ Function ManageRestorePoint {
     NotMandatory - includes the system registry in the restore point. Only used when Action is "Save".
     .PARAMETER IncludeDrivers
     NotMandatory - includes drivers in the restore point. Only used when Action is "Save".
+    .PARAMETER CustomName
+    NotMandatory - provides a custom name for the restore point. Only used when Action is "Save".
+    .PARAMETER BackupPath
+    NotMandatory - specifies a custom backup path for the restore point. Only used when Action is "Save".
 
     .EXAMPLE
     ManageRestorePoint -Action Create -Description "Before software installation"
@@ -28,7 +32,7 @@ Function ManageRestorePoint {
     ManageRestorePoint -Action Remove -Description "Unwanted Restore Point"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param(
@@ -59,14 +63,14 @@ Function ManageRestorePoint {
         }
         "Save" {
             Write-Host "Creating a custom system restore point..." -ForegroundColor Yellow
-            $null = Checkpoint-Computer -Description $Description -IncludeRegistry:$IncludeRegistry -IncludeDrivers:$IncludeDrivers
+            $null = Checkpoint-Computer -Description $Description -IncludeRegistry:$IncludeRegistry -IncludeDrivers:$IncludeDrivers -CustomName $CustomName -BackupPath $BackupPath
             Write-Host "Custom system restore point created."
         }
         "Restore" {
             Write-Host "Restoring system to the most recent restore point..." -ForegroundColor Yellow
-            $restorePoint = Get-ComputerRestorePoint | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
-            if ($restorePoint) {
-                $null = Restore-Computer -RestorePoint $restorePoint
+            $RestorePoint = Get-ComputerRestorePoint | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
+            if ($RestorePoint) {
+                $null = Restore-Computer -RestorePoint $RestorePoint
                 Write-Host "System restored to the most recent restore point."
             }
             else {
@@ -79,9 +83,9 @@ Function ManageRestorePoint {
         }
         "Remove" {
             Write-Host "Removing specified restore points..." -ForegroundColor Yellow
-            $restorePoints = Get-ComputerRestorePoint | Where-Object { $_.Description -eq $Description }
-            if ($restorePoints) {
-                $restorePoints | ForEach-Object {
+            $RestorePoints = Get-ComputerRestorePoint | Where-Object { $_.Description -eq $Description }
+            if ($RestorePoints) {
+                $RestorePoints | ForEach-Object {
                     Write-Host "Removing restore point: $($_.Description)" -ForegroundColor Yellow
                     Disable-ComputerRestore -RestorePoint $_
                 }
