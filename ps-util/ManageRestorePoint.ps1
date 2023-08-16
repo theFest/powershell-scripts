@@ -8,10 +8,12 @@ Function ManageRestorePoint {
     System restore points are snapshots of your system's state that can be used to restore your computer to a previous state if issues arise.
 
     .PARAMETER Action
-    Specifies the action to perform. Valid values are "Create", "Save", and "Restore".
+    Specifies the action to perform. Valid values are "Create", "Save", "Restore", "List", and "Remove".
     - Create: Creates a new system restore point.
     - Save: Creates a custom system restore point with additional options.
     - Restore: Restores the system to the most recent restore point.
+    - List: Lists available restore points.
+    - Remove: Removes specific restore points.
 
     .PARAMETER Description
     Mandatory - description for the restore point. Only used when Action is "Create" or "Save".
@@ -22,14 +24,16 @@ Function ManageRestorePoint {
 
     .EXAMPLE
     ManageRestorePoint -Action Create -Description "Before software installation"
+    ManageRestorePoint -Action List
+    ManageRestorePoint -Action Remove -Description "Unwanted Restore Point"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet("Create", "Save", "Restore")]
+        [ValidateSet("Create", "Save", "Restore", "List", "Remove")]
         [string]$Action,
 
         [Parameter(Mandatory = $false)]
@@ -39,7 +43,13 @@ Function ManageRestorePoint {
         [switch]$IncludeRegistry,
 
         [Parameter(Mandatory = $false)]
-        [switch]$IncludeDrivers
+        [switch]$IncludeDrivers,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CustomName,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BackupPath
     )
     switch ($Action) {
         "Create" {
@@ -61,6 +71,24 @@ Function ManageRestorePoint {
             }
             else {
                 Write-Host "No restore points available." -ForegroundColor DarkCyan
+            }
+        }
+        "List" {
+            Write-Host "Listing available restore points..." -ForegroundColor Yellow
+            Get-ComputerRestorePoint | Format-Table -AutoSize
+        }
+        "Remove" {
+            Write-Host "Removing specified restore points..." -ForegroundColor Yellow
+            $restorePoints = Get-ComputerRestorePoint | Where-Object { $_.Description -eq $Description }
+            if ($restorePoints) {
+                $restorePoints | ForEach-Object {
+                    Write-Host "Removing restore point: $($_.Description)" -ForegroundColor Yellow
+                    Disable-ComputerRestore -RestorePoint $_
+                }
+                Write-Host "Specified restore points removed." -ForegroundColor Green
+            }
+            else {
+                Write-Host "No matching restore points found." -ForegroundColor DarkCyan
             }
         }
     }
