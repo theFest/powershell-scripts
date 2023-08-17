@@ -38,7 +38,7 @@ Function AdvancedRemoteExecution {
     AdvancedRemoteExecution -ExecutionCommand "$ExecutionCommand" -ComputerInventoryFile "$env:USERPROFILE\Desktop\list.csv" -ExecutionMethod CIM -AsJob
     
     .NOTES
-    0.1.1
+    0.1.2
     #>
     [CmdletBinding()]
     param(
@@ -239,45 +239,44 @@ Function AdvancedRemoteExecution {
                             param ($Command)
                             Invoke-Expression $Command
                         } -ArgumentList $ExecutionCommand
-                        Remove-PSSession $Session
+                        Remove-PSSession $Session              
                         $Result = [PSCustomObject]@{
                             Computer = $Computer.HostName
                             Status   = "Success"
                         }
-                        $Results += $Result
                     }
                     catch {
-                        $ErrorResult = [PSCustomObject]@{
+                        $Result = [PSCustomObject]@{
                             Computer = $Computer.HostName
                             Status   = "Error: $_"
                         }
-                        $Results += $ErrorResult
                     }
+                    $Results += $Result
                 }
             }
             "PSSession" {
                 foreach ($Computer in $Computers) {
                     try {
                         $Session = New-PSSession -ComputerName $Computer.HostName -Credential $Computer.Credential
-                        Invoke-Command -Session $Session -ScriptBlock {
+                        $ScriptBlock = {
                             param ($Command)
                             Invoke-Expression $Command
-                        } -ArgumentList $ExecutionCommand
-                        Remove-PSSession $Session
+                        }                    
+                        Invoke-Command -Session $Session -ScriptBlock $ScriptBlock -ArgumentList $ExecutionCommand             
+                        Remove-PSSession $Session           
                         $Result = [PSCustomObject]@{
                             Computer = $Computer.HostName
                             Status   = "Success"
                         }
-                        $Results += $Result
                     }
                     catch {
-                        $ErrorResult = [PSCustomObject]@{
+                        $Result = [PSCustomObject]@{
                             Computer = $Computer.HostName
                             Status   = "Error: $_"
                         }
-                        $Results += $ErrorResult
                     }
-                }
+                    $Results += $Result
+                }                
             }
             "DCOM" {
                 foreach ($Computer in $Computers) {
