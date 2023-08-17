@@ -1,16 +1,3 @@
-Class ComputerCredentials {
-    [string]$HostName
-    [string]$Username
-    [SecureString]$Password
-    ComputerCredentials(
-        [string]$HostName,
-        [string]$Username,
-        [PSCredential]$Password) {
-        $this.HostName = $HostName
-        $this.Username = $Username
-        $this.Password = $Password.Password
-    }
-}
 Function AdvancedRemoteExecution {
     <#
     .SYNOPSIS
@@ -39,8 +26,6 @@ Function AdvancedRemoteExecution {
     NotMandatory - choose port you wanna use.
     .PARAMETER SkipTestConnection
     NotMandatory - use to speed up execution. 
-    .PARAMETER EncryptionKey
-    NotMandatory - still untested.
     .PARAMETER Encoding
     NotMandatory - not yet fully implemented
     .PARAMETER Delimiter
@@ -53,57 +38,55 @@ Function AdvancedRemoteExecution {
     AdvancedRemoteExecution -ExecutionCommand "$ExecutionCommand" -ComputerInventoryFile "$env:USERPROFILE\Desktop\list.csv" -ExecutionMethod CIM -AsJob
     
     .NOTES
-    1.0.1
+    0.1.1
     #>
-    [CmdletBinding(DefaultParameterSetName = "AdvancedRemoteExecution")]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("CIM", "WMI", "PSRemoting", "PSSession", "DCOM", "PsExec", "PaExec")]
+        [Parameter(Mandatory = $true, HelpMessage = "Method of remote execution.")]
+        [ValidateSet("CIM", "WMI", "PSRemoting", "PSSession", "DCOM", "PsExec", "SSH")]
         [string]$ExecutionMethod,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Path to the CSV file containing computer inventory")]
         [string]$ComputerInventoryFile,
     
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "Command to execute remotely")]
         [string]$ExecutionCommand,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Protocol to use for remote execution")]
         [ValidateSet("Default", "Dcom", "Wsman")]
         [string]$Protocol = "Default",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "WMI class name for CIM execution")]
         [ValidateSet("Process", "Property")]
         [string]$Class = "Process",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Method to use for CIM execution")]
         [ValidateSet("Create", "Terminate")]
         [string]$Method = "Create",
-    
-        [Parameter(Mandatory = $false, HelpMessage = "Authentication type used for the user's credentials")]
+
+        [Parameter(Mandatory = $false, HelpMessage = "Authentication type for remote execution")]
         [ValidateSet("Basic", "Default", "Negotiate", "Digest", "CredSsp", "Kerberos", "NtlmDomain")]
         [string]$Authentication = "Negotiate",
 
-        [Parameter(Mandatory = $false, HelpMessage = "Duration for which the cmdlet waits for a response from the server")]
+        [Parameter(Mandatory = $false, HelpMessage = "Duration to wait for a response from the server")]
         [ValidateRange(0, 3)]
         [int]$OperationTimeoutSec = 0,
 
-        [Parameter(Mandatory = $false, HelpMessage = "Default ports are 5985 (WinRM>HTTP) and 5986 (WinRM>HTTPS")]
+        [Parameter(Mandatory = $false, HelpMessage = "Port for remote execution")]
         [ValidateSet(5985, 5986)]
         [int]$Port,
 
-        [Parameter(Mandatory = $false, HelpMessage = "To reduce some data transmission time use this switch")]
+        [Parameter(Mandatory = $false, HelpMessage = "Skip testing the connection before execution")]
         [switch]$SkipTestConnection,
-
-        [Parameter(Mandatory = $false)]
-        [string]$EncryptionKey,
     
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Encoding for the output")]
         [ValidateSet("UTF8", "UTF32", "UTF7", "ASCII", "BigEndianUnicode", "Default", "OEM")]
         [string]$Encoding = "UTF8",
     
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Delimiter for output")]
         [string]$Delimiter = ",",
     
+        [Parameter(Mandatory = $false, HelpMessage = "Use if executing via CIM")]
         [switch]$AsJob
     )
     BEGIN {
@@ -178,71 +161,207 @@ Function AdvancedRemoteExecution {
         switch ($ExecutionMethod) {
             "CIM" {
                 foreach ($Computer in $Computers) {
-                    $ScriptBlockInvoke = { "Powershell -ExecutionPolicy Bypass -Command $ExecutionCommand" }
-                    Write-Host CIM
-                    $SessionArgs = @{
-                        Computer      = $Computer.HostName
-                        Credential    = $Computer.Credential
-                        SessionOption = New-CimSessionOption -Protocol $Protocol 
-                        #Port                = $Port
-                        #Authentication      = $Authentication 
-                        #SkipTestConnection  = $SkipTestConnection
-                        #OperationTimeoutSec = $OperationTimeoutSec
-                    }
-                    $MethodArgs = @{
-                        ClassName  = "Win32_$Class" 
-                        MethodName = $Method
-                        CimSession = New-CimSession @SessionArgs
-                        Arguments  = @{
-                            CommandLine = Invoke-Command -ScriptBlock $ScriptBlockInvoke
+                    try {
+                        $SessionArgs = @{
+                            Computer      = $Computer.HostName
+                            Credential    = $Computer.Credential
+                            SessionOption = New-CimSessionOption -Protocol $Protocol
                         }
+                        $CimSession = New-CimSession @SessionArgs
+                        $MethodArgs = @{
+                            ClassName  = "Win32_$Class"
+                            MethodName = $Method
+                            CimSession = $CimSession
+                            Arguments  = @{
+                                CommandLine = $ExecutionCommand
+                            }
+                        }
+                        if ($AsJob) {
+                            $JobScriptBlock = {
+                                param ($CimMethodArgs)
+                                Invoke-CimMethod @CimMethodArgs
+                            }
+                            $JobArgs = @($MethodArgs)
+                            Start-Job -ScriptBlock $JobScriptBlock -ArgumentList $JobArgs
+                        }
+                        else {
+                            Invoke-CimMethod @MethodArgs
+                        }
+                        Remove-CimSession $CimSession
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                        }
+                        $Results += $Result
                     }
-                    if ($AsJob) {
-                        $execjob = { Invoke-CimMethod @MethodArgs }
-                        Invoke-Command -ScriptBlock $execjob #-AsJob
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
                     }
-                    else {
-                        Invoke-CimMethod @MethodArgs -Verbose
+                }
+            }            
+            "WMI" {
+                foreach ($Computer in $Computers) {
+                    try {
+                        $ConnectionOptions = New-Object System.Management.ConnectionOptions
+                        $ConnectionOptions.Username = $Computer.Credential.UserName
+                        $ConnectionOptions.Password = $Computer.Credential.GetNetworkCredential().Password
+                        $ManagementScope = New-Object System.Management.ManagementScope("\\$($Computer.HostName)\root\cimv2", $ConnectionOptions)
+                        $ManagementScope.Connect()
+                        $Query = "SELECT * FROM Win32_Process WHERE Name = '$ExecutionCommand'"
+                        $QueryOptions = New-Object System.Management.ObjectQueryOptions
+                        $ManagementObjectSearcher = New-Object System.Management.ManagementObjectSearcher($ManagementScope, $Query, $QueryOptions)
+                        $Results = $ManagementObjectSearcher.Get()
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                            Count    = $Results.Count
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
                     }
                 }
             }
-            "WMI" {
-                $Connection = New-CimInstance -ComputerName $Computer.HostName -Credential $Computer.Credential
-                Invoke-WmiMethod -InputObject $Connection -Name $ExecutionCommand
-            }
             "PSRemoting" {
-                $Session = New-PSSession -ComputerName $Computer.HostName -Credential $Computer.Credential
-                Invoke-Command -Session $Session -ScriptBlock { $ExecutionCommand }
-                Remove-PSSession $Session
+                foreach ($Computer in $Computers) {
+                    try {
+                        $Session = New-PSSession -ComputerName $Computer.HostName -Credential $Computer.Credential
+                        Invoke-Command -Session $Session -ScriptBlock {
+                            param ($Command)
+                            Invoke-Expression $Command
+                        } -ArgumentList $ExecutionCommand
+                        Remove-PSSession $Session
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
+                    }
+                }
             }
             "PSSession" {
-                $Session = New-PSSession -ComputerName $Computer.HostName -Credential $Computer.Credential
-                Invoke-Command -Session $Session -ScriptBlock { $ExecutionCommand }
-                Remove-PSSession $Session
+                foreach ($Computer in $Computers) {
+                    try {
+                        $Session = New-PSSession -ComputerName $Computer.HostName -Credential $Computer.Credential
+                        Invoke-Command -Session $Session -ScriptBlock {
+                            param ($Command)
+                            Invoke-Expression $Command
+                        } -ArgumentList $ExecutionCommand
+                        Remove-PSSession $Session
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
+                    }
+                }
             }
             "DCOM" {
-                $Connection = New-Object -ComObject $ExecutionCommand -ArgumentList $Computer.HostName, $Computer.Credential
-                $Connection.Execute()
+                foreach ($Computer in $Computers) {
+                    try {
+                        $WmiConnectionOptions = New-Object System.Management.ConnectionOptions
+                        $WmiConnectionOptions.Username = $Computer.Credential.UserName
+                        $WmiConnectionOptions.Password = $Computer.Credential.GetNetworkCredential().Password
+                        $WmiScope = New-Object System.Management.ManagementScope("\\$($Computer.HostName)\root\cimv2", $WmiConnectionOptions)
+                        $WmiScope.Connect()
+                        $WmiClass = New-Object System.Management.ManagementClass($WmiScope, (New-Object System.Management.ManagementPath("Win32_Process")), $null)
+                        $WmiProcess = $WmiClass.CreateInstance()
+                        $WmiProcess.Create($ExecutionCommand)
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
+                    }
+                }
             }
             "PsExec" {
-                PsExec.exe \$Computer.HostName -u $Computer.Username -p $Computer.Password $ExecutionCommand
+                foreach ($Computer in $Computers) {
+                    try {
+                        $PsExecPath = "$env:TEMP\PSTools\PsExec.exe"
+                        $PsExecArgs = "\\$($Computer.HostName) -u $($Computer.Credential.UserName) -p $($Computer.Credential.GetNetworkCredential().Password) $ExecutionCommand"
+                        Start-Process -FilePath $PsExecPath -ArgumentList $PsExecArgs -Wait
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
+                    }
+                }
             }
-            "PaExec" {
-                PaExec.exe \$Computer.HostName -u $Computer.Username -p $Computer.Password $ExecutionCommand
+            "SSH" {
+                if (-not (Get-Module -Name Posh-SSH -ListAvailable)) {
+                    Write-Verbose "Installing Posh-SSH module..."
+                    Install-Module -Name Posh-SSH -Force
+                }
+                foreach ($Computer in $Computers) {
+                    try {
+                        $SSHSession = New-SSHSession -ComputerName $Computer.HostName -Credential $Computer.Credential
+                        $SSHResult = Invoke-SSHCommand -SSHSession $SSHSession -Command $ExecutionCommand
+                        Remove-SSHSession -SSHSession $SSHSession
+                        $Result = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Success"
+                            Output   = $SSHResult.Output
+                        }
+                        $Results += $Result
+                    }
+                    catch {
+                        $ErrorResult = [PSCustomObject]@{
+                            Computer = $Computer.HostName
+                            Status   = "Error: $_"
+                        }
+                        $Results += $ErrorResult
+                    }
+                }
             }
         }
     }
     END {
-        Get-Job -Verbose | Remove-Job -Verbose
+        Get-Job -ErrorAction SilentlyContinue -Verbose | Remove-Job -ErrorAction SilentlyContinue -Verbose
         Set-Location -Path $env:SystemDrive
         Write-Host "Finished, cleaning up, stopping transcript and exiting..." -ForegroundColor Cyan
-        Get-CimSession | Remove-CimSession -Verbose
+        Get-CimSession | Remove-CimSession -ErrorAction SilentlyContinue -Verbose
         Clear-Variable -Name RemoteComputerUser, RemoteComputerPass -Force -Verbose
         Write-Output "`nTime taken [$((Get-Date).Subtract($StartTime).Duration() -replace ".{8}$")]"
         Clear-History -Verbose
         Stop-Transcript
-        if ($EncryptionKey) {
-            Encrypt-File -Path "$env:USERPROFILE\Desktop\executionResults.csv" -EncryptionKey $EncryptionKey
-        }
     }
 }
