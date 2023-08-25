@@ -13,7 +13,7 @@ Function Set-AppNetworkCounter {
     .PARAMETER CaptureUnit
     Mandatory - specifies the time unit for the capture time. Available options: "seconds", "minutes", "hours".
     .PARAMETER SaveOutput
-    Mandatory - format in which the captured network usage data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext". The default is "/sjson".
+    Mandatory - format in which the captured network usage data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext".
     .PARAMETER SortColumn
     NotMandatory - column by which the captured data should be sorted. Available options for sorting include "Application Name", "Application Path", "Received Bytes", and "Sent Bytes".
     .PARAMETER DownloadPath
@@ -26,13 +26,16 @@ Function Set-AppNetworkCounter {
     NotMandatory - a configuration file to customize the behavior of the AppNetworkCounter utility.
     .PARAMETER WaitProcess
     NotMandatory - use this switch is to wait(in session) for process to end or release.
+    .PARAMETER AsJob
+    NotMandatory - use this switch to run as background job.
 
     .EXAMPLE
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma
+    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -AsJob
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -WaitProcess
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
@@ -70,7 +73,10 @@ Function Set-AppNetworkCounter {
         [string]$ConfigFile,
 
         [Parameter(Mandatory = $false)]
-        [switch]$WaitProcess
+        [switch]$WaitProcess,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$AsJob
     )
     BEGIN {
         $TimeUnitInSeconds = @{
@@ -85,6 +91,9 @@ Function Set-AppNetworkCounter {
         $TempDir = Split-Path -Path $DownloadPath
         if (!(Test-Path -Path $TempDir -PathType Container)) {
             New-Item -Path $TempDir -ItemType Directory | Out-Null
+        }
+        if ($AsJob) {
+            Write-Host "Starting AppNetworkCounter in the background..." -ForegroundColor Cyan
         }
     }
     PROCESS {
@@ -154,15 +163,27 @@ Function Set-AppNetworkCounter {
                 RedirectStandardError  = "$env:USERPROFILE\Desktop\AppNetworkCounter\anc-rse.txt"
                 RedirectStandardOutput = "$env:USERPROFILE\Desktop\AppNetworkCounter\anc-rso.txt"
             }
-            Start-Process @StartProcessParams | Out-Null
-            Write-Host "Process has finish, check results." -ForegroundColor Green
+            if ($AsJob) {
+                Write-Verbose -Message "Running the process in the background job..."
+                $JobScriptBlock = {
+                    param ($AppPath, $StartProcessParams)
+                    Start-Process @StartProcessParams | Out-Null
+                }
+                Start-Job -ScriptBlock $JobScriptBlock -ArgumentList $AppPath, $StartProcessParams | Out-Null
+                Write-Host "AppNetworkCounter process is running in the background." -ForegroundColor Cyan
+            }
+            else {
+                Write-Verbose -Message "Running the process normally..."
+                Start-Process @StartProcessParams | Out-Null
+                Write-Host "Process has finished, check results." -ForegroundColor Green
+            }
         }
         else {
-            Write-Error -Message "Failed to download the file! - $($_.Exception.Message)"
+            Write-Error -Message "Failed to download file: $($_.Exception.Message)"
         }
     }
     END {
-        if (-not $WaitProcess) {
+        if (-not $WaitProcess -and -not $AsJob) {
             Write-Host "Process is running for next $CaptureTime $CaptureUnit..." -ForegroundColor Cyan
         }
     }
