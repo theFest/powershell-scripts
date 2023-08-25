@@ -1,7 +1,7 @@
 Function Set-AppNetworkCounter {
     <#
     .SYNOPSIS
-    Monitors network usage of applications using AppNetworkCounter from Nirsoft.
+    Monitors network usage of applications using AppNetworkCounter. Credits to Nirsoft for creating this tool.
 
     .DESCRIPTION
     This function is used to monitor network usage of applications using the AppNetworkCounter utility.
@@ -9,9 +9,11 @@ Function Set-AppNetworkCounter {
     The function allows customization through parameters such as capture time, output file format, sorting column, and more.
 
     .PARAMETER CaptureTime
-    NotMandatory - specifies the duration (in minutes) for which network usage data should be captured. The default value is 20 minues.
+    Mandatory - specifies the duration for which network usage data should be captured.
+    .PARAMETER CaptureUnit
+    Mandatory - specifies the time unit for the capture time. Available options: "seconds", "minutes", "hours".
     .PARAMETER SaveOutput
-    NotMandatory - format in which the captured network usage data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext". The default is "/sjson".
+    Mandatory - format in which the captured network usage data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext". The default is "/sjson".
     .PARAMETER SortColumn
     NotMandatory - column by which the captured data should be sorted. Available options for sorting include "Application Name", "Application Path", "Received Bytes", and "Sent Bytes".
     .PARAMETER DownloadPath
@@ -22,24 +24,31 @@ Function Set-AppNetworkCounter {
     NotMandatory - URL from which the AppNetworkCounter utility should be downloaded. The default URL is "https://www.nirsoft.net/utils/appnetworkcounter-x64.zip".
     .PARAMETER ConfigFile
     NotMandatory - a configuration file to customize the behavior of the AppNetworkCounter utility.
+    .PARAMETER WaitProcess
+    NotMandatory - use this switch is to wait(in session) for process to end or release.
 
     .EXAMPLE
-    Set-AppNetworkCounter
+    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma
+    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -WaitProcess
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [ValidateScript({ 
                 $_ -gt 0 
             })]
-        [int]$CaptureTime = 20,
+        [int]$CaptureTime,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Seconds", "Minutes", "Hours")]
+        [string]$CaptureUnit,
+
+        [Parameter(Mandatory = $true)]
         [ValidateSet("/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", "/stext")]
-        [string]$SaveOutput = "/sjson",
+        [string]$SaveOutput,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("Application Name", "Application Path", "Received Bytes", "Sent Bytes")]
@@ -58,10 +67,18 @@ Function Set-AppNetworkCounter {
         [ValidateScript({ 
                 Test-Path -PathType Leaf -Path $_ 
             })]
-        [string]$ConfigFile
+        [string]$ConfigFile,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$WaitProcess
     )
     BEGIN {
-        $Duration = $CaptureTime * 1000
+        $TimeUnitInSeconds = @{
+            "Seconds" = 1
+            "Minutes" = 60
+            "Hours"   = 3600
+        }[$CaptureUnit]
+        $Duration = $CaptureTime * $TimeUnitInSeconds * 1000
         if (Get-Process -Name AppNetworkCounter -ErrorAction SilentlyContinue) {
             Stop-Process -Name AppNetworkCounter -Force -Verbose
         }
@@ -83,7 +100,7 @@ Function Set-AppNetworkCounter {
             Expand-Archive -Path $DownloadPath -DestinationPath "$env:USERPROFILE\Desktop\AppNetworkCounter" -Force -Verbose
             $AppPath = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNetworkCounter.exe"
             Start-Process -FilePath $AppPath -WindowStyle Minimized
-            Write-Verbose "Waingin to " 
+            Write-Verbose "Creating default config file..." 
             Start-Sleep -Seconds 2
             $Process = Get-Process -Name AppNetworkCounter -ErrorAction SilentlyContinue
             if ($null -ne $Process) {
@@ -95,11 +112,11 @@ Function Set-AppNetworkCounter {
                     Stop-Process -InputObject $Process -Force -Verbose
                 }
                 else {
-                    Write-Host "Process has already exited gracefully."
+                    Write-Host "Process has already exited gracefully, config file should be created." -ForegroundColor Green
                 }
             }
             else {
-                Write-Host "Process not found." -ForegroundColor DarkRed
+                Write-Host "Process not found!" -ForegroundColor DarkRed
             }
             $CommandArgs = @("/CaptureTime", $Duration)
             if ($ConfigFile) {
@@ -125,22 +142,28 @@ Function Set-AppNetworkCounter {
             if ($SortColumn) {
                 $CommandArgs += "/sort", $SortColumn
             }
+            if ($WaitProcess) {
+                Write-Host "Process is running for next $CaptureTime $CaptureUnit, please wait..." -ForegroundColor Cyan
+            }
             $StartProcessParams = @{
-                FilePath               = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNetworkCounter.exe"
+                FilePath               = $AppPath
                 ArgumentList           = $CommandArgs
-                WorkingDirectory       = "$env:USERPROFILE\Desktop\AppNetworkCounter"
-                Wait                   = $false
+                Wait                   = $WaitProcess
                 WindowStyle            = "Hidden"
-                RedirectStandardOutput = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNC-RSO.txt"
-                RedirectStandardError  = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNC-RSE.txt"
+                WorkingDirectory       = "$env:USERPROFILE\Desktop\AppNetworkCounter"
+                RedirectStandardError  = "$env:USERPROFILE\Desktop\AppNetworkCounter\anc-rse.txt"
+                RedirectStandardOutput = "$env:USERPROFILE\Desktop\AppNetworkCounter\anc-rso.txt"
             }
             Start-Process @StartProcessParams | Out-Null
+            Write-Host "Process has finish, check results." -ForegroundColor Green
         }
         else {
-            Write-Error -Message "Failed to download the file!"
+            Write-Error -Message "Failed to download the file! - $($_.Exception.Message)"
         }
     }
     END {
-        Write-Host "Process is running for next $CaptureTime minutes."
+        if (-not $WaitProcess) {
+            Write-Host "Process is running for next $CaptureTime $CaptureUnit..." -ForegroundColor Cyan
+        }
     }
 }
