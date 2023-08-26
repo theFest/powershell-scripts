@@ -1,116 +1,81 @@
-#Requires -Version 4.0
 Function Set-DNS {
     <#
     .SYNOPSIS
-    This function is used to set DNS.
+    Set DNS servers for network adapters using WMI method.
 
     .DESCRIPTION
-    This function is used to set DNS using WMI method for Windows 7 compatibility.
+    This function sets DNS servers for network adapters using the Win32_NetworkAdapterConfiguration class.
 
-    .PARAMETER ConnectionType
-    Mandatory - the type of connection to target for DNS configuration.
-    .PARAMETER AdapterSNm
-    Mandatory - the manufacturer of the adapter to target for DNS configuration.
-    .PARAMETER PrimaryDNS
-    Mandatory - the preferred DNS server.
-    .PARAMETER SecondaryDNS
-    Mandatory - the alternate DNS server (fail-safe).
-    .PARAMETER FlushDNS
-    NotMandatory - whether to flush the DNS cache after configuration.
-    .PARAMETER RegisterDNS
-    NotMandatory - whether to register the DNS settings after configuration.
-    .PARAMETER IpConfigAll
-    NotMandatory - whether to display the IP configuration details after configuration.
+    .PARAMETER DNSPrimary
+    Mandatory - Preferred DNS server.
+    .PARAMETER DNSSecondary
+    Mandatory - Alternate DNS server (fail-safe).
+    .PARAMETER Adapter
+    Mandatory - Name of the network adapter. Use 'Ethernet' to target physical adapters, or leave empty for all adapters.
 
     .EXAMPLE
-    Set-DNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8 -IpConfigAll
+    Set-DNS -DNSPrimary "8.8.8.8" -DNSSecondary "9.9.9.9" -Adapter "Ethernet"
 
     .NOTES
-    Version: 0.0.4
+    Version: 0.3.5
     #>
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateSet("LAN", "WAN", "VPN", "WiFi", "Ethernet", "ServiceName", "All")]
-        [string]$ConnectionType,
+        [Parameter(Mandatory = $true, HelpMessage = "primary DNS server")]
+        [ipaddress]$DNSPrimary,
 
-        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Enter a partial adapter name to filter by manufacturer")]
-        [ValidateSet("RTL*", "Intel*", "Broadcom*", "Qualcomm*", "Marvell*", "VIA*", "All")]
-        [string]$AdapterSNm,
+        [Parameter(Mandatory = $true, HelpMessage = "secondary DNS server")]
+        [ipaddress]$DNSSecondary,
 
-        [Parameter(Mandatory = $true, HelpMessage = "IP address of the preferred DNS server")]
-        [ipaddress]$PrimaryDNS,
-
-        [Parameter(Mandatory = $true, HelpMessage = "IP address of the alternate DNS server")]
-        [ipaddress]$SecondaryDNS,
-
-        [Parameter(Mandatory = $false, HelpMessage = "flush the DNS cache after configuration.")]
-        [switch]$FlushDNS,
-
-        [Parameter(Mandatory = $false, HelpMessage = "register DNS settings after configuration")]
-        [switch]$RegisterDNS,
-
-        [Parameter(Mandatory = $false, HelpMessage = "display IP configuration details after configuration")]
-        [switch]$IpConfigAll
+        [Parameter(Mandatory = $true, HelpMessage = "action to perform")]
+        [ValidateSet(
+            "Ethernet",
+            "Local Area Connection",
+            "*",
+            "Wireless",
+            "VPN",
+            "Bluetooth",
+            "Mobile Broadband",
+            "Tunnel",
+            "Loopback",
+            "Virtual",
+            "VLAN",
+            "Team",
+            "Aggregate",
+            "WAN Miniport",
+            "ISATAP",
+            "Teredo"
+        )]
+        [string]$Adapter
     )
-    $Adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -Filter "IpEnabled = $true"
-    switch ($ConnectionType) {
-        "LAN" {
-            $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -match "^(192\.168\.|172\.|10\.)"
-            }
+    $Query = "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = 'True'"   
+    if ($Adapter -eq "Ethernet") {
+        $Query += " AND MACAddress IS NOT NULL"
+    }   
+    $NetworkAdapters = Get-WmiObject -Query $Query   
+    foreach ($NetworkAdapter in $NetworkAdapters) {
+        $DNS_Servers = $DNSPrimary, $DNSSecondary
+        $NetworkAdapter | ForEach-Object {
+            $_.SetDNSServerSearchOrder($DNS_Servers)
+            $_.SetDynamicDNSRegistration($true)
         }
-        "WAN" {
-            $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -notmatch "^(192\.168\.|172\.|10\.)"
-                Write-Host "n/a { route }" -ForegroundColor DarkMagenta
-            }
+    }  
+    try {
+        Write-Output "Flushing and registering DNS."
+        $FlushDnsProcess = Start-Process -FilePath "ipconfig" -ArgumentList "/flushdns" -PassThru -Wait -NoNewWindow
+        if ($FlushDnsProcess.ExitCode -ne 0) {
+            throw "Failed to flush DNS cache."
         }
-        "VPN" {
-            $Adapters = $Adapters | Where-Object {
-                $_.Description -match "VPN"
-            }
+        $RegisterDnsProcess = Start-Process -FilePath "ipconfig" -ArgumentList "/registerdns" -PassThru -Wait -NoNewWindow
+        if ($RegisterDnsProcess.ExitCode -ne 0) {
+            throw "Failed to register DNS."
         }
-        "WiFi" {
-            $Adapters = $Adapters | Where-Object {
-                $_.NetConnectionID -match "Wi-Fi"
-            }
-        }
-        "Ethernet" {
-            $Adapters = $Adapters | Where-Object {
-                $_.NetConnectionID -match "Ethernet"
-            }
-        }
-        "ServiceName" {
-            if ($AdapterSNm) {
-                $Adapters = $Adapters | Where-Object {
-                    $_.ServiceName -like $AdapterSNm
-                }
-            }
-        }
-        "All" {
-            Write-Host "implementation ongoing..." -ForegroundColor DarkGreen
-        }
-        default {
-            throw "Invalid ConnectionType value"
-        }
+        Write-Output "DNS cache flushed and registered successfully."
     }
-    foreach ($Adapter in $Adapters) {
-        $Adapter.DNSServerSearchOrder = @($PrimaryDNS, $SecondaryDNS)
-        $Adapter.SetDynamicDNSRegistration($true)
+    catch {
+        Write-Error -Message "An error occurred: $_"
     }
-    if ($FlushDNS) {
-        Write-Verbose -Message "Flushing DNS cache..."
-        ipconfig /flushdns | Out-Null
-        Clear-DnsClientCache -Verbose -ErrorAction SilentlyContinue
-    }
-    if ($RegisterDNS) {
-        Write-Verbose -Message "Registering DNS..."
-        ipconfig /registerdns | Out-Null
-        Register-DnsClient -Verbose -ErrorAction SilentlyContinue
-    }
-    if ($IpConfigAll) {
-        Write-Verbose -Message "Results..."
-        ipconfig /all | Out-Host
+    finally {
+        Write-Host "DNS maintenance completed." -ForegroundColor Cyan
     }
 }
