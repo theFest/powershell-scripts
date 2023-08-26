@@ -13,7 +13,7 @@ Function Set-AppNetworkCounter {
     .PARAMETER CaptureUnit
     Mandatory - specifies the time unit for the capture time. Available options: "seconds", "minutes", "hours".
     .PARAMETER SaveOutput
-    Mandatory - format in which the captured network usage data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext".
+    Mandatory - format in which the captured data should be saved. Available options include "/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", and "/stext".
     .PARAMETER SortColumn
     NotMandatory - column by which the captured data should be sorted. Available options for sorting include "Application Name", "Application Path", "Received Bytes", and "Sent Bytes".
     .PARAMETER DownloadPath
@@ -25,64 +25,59 @@ Function Set-AppNetworkCounter {
     .PARAMETER ConfigFile
     NotMandatory - a configuration file to customize the behavior of the AppNetworkCounter utility.
     .PARAMETER TranslateLanguage
-    NotMandatory - language for translating the user interface. Available options: "en", "fr", "es",etc.
+    NotMandatory - language for translating the user interface. Available options: "ar", "pt-br", "nl", "fr", "de", "el", "hu", "it", "fa", "pl", "ro", "ru", "sk", "tr", "cs", "sv", "th", "es", "zh", "ja".
     .PARAMETER WaitProcess
-    NotMandatory - use this switch is to wait(in session) for process to end or release.
+    NotMandatory - use this switch to wait (in session) for the process to end or release.
     .PARAMETER AsJob
-    NotMandatory - use this switch to run as background job.
+    NotMandatory - use this switch to run as a background job.
 
     .EXAMPLE
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -AsJob
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -WaitProcess
-    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -TranslateLanguage de
+    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -TranslateLanguage 'de'
 
     .NOTES
-    v0.0.4
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [ValidateScript({ 
-                $_ -gt 0 
-            })]
+        [Parameter(Mandatory = $true, HelpMessage = "duration for which network usage data should be captured")]
+        [ValidateRange(1, [int]::MaxValue)]
         [int]$CaptureTime,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "time unit for the capture time")]
         [ValidateSet("Seconds", "Minutes", "Hours")]
         [string]$CaptureUnit,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "format in which the captured data should be saved")]
         [ValidateSet("/sjson", "/scomma", "/shtml", "/sverhtml", "/sxml", "/stab", "/stext")]
         [string]$SaveOutput,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "column by which the captured data should be sorted")]
         [ValidateSet("Application Name", "Application Path", "Received Bytes", "Sent Bytes")]
         [string]$SortColumn,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "local path where the AppNetworkCounter utility archive should be downloaded")]
         [string]$DownloadPath = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNetworkCounter-x64.zip",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "path where the captured network usage data should be saved")]
         [string]$OutputFilePath = "$env:USERPROFILE\Desktop\AppNetworkCounter\NetworkReport",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "URL from which the AppNetworkCounter utility should be downloaded")]
         [uri]$AppNetCounterUrl = "https://www.nirsoft.net/utils/appnetworkcounter-x64.zip",
 
-        [Parameter(Mandatory = $false)]
-        [ValidateScript({ 
-                Test-Path -PathType Leaf -Path $_ 
-            })]
+        [Parameter(Mandatory = $false, HelpMessage = "configuration file to customize the behavior of the AppNetworkCounter utility")]
         [string]$ConfigFile,
 
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("en", "fr", "es", "de", "zh", "ja", "ar", "pt-br", "nl", "el", "hu", "it", "fa", "pl", "ro", "ru", "sk", "tr", "cs", "sv", "th")]  
+        [Parameter(Mandatory = $false, HelpMessage = "language for translating the user interface")]
+        [ValidateSet("ar", "pt-br", "nl", "fr", "de", "el", "hu", "it", "fa", "pl", "ro", "ru", "sk", "tr", "cs", "sv", "th", "es", "zh", "ja")]  
         [string]$TranslateLanguage,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "wait for the process to end or release")]
         [switch]$WaitProcess,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "run the process as a background job")]
         [switch]$AsJob
     )
     BEGIN {
@@ -111,6 +106,7 @@ Function Set-AppNetworkCounter {
         }
         catch {
             Write-Error -Message "An error occurred: $($_.Exception.Message)"
+            return
         }
         if (Test-Path -Path $DownloadPath -ErrorAction Stop) {
             Expand-Archive -Path $DownloadPath -DestinationPath "$env:USERPROFILE\Desktop\AppNetworkCounter" -Force -Verbose
@@ -141,18 +137,17 @@ Function Set-AppNetworkCounter {
                 if ($TranslationLinks.ContainsKey($TranslateLanguage)) {
                     $TranslationLink = "https://www.nirsoft.net/utils/trans/appnetworkcounter_" + $TranslationLinks[$TranslateLanguage]
                     Write-Host "Translating to $TranslateLanguage" -ForegroundColor Yellow
-                    Start-Process -FilePath $AppPath -ArgumentList "/savelangfile" -WindowStyle Minimized
-                    Write-Verbose "Translation finished, creating default config file..."
-                    Join-Path -Path $TempDir -ChildPath "AppNetworkCounter_lng.ini"
+                    $TranslationFilePath = Join-Path -Path $TempDir -ChildPath "AppNetworkCounter_lng.ini"
                     try {
                         Write-Verbose -Message "Downloading translation file..."
                         $TranslationZipPath = Join-Path -Path $TempDir -ChildPath "Translation.zip"
                         Invoke-WebRequest -Uri $TranslationLink -OutFile $TranslationZipPath -UseBasicParsing -Verbose
                         Expand-Archive -Path $TranslationZipPath -DestinationPath $TempDir -Force -Verbose
-                        Join-Path -Path $TempDir -ChildPath "AppNetworkCounter_lng.ini"
+                        $TranslationFilePath
                     }
                     catch {
                         Write-Error -Message "An error occurred while downloading translation: $($_.Exception.Message)"
+                        return
                     }
                 }
                 else {
@@ -163,22 +158,18 @@ Function Set-AppNetworkCounter {
                 Start-Process -FilePath $AppPath -WindowStyle Minimized
                 Write-Verbose "Creating default config file..."
             }
-            Start-Sleep -Seconds 2
             $Process = Get-Process -Name AppNetworkCounter -ErrorAction SilentlyContinue
             if ($null -ne $Process) {
                 Write-Host "Stopping process gracefully..." -ForegroundColor Cyan
                 $Process.CloseMainWindow()
                 Start-Sleep -Seconds 3
                 if (!$Process.HasExited) {
-                    Write-Host "Forcefully terminating process..."
-                    Stop-Process -InputObject $Process -Force -Verbose
+                    Write-Host "Forcefully terminating process..." -ForegroundColor DarkGreen
+                    Stop-Process -InputObject $Process -Force -Verbose -ErrorAction Ignore
                 }
                 else {
                     Write-Host "Process has already exited gracefully, config file should be created." -ForegroundColor Green
                 }
-            }
-            else {
-                Write-Host "Process not found!" -ForegroundColor DarkRed
             }
             $CommandArgs = @("/CaptureTime", $Duration)
             if ($ConfigFile) {
@@ -205,7 +196,7 @@ Function Set-AppNetworkCounter {
                 $CommandArgs += "/sort", $SortColumn
             }
             if ($WaitProcess) {
-                Write-Host "Process is running for next $CaptureTime $CaptureUnit, please wait..." -ForegroundColor Cyan
+                Write-Host "Process is running for the next $CaptureTime $CaptureUnit, please wait..." -ForegroundColor Cyan
             }
             $StartProcessParams = @{
                 FilePath               = $AppPath
@@ -232,12 +223,12 @@ Function Set-AppNetworkCounter {
             }
         }
         else {
-            Write-Error -Message "Failed to download file: $($_.Exception.Message)"
+            Write-Error -Message "Failed to download file: $($_.Exception)"
         }
     }
     END {
-        if (-not $WaitProcess -and -not $AsJob) {
-            Write-Host "Process is running for next $CaptureTime $CaptureUnit..." -ForegroundColor Cyan
+        if (!$WaitProcess -and !$AsJob) {
+            Write-Host "Process is running for the next $CaptureTime $CaptureUnit..." -ForegroundColor Cyan
         }
     }
 }
