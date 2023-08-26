@@ -1,5 +1,5 @@
-#Requires -Version 5.1
-Function SetDNS {
+#Requires -Version 4.0
+Function Set-DNS {
     <#
     .SYNOPSIS
     This function is used to set DNS.
@@ -8,65 +8,61 @@ Function SetDNS {
     This function is used to set DNS using WMI method for Windows 7 compatibility.
 
     .PARAMETER ConnectionType
-    Mandatory - choose connection type.
+    Mandatory - the type of connection to target for DNS configuration.
     .PARAMETER AdapterSNm
-    Mandatory - adapter manufacturer.
+    Mandatory - the manufacturer of the adapter to target for DNS configuration.
     .PARAMETER PrimaryDNS
-    Mandatory - preferred DNS server.
+    Mandatory - the preferred DNS server.
     .PARAMETER SecondaryDNS
-    Mandatory - alternate DNS server(fail-safe).
+    Mandatory - the alternate DNS server (fail-safe).
     .PARAMETER FlushDNS
-    NotMandatory - switch FlushDNS.
+    NotMandatory - whether to flush the DNS cache after configuration.
     .PARAMETER RegisterDNS
-    NotMandatory - switch RegisterDNS.
+    NotMandatory - whether to register the DNS settings after configuration.
     .PARAMETER IpConfigAll
-    PNotMandatory - output results.
+    NotMandatory - whether to display the IP configuration details after configuration.
 
     .EXAMPLE
-    SetDNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8 -IpConfigAll
+    Set-DNS -ConnectionType LAN -PrimaryDNS 1.1.1.1 -SecondaryDNS 8.8.8.8 -IpConfigAll
 
     .NOTES
-    v0.3.3
+    Version: 0.0.4
     #>
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory = $false, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [ValidateSet("LAN", "WAN", "VPN", "WiFi", "Ethernet", "ServiceName", "All")]
-        [string]$ConnectionType = "LAN",
+        [string]$ConnectionType,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Enter a partial adapter name to filter by manufacturer")]
         [ValidateSet("RTL*", "Intel*", "Broadcom*", "Qualcomm*", "Marvell*", "VIA*", "All")]
-        [string]$AdapterSNm = "",
+        [string]$AdapterSNm,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "IP address of the preferred DNS server")]
         [ipaddress]$PrimaryDNS,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "IP address of the alternate DNS server")]
         [ipaddress]$SecondaryDNS,
 
-        [Parameter()]
+        [Parameter(Mandatory = $false, HelpMessage = "flush the DNS cache after configuration.")]
         [switch]$FlushDNS,
 
-        [Parameter()]
+        [Parameter(Mandatory = $false, HelpMessage = "register DNS settings after configuration")]
         [switch]$RegisterDNS,
 
-        [Parameter()]
+        [Parameter(Mandatory = $false, HelpMessage = "display IP configuration details after configuration")]
         [switch]$IpConfigAll
     )
     $Adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -Filter "IpEnabled = $true"
     switch ($ConnectionType) {
         "LAN" {
             $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -like "192.168.*" `
-                    -or $_.IPAddress -like "172.*.*.*" `
-                    -or $_.IPAddress -like "10.*.*.*"
+                $_.IPAddress -match "^(192\.168\.|172\.|10\.)"
             }
         }
         "WAN" {
             $Adapters = $Adapters | Where-Object {
-                $_.IPAddress -notlike "192.168.*" `
-                    -and $_.IPAddress -notlike "172.*.*.*" `
-                    -and $_.IPAddress -notlike "10.*.*.*"
+                $_.IPAddress -notmatch "^(192\.168\.|172\.|10\.)"
                 Write-Host "n/a { route }" -ForegroundColor DarkMagenta
             }
         }
@@ -76,16 +72,20 @@ Function SetDNS {
             }
         }
         "WiFi" {
-            $Adapters = Get-NetAdapter -Physical `
-            | Where-Object { $_.MediaType -eq '802.11' }
+            $Adapters = $Adapters | Where-Object {
+                $_.NetConnectionID -match "Wi-Fi"
+            }
         }
         "Ethernet" {
-            $Adapters = Get-NetAdapter -Physical `
-            | Where-Object { $_.MediaType -eq '802.3' }
+            $Adapters = $Adapters | Where-Object {
+                $_.NetConnectionID -match "Ethernet"
+            }
         }
         "ServiceName" {
-            $Adapters = $Adapters | Where-Object {
-                $_.ServiceName -match $AdapterSNm
+            if ($AdapterSNm) {
+                $Adapters = $Adapters | Where-Object {
+                    $_.ServiceName -like $AdapterSNm
+                }
             }
         }
         "All" {
@@ -95,19 +95,9 @@ Function SetDNS {
             throw "Invalid ConnectionType value"
         }
     }
-    $Adapters | ForEach-Object {
-        $AbOut = @{
-            "Adapter"             = $_
-            "DNSServer"           = $_.DNSServerSearchOrder
-            "FullDNSRegistration" = $_.FullDNSRegistrationEnabled
-        }
-        return $AbOut
-    }
-    $ServersDNS = $PrimaryDNS, $SecondaryDNS
     foreach ($Adapter in $Adapters) {
-        #Set-DnsClientServerAddress -InterfaceAlias $Adapter.InterfaceAlias -ServerAddresses $ServersDNS
-        $Adapters.SetDNSServerSearchOrder($ServersDNS)
-        $Adapters.SetDynamicDNSRegistration($true)
+        $Adapter.DNSServerSearchOrder = @($PrimaryDNS, $SecondaryDNS)
+        $Adapter.SetDynamicDNSRegistration($true)
     }
     if ($FlushDNS) {
         Write-Verbose -Message "Flushing DNS cache..."
