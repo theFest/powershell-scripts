@@ -21,9 +21,11 @@ Function Set-AppNetworkCounter {
     .PARAMETER OutputFilePath
     NotMandatory - the path where the captured network usage data should be saved. The default path is the user's desktop.
     .PARAMETER AppNetCounterUrl
-    NotMandatory - URL from which the AppNetworkCounter utility should be downloaded. The default URL is "https://www.nirsoft.net/utils/appnetworkcounter-x64.zip".
+    NotMandatory - URL from which the AppNetworkCounter utility should be downloaded.
     .PARAMETER ConfigFile
     NotMandatory - a configuration file to customize the behavior of the AppNetworkCounter utility.
+    .PARAMETER TranslateLanguage
+    NotMandatory - language for translating the user interface. Available options: "en", "fr", "es",etc.
     .PARAMETER WaitProcess
     NotMandatory - use this switch is to wait(in session) for process to end or release.
     .PARAMETER AsJob
@@ -33,9 +35,10 @@ Function Set-AppNetworkCounter {
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -AsJob
     Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -WaitProcess
+    Set-AppNetworkCounter -CaptureTime 10 -CaptureUnit Seconds -SaveOutput /scomma -TranslateLanguage de
 
     .NOTES
-    v0.0.3
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -73,6 +76,10 @@ Function Set-AppNetworkCounter {
         [string]$ConfigFile,
 
         [Parameter(Mandatory = $false)]
+        [ValidateSet("en", "fr", "es", "de", "zh", "ja", "ar", "pt-br", "nl", "el", "hu", "it", "fa", "pl", "ro", "ru", "sk", "tr", "cs", "sv", "th")]  
+        [string]$TranslateLanguage,
+
+        [Parameter(Mandatory = $false)]
         [switch]$WaitProcess,
 
         [Parameter(Mandatory = $false)]
@@ -108,8 +115,54 @@ Function Set-AppNetworkCounter {
         if (Test-Path -Path $DownloadPath -ErrorAction Stop) {
             Expand-Archive -Path $DownloadPath -DestinationPath "$env:USERPROFILE\Desktop\AppNetworkCounter" -Force -Verbose
             $AppPath = "$env:USERPROFILE\Desktop\AppNetworkCounter\AppNetworkCounter.exe"
-            Start-Process -FilePath $AppPath -WindowStyle Minimized
-            Write-Verbose "Creating default config file..." 
+            if ($TranslateLanguage) {
+                $TranslationLinks = @{
+                    "ar"    = "arabic.zip"
+                    "pt-br" = "brazilian_portuguese.zip"
+                    "nl"    = "dutch.zip"
+                    "fr"    = "french.zip"
+                    "de"    = "german.zip"
+                    "el"    = "greek.zip"
+                    "hu"    = "hungarian.zip"
+                    "it"    = "italian.zip"
+                    "fa"    = "persian.zip"
+                    "pl"    = "polish.zip"
+                    "ro"    = "romanian.zip"
+                    "ru"    = "russian.zip"
+                    "sk"    = "slovak.zip"
+                    "tr"    = "turkish.zip"
+                    "cs"    = "czech.zip"
+                    "sv"    = "swedish.zip"
+                    "th"    = "thai.zip"
+                    "es"    = "spanish.zip"
+                    "zh"    = "schinese.zip"
+                    "ja"    = "japanese.zip"
+                }
+                if ($TranslationLinks.ContainsKey($TranslateLanguage)) {
+                    $TranslationLink = "https://www.nirsoft.net/utils/trans/appnetworkcounter_" + $TranslationLinks[$TranslateLanguage]
+                    Write-Host "Translating to $TranslateLanguage" -ForegroundColor Yellow
+                    Start-Process -FilePath $AppPath -ArgumentList "/savelangfile" -WindowStyle Minimized
+                    Write-Verbose "Translation finished, creating default config file..."
+                    Join-Path -Path $TempDir -ChildPath "AppNetworkCounter_lng.ini"
+                    try {
+                        Write-Verbose -Message "Downloading translation file..."
+                        $TranslationZipPath = Join-Path -Path $TempDir -ChildPath "Translation.zip"
+                        Invoke-WebRequest -Uri $TranslationLink -OutFile $TranslationZipPath -UseBasicParsing -Verbose
+                        Expand-Archive -Path $TranslationZipPath -DestinationPath $TempDir -Force -Verbose
+                        Join-Path -Path $TempDir -ChildPath "AppNetworkCounter_lng.ini"
+                    }
+                    catch {
+                        Write-Error -Message "An error occurred while downloading translation: $($_.Exception.Message)"
+                    }
+                }
+                else {
+                    Write-Warning -Message "Unsupported translation language: $TranslateLanguage"
+                }
+            }
+            else {
+                Start-Process -FilePath $AppPath -WindowStyle Minimized
+                Write-Verbose "Creating default config file..."
+            }
             Start-Sleep -Seconds 2
             $Process = Get-Process -Name AppNetworkCounter -ErrorAction SilentlyContinue
             if ($null -ne $Process) {
