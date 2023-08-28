@@ -25,7 +25,7 @@ Function Test-Port {
     Test-Port -Address "www.google.com" -Port 80 -Duration 60 -TimeUnit Seconds -OutputInterval 10
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     Param(
@@ -33,6 +33,7 @@ Function Test-Port {
         [string]$Address,
 
         [Parameter(Mandatory = $true)]
+        [ValidateRange(1, 65535)]
         [int]$Port,
 
         [Parameter()]
@@ -52,11 +53,15 @@ Function Test-Port {
         [int]$OutputInterval = 0
     )
     BEGIN {
-        $Socket = New-Object System.Net.Sockets.TcpClient
         $Results = @()
+        $CurrentTime = Get-Date
+        $Socket = New-Object System.Net.Sockets.TcpClient
         $WriteInterval = [TimeSpan]::FromSeconds($OutputInterval)
-        $ImmediateOutputEndTime = (Get-Date).Add($WriteInterval)
-        $CurrentTime = (Get-Date)
+        $ImmediateOutputEndTime = $CurrentTime.Add($WriteInterval)
+        $ImmediateOutputWriter = $null
+        if ($OutputInterval -gt 0) {
+            $ImmediateOutputWriter = [System.IO.StreamWriter]::new($OutputPath, $false)
+        }
     }
     PROCESS {
         $TimeSpan = switch ($TimeUnit) {
@@ -64,25 +69,14 @@ Function Test-Port {
             "Hours" { [TimeSpan]::FromHours($Duration) }
             default { [TimeSpan]::FromSeconds($Duration) }
         }
-        $EndTime = $currentTime.Add($TimeSpan)
-        $ImmediateOutputPath = Join-Path -Path $env:TEMP -ChildPath $OutputPath # 
-        $ImmediateOutputWriter = $null
-        if ($OutputInterval -gt 0) {
-            $ImmediateOutputWriter = [System.IO.StreamWriter]::new($immediateOutputPath, $false)
-        }
+        $EndTime = $CurrentTime.Add($TimeSpan)
         while ($CurrentTime -le $EndTime) {
-            if ($OutputInterval -gt 0 -and $CurrentTime -ge $ImmediateOutputEndTime) {
-                $Status = if ($Socket.Connected) { "Open" } else { "Closed" }
-                $ImmediateOutputWriter.WriteLine("$CurrentTime, Immediate output: Port $Port on $Address is $Status.")
-                $ImmediateOutputWriter.Flush()
-                $ImmediateOutputEndTime = $ImmediateOutputEndTime.AddSeconds($OutputInterval)
-            }
             if (!$Socket.Connected) {
                 $Result = $Socket.BeginConnect($Address, $Port, $null, $null)
                 $WaitHandle = $Result.AsyncWaitHandle
                 $WaitHandle.WaitOne(1000, $false) | Out-Null
                 if ($Socket.Connected) {
-                    $results += [PSCustomObject]@{
+                    $Results += [PSCustomObject]@{
                         DateTime = $CurrentTime
                         Address  = $Address
                         Port     = $Port
@@ -93,27 +87,35 @@ Function Test-Port {
                     }
                 }
             }
+            if ($OutputInterval -gt 0 -and $CurrentTime -ge $ImmediateOutputEndTime) {
+                $Status = if ($Socket.Connected) { "Open" } else { "Closed" }
+                $ImmediateOutputWriter.WriteLine("$CurrentTime, Immediate output: Port $Port on $Address is $Status.")
+                $ImmediateOutputWriter.Flush()
+                $ImmediateOutputEndTime = $ImmediateOutputEndTime.Add($WriteInterval)
+            }
             $CurrentTime = Get-Date
         }
+    }
+    END {
+        Write-Verbose -Message "Closing test and disposing..."
+        $Socket.Close()
+        $Socket.Dispose()
         if (!$Socket.Connected) {
-            $results += [PSCustomObject]@{
+            $Results += [PSCustomObject]@{
                 DateTime = $CurrentTime
                 Address  = $Address
                 Port     = $Port
                 Status   = "Closed"
             }
             if (-not $Quiet) {
-                Write-Output "$currentTime, Timeout, port $Port on $Address is closed."
+                Write-Output "$CurrentTime, Timeout, port: $Port on $Address is closed."
             }
         }
         if ($ImmediateOutputWriter) {
             $ImmediateOutputWriter.Close()
             $ImmediateOutputWriter.Dispose()
-            Write-Output "Immediate output has been written to $immediateOutputPath."
+            Write-Output "Immediate output has been written to $OutputPath."
         }
-    }
-    END {
-        $Socket.Close()
-        $Socket.Dispose()
+        return $Results
     }
 }
