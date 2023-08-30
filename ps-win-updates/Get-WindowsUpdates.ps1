@@ -1,11 +1,10 @@
-Function GetWindowsUpdates {
+Function Get-WindowsUpdates {
     <#
     .SYNOPSIS
     Retrieve information about available Windows updates on a remote computer.
     
     .DESCRIPTION
-    This function connects to a remote computer and retrieves information about available Windows updates.
-    It provides various options to filter and control the number of updates returned.
+    This function connects to a remote computer and retrieves information about available Windows updates, it provides various options to filter and control the number of updates returned.
     
     .PARAMETER ComputerName
     NotMandatory - name of the remote computer where updates will be checked.
@@ -25,11 +24,11 @@ Function GetWindowsUpdates {
     NotMandatory - if specified, the updates information will be saved to the specified file.
     
     .EXAMPLE
-    Get-WindowsUpdates -ComputerName $env:COMPUTERNAME -Verbose
-    GetWindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -OutputFile "$env:USERPROFILE\Desktop\Updates.txt" -Verbose
+    Get-WindowsUpdates -OutputFile "$env:USERPROFILE\Desktop\Updates.csv" -Verbose
+    Get-WindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -OutputFile "$env:USERPROFILE\Desktop\Updates.csv" -Verbose
     
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -59,12 +58,10 @@ Function GetWindowsUpdates {
     )
     try {
         $UsingCred = $null
-        if ($ComputerName -ne $env:COMPUTERNAME) {
+        if ($ComputerName -ne $env:COMPUTERNAME -and $Username -and $Pass) {
             Write-Verbose -Message "Creating PSCredential object..."
-            if ($Username -and $Pass) {
-                $SecurePassword = ConvertTo-SecureString -String $Pass -AsPlainText -Force
-                $UsingCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePassword
-            }
+            $SecurePassword = ConvertTo-SecureString -String $Pass -AsPlainText -Force
+            $UsingCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePassword
         }
         $ScriptBlock = {
             param (
@@ -106,7 +103,7 @@ Function GetWindowsUpdates {
             Write-Verbose -Message "Writing updates information to the file: $OutputFile..."
             $Updates | Out-File -FilePath $OutputFile -Force
         }
-        $Updates
+        return $Updates
     }
     catch {
         Write-Error -Message "Failed to retrieve Windows updates: $_"
