@@ -1,28 +1,35 @@
 Function Get-Screenshot {
     <#
     .SYNOPSIS
-    Captures a screenshot of the specified screen area.
+    Takes a screenshot with customizable options.
     
     .DESCRIPTION
-    This function captures a screenshot of the specified screen area and saves it to the specified output path.
-    Provides options for selecting the screen area, choosing the image format, adjusting image quality, and displaying a preview of the captured screenshot.
+    This function captures a screenshot of the specified area on the screen with various options such as bounds type, output path, image format, quality, and preview behavior.
     
     .PARAMETER BoundsType
-    NotMandatory - type of screen area to capture. Valid values are "FullHD", "HD", "4K", and "Custom". Default is "FullHD".
+    NotMandatory - type of screen area to capture. Options include 'FullHD', 'HD', '4K', or 'Custom'.
     .PARAMETER OutputPath
-    Mandatory - specifies the path where the screenshot image will be saved.
+    Mandatory - the path where the screenshot image will be saved.
     .PARAMETER ImageFormat
-    NotMandatory - format of the screenshot image. Valid values are "Bmp", "Png", "Jpeg", "Gif", and "Tiff". Default is "Png".
+    NotMandatory - format of the screenshot image. Options include 'Bmp', 'Png', 'Jpeg', 'Gif', or 'Tiff'.
     .PARAMETER Quality
-    NotMandatory - the image quality when using lossy image formats. The value should be between 1 and 100. Default is 100.
+    NotMandatory - image quality for formats that support it (0-100).
+    .PARAMETER CaptureDelay
+    NotMandatory - adds a delay before capturing the screenshot (in seconds).
     .PARAMETER ShowPreview
-    NotMandatory - if specified, displays a preview of the captured screenshot after saving.
+    NotMandatory - switch to display the screenshot image in a preview window.
+    .PARAMETER AutoClosePreview
+    NotMandatory - switch to automatically close the preview window after a delay.
+    .PARAMETER PreviewCloseDelay
+    NotMandatory - delay before automatically closing the preview window.
+    .PARAMETER CustomPosition
+    NotMandatory - specifies a custom position (point) for the screenshot.
     
     .EXAMPLE
-    Get-Screenshot -BoundsType FullHD -OutputPath "$env:USERPROFILE\Desktop\ss" -ImageFormat Tiff -ShowPreview
+    Get-Screenshot -BoundsType FullHD -OutputPath "$env:USERPROFILE\Desktop\screenshot" -ImageFormat Jpeg -Quality 90 -ShowPreview -AutoClosePreview
     
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -43,7 +50,20 @@ Function Get-Screenshot {
         [int]$Quality = 100,
 
         [Parameter(Mandatory = $false)]
-        [switch]$ShowPreview
+        [int]$CaptureDelay = 0,
+
+        [Parameter(Mandatory = $false)]
+        [Switch]$ShowPreview,
+
+        [Parameter(Mandatory = $false)]
+        [Switch]$AutoClosePreview,
+
+        [Parameter(Mandatory = $false)]
+        [int]$PreviewCloseDelay = 3,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNull()]
+        [System.Drawing.Point]$CustomPosition
     )
     BEGIN {
         Add-Type -AssemblyName System.Drawing
@@ -56,13 +76,28 @@ Function Get-Screenshot {
             "4K" { $Bounds = [Drawing.Rectangle]::FromLTRB(0, 0, 3840, 2160) }
             "Custom" {
                 $CustomDimensions = Read-Host "Enter custom dimensions for screenshot (format: Width Height)"
-                $Width, $Height = $CustomDimensions -split 'x'
+                $Width, $Height = $CustomDimensions -split ' '
+                if (-not [int]::TryParse($Width, [ref]$null) -or -not [int]::TryParse($Height, [ref]$null)) {
+                    Write-Error -Message "Invalid custom dimensions provided."
+                    return
+                }
                 $Bounds = [Drawing.Rectangle]::FromLTRB(0, 0, [int]$Width, [int]$Height)
+            }
+            default {
+                Write-Warning -Message "Invalid BoundsType. Please choose from 'FullHD', 'HD', '4K', or 'Custom'."
+                return
             }
         }
         try {
+            if ($CaptureDelay -gt 0) {
+                Write-Host "Delaying for $CaptureDelay seconds before capturing screenshot..."
+                Start-Sleep -Seconds $CaptureDelay
+            }
             $Bitmap = New-Object Drawing.Bitmap $Bounds.Width, $Bounds.Height
             $Graphics = [Drawing.Graphics]::FromImage($Bitmap)
+            if ($CustomPosition -ne $null) {
+                $Bounds.Location = $CustomPosition
+            }    
             $Graphics.CopyFromScreen($Bounds.Location, [Drawing.Point]::Empty, $Bounds.Size)
             $ImageFormatEnum = [System.Drawing.Imaging.ImageFormat]::Png
             switch ($ImageFormat) {
@@ -70,13 +105,26 @@ Function Get-Screenshot {
                 "Jpeg" { $ImageFormatEnum = [System.Drawing.Imaging.ImageFormat]::Jpeg }
                 "Gif" { $ImageFormatEnum = [System.Drawing.Imaging.ImageFormat]::Gif }
                 "Tiff" { $ImageFormatEnum = [System.Drawing.Imaging.ImageFormat]::Tiff }
+                Default {
+                    Write-Warning -Message "Invalid ImageFormat. Please choose from 'Bmp', 'Png', 'Jpeg', 'Gif', or 'Tiff'."
+                    return
+                }
             }
             $OutputPathWithExtension = "$OutputPath.$($ImageFormatEnum.ToString().ToLower())"
             $Bitmap.Save($OutputPathWithExtension, $ImageFormatEnum)
-            Write-Host "Screenshot saved to $OutputPathWithExtension"
+            Write-Host "Screenshot saved to $OutputPathWithExtension" -ForegroundColor Cyan
             if ($ShowPreview) {
-                $Bitmap.Dispose()
-                Invoke-Item -Path $OutputPathWithExtension
+                $PreviewProcess = Start-Process -FilePath $OutputPathWithExtension -PassThru
+                if ($AutoClosePreview) {
+                    Start-Sleep -Seconds $PreviewCloseDelay
+                    $PreviewProcess | ForEach-Object {
+                        $PreviewProcessId = $_.Id
+                        $AssociatedProgram = Get-Process | Where-Object { $_.MainWindowHandle -eq $_.MainWindowHandle }
+                        if ($AssociatedProgram) {
+                            Stop-Process -Id $PreviewProcessId -Force
+                        }
+                    }
+                }
             }
         }
         catch {
@@ -92,6 +140,9 @@ Function Get-Screenshot {
         }
     }
     END {
-        Write-Verbose -Message "Look at path for a screenshot..."
+        Write-Verbose -Message "Opening the screenshot directory using the default file explorer..."
+        if (Test-Path -Path $OutputPath -PathType Container) {
+            Invoke-Item -Path (Get-Item $OutputPath).FullName
+        }
     }
 }
