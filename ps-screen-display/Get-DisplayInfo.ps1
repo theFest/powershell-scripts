@@ -4,7 +4,7 @@ Function Get-DisplayInfo {
     Retrieves information about computer display monitors.
 
     .DESCRIPTION
-    This function retrieves various information about computer display monitors, including their names, manufacturer, type, screen dimensions, and more.
+    This function retrieves various information about computer display monitors, including their names, manufacturer, type, screen dimensions, and more, using alternative methods.
 
     .PARAMETER Detailed
     NotMandatory - specifies whether to include detailed information about the displays, such as refresh rate and pixels per logical inch.
@@ -19,29 +19,22 @@ Function Get-DisplayInfo {
     Get-DisplayInfo -Detailed -IncludeAllResolutions -IncludePhysicalDimensions -ExportPath "$env:USERPROFILE\Desktop\DisplayInfo.csv"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
         [switch]$Detailed,
-
-        [Parameter(Mandatory = $false)]
         [switch]$IncludeAllResolutions,
-
-        [Parameter(Mandatory = $false)]
         [switch]$IncludePhysicalDimensions,
-
-        [Parameter(Mandatory = $false)]
         [string]$ExportPath
     )
-    $Displays = Get-WmiObject -Namespace "root\cimv2" -Class Win32_DesktopMonitor
     $DisplayInfoList = @()
-    foreach ($Display in $Displays) {
+    $DisplayMonitors = Get-CimInstance -ClassName Win32_DesktopMonitor
+    foreach ($Display in $DisplayMonitors) {
         $DisplayInfo = @{
             Name                = $Display.DeviceID
-            MonitorManufacturer = $Display.MonitorManufacturerName
-            MonitorType         = $Display.MonitorType
+            MonitorManufacturer = $Display.Manufacturer
+            MonitorType         = $Display.PNPDeviceID
             ScreenWidth         = $Display.ScreenWidth
             ScreenHeight        = $Display.ScreenHeight
         }
@@ -49,12 +42,15 @@ Function Get-DisplayInfo {
             $DisplayInfo.RefreshRate = $Display.RefreshRate
             $DisplayInfo.PixelsPerXLogicalInch = $Display.PixelsPerXLogicalInch
             $DisplayInfo.PixelsPerYLogicalInch = $Display.PixelsPerYLogicalInch
-        }
+        }        
         if ($IncludeAllResolutions) {
-            $DisplayInfo.AllResolutions = $display.DisplayModes | ForEach-Object {
-                "{0}x{1}" -f $_.HorizontalResolution, $_.VerticalResolution
+            $VideoControllers = Get-CimInstance -ClassName Win32_VideoController
+            $Resolutions = @()
+            foreach ($Controller in $VideoControllers) {
+                $Resolutions += $Controller.VideoModeDescription
             }
-        }
+            $DisplayInfo.AllResolutions = $Resolutions
+        }     
         if ($IncludePhysicalDimensions) {
             $DisplayInfo.PhysicalWidth = $Display.ScreenWidth / $Display.PixelsPerXLogicalInch
             $DisplayInfo.PhysicalHeight = $Display.ScreenHeight / $Display.PixelsPerYLogicalInch
