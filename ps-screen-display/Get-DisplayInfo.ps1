@@ -12,20 +12,31 @@ Function Get-DisplayInfo {
     NotMandatory - specifies whether to include all available display resolutions.
     .PARAMETER IncludePhysicalDimensions
     NotMandatory - specifies whether to include the physical dimensions of the displays in inches.
+    .PARAMETER ExportPath
+    NotMandatory - specifies the path to export the display information to a CSV file.
 
     .EXAMPLE
-    Get-DisplayInfo -Detailed -IncludeAllResolutions -IncludePhysicalDimensions
+    Get-DisplayInfo -Detailed -IncludeAllResolutions -IncludePhysicalDimensions -ExportPath "$env:USERPROFILE\Desktop\DisplayInfo.csv"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
+        [Parameter(Mandatory = $false)]
         [switch]$Detailed,
+
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeAllResolutions,
-        [switch]$IncludePhysicalDimensions
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludePhysicalDimensions,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ExportPath
     )
     $Displays = Get-WmiObject -Namespace "root\cimv2" -Class Win32_DesktopMonitor
+    $DisplayInfoList = @()
     foreach ($Display in $Displays) {
         $DisplayInfo = @{
             Name                = $Display.DeviceID
@@ -49,6 +60,11 @@ Function Get-DisplayInfo {
             $DisplayInfo.PhysicalHeight = $Display.ScreenHeight / $Display.PixelsPerYLogicalInch
         }
         $DisplayObject = New-Object PSObject -Property $DisplayInfo
-        Write-Output $DisplayObject
+        $DisplayInfoList += $DisplayObject
+    }
+    Write-Output -InputObject $DisplayInfoList
+    if ($ExportPath) {
+        $DisplayInfoList | Export-Csv -Path $ExportPath -NoTypeInformation
+        Write-Host "Display information exported to $ExportPath" -ForegroundColor Cyan
     }
 }
