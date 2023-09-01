@@ -1,29 +1,29 @@
 #requires -version 5.1
-Function AddUsersToGroup {
+Function Add-UsersToGroup {
     <#
     .SYNOPSIS
-    Function for adding user/users to Active Directory groups.
+    Adds users to an Active Directory group.
     
     .DESCRIPTION
-    With this function you can add user/users to AD group either via pipeline or by importing csv file.
+	This function allows you to add users to an Active Directory group either by specifying a list of users directly or by providing a CSV file containing user names. It checks if each user exists in Active Directory before adding them to the group.
     
     .PARAMETER Users
-    Mandatory - users(identity or identites) that you want to add.
+    Mandatory - an array of user names to add to the group.
     .PARAMETER FromCSV
-    NotMandatory - add users(identites from file) from .csv file.   
+    NotMandatory - the path to a CSV file containing user names, will read user names from this file and add them to the group.
     .PARAMETER Filter
-    NotMandatory - choose filter, SAM account name is predifined.  
+    NotMandatory - filter to use when searching for users in Active Directory. Possible values are "SamAccountName" (default), "DisplayName," "Email," and "UserPrincipalName."
     .PARAMETER GroupName
-    Mandatory - Active Directory group in which users will be added.  
+    Mandatory - the name of the Active Directory group to which users will be added.
     .PARAMETER Delimiter
-    NotMandatory - delimiter present in csv file, if your delimiter is not comma, choose the one used in csv file.
+    NotMandatory - delimiter used in the CSV file when reading user names.
     
     .EXAMPLE
-    "your_AD_group" | AddUsersToGroup -Users "first_user", "second_user" -Verbose
-    AddUsersToGroup -FromCSV "$env:USERPROFILE\Desktop\your_csv_with_users.csv" -GroupName 'your_AD_group' -Verbose
+    "your_AD_group" | Add-UsersToGroup -Users "first_user", "second_user" -Verbose
+    Add-UsersToGroup -FromCSV "$env:USERPROFILE\Desktop\your_csv_with_users.csv" -GroupName 'your_AD_group' -Verbose
     
     .NOTES
-    v1.0.1
+    v0.0.4
     #>
     [CmdletBinding()]
     param(
@@ -63,7 +63,7 @@ Function AddUsersToGroup {
                 }
             }
             catch {
-                Write-Error $_.Exception.Message
+                Write-Error -Exception $_.Exception.Message
             }
         }
         foreach ($U in $Users) {
