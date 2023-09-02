@@ -1,4 +1,4 @@
-Function ADMembershipManager {
+Function Set-ADMembership {
     <#
     .SYNOPSIS
     Manage Active Directory users and groups.
@@ -30,9 +30,9 @@ Function ADMembershipManager {
     NotMandatory - perform a dry run and display what actions would be performed, without actually making any changes.
 
     .EXAMPLE
-    ADMembershipManager -Action Add -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group1' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify
-    ADMembershipManager -Action Remove -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group2' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify -WhatIf
-    ADMembershipManager -Action Information -UserAD "your_AD_user" -PassAD "your_AD_password" -ResultOutput "$env:TEMP\ResultOutput.csv" -Verbose -Verify
+    Set-ADMembership -Action Add -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group1' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify
+    Set-ADMembership -Action Remove -Users 'some_AD_user1', 'some_AD_user2' -Groups 'AD_group1', 'AD_group2' -UserAD "your_AD_user" -PassAD "your_AD_password" -Verbose -Verify -WhatIf
+    Set-ADMembership -Action Information -UserAD "your_AD_user" -PassAD "your_AD_password" -ResultOutput "$env:TEMP\ResultOutput.csv" -Verbose -Verify
 
     .NOTES
     v1.0.1

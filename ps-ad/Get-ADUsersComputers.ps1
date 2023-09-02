@@ -1,5 +1,5 @@
 #requires -version 3.0
-Function CheckUsersOrComputers {
+Function Get-ADUsersComputers {
     <#
     .SYNOPSIS
     Function for querying users or computers.
@@ -19,12 +19,12 @@ Function CheckUsersOrComputers {
     NotMandatory - export computers to csv file.
     
     .EXAMPLE
-    CheckUsersOrComputers -CheckType Users -Verbose
-    CheckUsersOrComputers -CheckType Computers -ExComp "$env:USERPROFILE\Desktop\ExComp.csv" -Verbose
+    Get-ADUsersComputers -CheckType Users -Verbose
+    Get-ADUsersComputers -CheckType Computers -ExComp "$env:USERPROFILE\Desktop\ExComp.csv" -Verbose
     
     .NOTES
-    Info: https://learn.microsoft.com/en-us/sysinternals/downloads/psloggedon
-    v1
+    v0.0.3
+    info: https://learn.microsoft.com/en-us/sysinternals/downloads/psloggedon
     #>
     [CmdletBinding()]
     Param(
