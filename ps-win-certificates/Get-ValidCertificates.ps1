@@ -8,10 +8,9 @@ Function Get-ValidCertificates {
     You can filter certificates by friendly name, expiration date, store location, store name, and more.
 
     .PARAMETER FriendlyNameFilter
-    Filters certificates by their friendly name. You can provide a partial name or use wildcards.
-
+    NotManatory - filters certificates by their friendly name. You can provide a partial name or use wildcards.
     .PARAMETER NotAfter
-    NotManatory - filters certificates to include only those not expired as of the specified date.
+    NotManatory - expiration date filter for certificates. Will include only certificates that are not expired as of the specified date. Certificates with expiration dates on or after this date will be considered valid. This parameter is not mandatory and can be omitted if not needed.
     .PARAMETER PromptUser
     NotManatory - user to select a certificate if multiple valid certificates are found.
     .PARAMETER StoreLocation
@@ -22,14 +21,16 @@ Function Get-ValidCertificates {
     NotManatory - includes expired certificates in the result if this switch is specified.
     .PARAMETER IncludePrivateKey
     NotManatory - includes the private key with the certificate information if this switch is specified.
+    .PARAMETER ExportToCsv
+    NotMandatory - exports the results to a CSV file if specified, provide the file path.
 
     .EXAMPLE
-    Get-ValidCertificates
-    Get-ValidCertificates -FriendlyNameFilter "your_cert_name"
-    Get-ValidCertificates -StoreLocation LocalMachine -StoreName Root -IncludeExpired
+    Get-ValidCertificates -Verbose
+    Get-ValidCertificates -FriendlyNameFilter "your_cert_name" -Verbose
+    Get-ValidCertificates -StoreLocation LocalMachine -StoreName Root -IncludeExpired -ExportToCsv "$env:USERPROFILE\Desktop\Certificates.csv"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -54,8 +55,14 @@ Function Get-ValidCertificates {
         [switch]$IncludeExpired,
 
         [Parameter(Mandatory = $false)]
-        [switch]$IncludePrivateKey
+        [switch]$IncludePrivateKey,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ExportToCsv
     )
+    BEGIN {
+        $CsvResults = @()
+    }
     PROCESS {
         try {
             Write-Verbose -Message "Retrieving certificates..."
@@ -82,6 +89,8 @@ Function Get-ValidCertificates {
                     $CertInfo.PrivateKey = $Cert.PrivateKey
                 }
                 $Results += $CertInfo
+                Write-Verbose -Message "Adding the certificate info to the CSV results array..."
+                $CsvResults += $CertInfo
             }
             if ($Results.Count -eq 1 -and !$PromptUser) {
                 Write-Verbose -Message "Only one valid certificate found. Returning it immediately without prompting."
@@ -114,6 +123,13 @@ Function Get-ValidCertificates {
         }
         finally {
             $Store.Close()
+        }
+    }
+    END {
+        Write-Verbose -Message "Exporting to CSV if specified..."
+        if ($ExportToCsv) {
+            $CsvResults | Export-Csv -Path $ExportToCsv -NoTypeInformation
+            Write-Host "Certificates exported to $ExportToCsv" -ForegroundColor Green
         }
     }
 }
