@@ -1,36 +1,37 @@
 Function Invoke-ACPIAction {
     <#
     .SYNOPSIS
-    Performs ACPI-related actions such as Sleep, Hibernate, Shutdown, Reboot, and retrieves power and battery information.
+    Performs ACPI actions like Sleep, Hibernate, Shutdown, or Reboot and schedules them if needed.
 
     .DESCRIPTION
-    The Invoke-ACPIAction function allows you to perform various ACPI-related actions on your computer in C#.
-    
+    This function allows you to perform ACPI actions on a Windows computer, such as Sleep, Hibernate, Shutdown, or Reboot.
+    You can schedule these actions to run at a specified time and repeat them at defined intervals for a specified duration.
+
     .PARAMETER Action
-    Mandatory - the ACPI action to perform. Valid values are "Sleep," "Hibernate," "Shutdown," "Reboot," "QueryPowerStatus," and "BatteryInfo."
+    Mandatory - the ACPI action to perform, valid values are "Sleep," "Hibernate," "Shutdown," or "Reboot."
     .PARAMETER DelaySeconds
-    NotMandatory - specifies an optional delay (in seconds) before executing the ACPI action, the default is 0 seconds.
+    NotMandatory - specifies the number of seconds to delay before performing the ACPI action. Default is 0 seconds.
     .PARAMETER Force
-    NotMandatory - specifies whether to force the ACPI action, especially useful for Shutdown and Reboot. By default, actions are not forced.
+    NotMandatory - if specified, forces the ACPI action without prompting for confirmation.
     .PARAMETER ScheduleTime
-    NotMandatory - specifies a time at which to schedule the ACPI action. If provided, the action will be scheduled to run at the specified time.
+    NotMandatory - time at which to schedule the ACPI action. Use the format "hh:mm tt" (e.g., "3:00 PM"). The action will run once at this time unless additional scheduling options are specified.
     .PARAMETER RepeatInterval
-    NotMandatory - specifies the interval (in minutes) at which the scheduled task should repeat.
+    NotMandatory - interval (in minutes) at which to repeat the ACPI action. Use in combination with RepeatDuration to repeat the action multiple times. Default is 0 (no repetition).
     .PARAMETER RepeatDuration
-    NotMandatory - specifies the duration (in minutes) for which the scheduled task should repeat.
+    NotMandatory - the total duration (in minutes) for which to repeat the ACPI action at the specified RepeatInterval. Default is 0 (no repetition).
     .PARAMETER TaskName
-    NotMandatory - specifies a custom name for the scheduled task.
+    NotMandatory - a custom name for the scheduled task. If not provided, a default name is generated based on the selected ACPI action.
 
     .EXAMPLE
-    Invoke-ACPIAction -Action Shutdown -ScheduleTime "3:00 PM" -RepeatInterval 60 -RepeatDuration 120 -TaskName "MyShutdownTask"
+    Invoke-ACPIAction -Action Reboot -ScheduleTime "3:00 PM" -RepeatInterval 60 -RepeatDuration 120 -TaskName "your_ACPT_scheduled_Action"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [ValidateSet("Sleep", "Hibernate", "Shutdown", "Reboot", "QueryPowerStatus", "BatteryInfo")]
+        [ValidateSet("Sleep", "Hibernate", "Shutdown", "Reboot")]
         [string]$Action,
 
         [Parameter(Mandatory = $false)]
@@ -53,79 +54,56 @@ Function Invoke-ACPIAction {
     )
     try {
         if ($ScheduleTime) {
-            $TaskAction = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "Invoke-ACPIAction -Action $Action -DelaySeconds $DelaySeconds -Force:$Force"
-            $TaskTrigger = New-ScheduledTaskTrigger -At $ScheduleTime -Once
-            if ($RepeatInterval -gt 0 -and $RepeatDuration -gt 0) {
-                $TaskTrigger.RepetitionInterval = [TimeSpan]::FromMinutes($RepeatInterval)
-                $TaskTrigger.RepetitionDuration = [TimeSpan]::FromMinutes($RepeatDuration)
+            $ScriptPath = "$env:TEMP\ACPIActions_$Action.ps1"
+            $ScriptContent = @"
+Function Invoke-ACPIAction {
+    param (
+        [string]`$Action,
+        [int]`$DelaySeconds = 0,
+        [switch]`$Force = `$false
+    )
+    Write-Host "Performing `$Action action..."
+    Start-Sleep -Seconds `$DelaySeconds
+    if (`$Action -in "Sleep", "Hibernate") {
+        [System.Runtime.InteropServices.Marshal]::LoadLibrary("PowrProf.dll")
+        [System.Windows.Forms.Application]::SetSuspendState(`$Action, `$Force, `$Force)
+    } elseif (`$Action -eq "Shutdown") {
+        Stop-Computer -Force:`$Force
+    } elseif (`$Action -eq "Reboot") {
+        Restart-Computer -Force:`$Force
+    }
+}
+Invoke-ACPIAction -Action "$Action" -DelaySeconds 0 -Force:`$Force
+"@
+            $ScriptContent | Out-File -FilePath $ScriptPath -Force
+            $RepetitionIntervalSec = $RepeatInterval * 60
+            $RepetitionDurationSec = $RepeatDuration * 60
+            $TaskTrigger = @()
+            $TaskTrigger += New-ScheduledTaskTrigger -At $ScheduleTime -Once
+            if ($RepetitionIntervalSec -gt 0 -and $RepetitionDurationSec -gt 0) {
+                $NumRepetitions = [math]::Ceiling($RepetitionDurationSec / $RepetitionIntervalSec)
+                for ($i = 1; $i -lt $NumRepetitions; $i++) {
+                    $RepetitionTime = (Get-Date $ScheduleTime).AddMinutes($i * $RepeatInterval)
+                    $TaskTrigger += New-ScheduledTaskTrigger -At $RepetitionTime -Once
+                }
             }
-            Register-ScheduledTask -TaskName ($TaskName -or "ACPIAction_$Action") -Action $TaskAction -Trigger $TaskTrigger
-            Write-Host "Scheduled $Action action to run at $ScheduleTime." -ForegroundColor DarkGreen
+            $TaskNameToUse = if ($TaskName) { $TaskName } else { "ACPIAction_$Action" }
+            $ActionArgs = "-File '$ScriptPath'"
+            Register-ScheduledTask -TaskName $TaskNameToUse -Trigger $TaskTrigger -Action (New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument $ActionArgs)
+            Write-Host "Scheduled $Action action to run at $ScheduleTime with TaskName: $TaskNameToUse." -ForegroundColor DarkGreen
         }
         else {
-            switch ($Action) {
-                "Sleep" {
-                    Write-Host "Putting the computer to sleep..."
-                    Start-Sleep -Seconds $DelaySeconds
-                    Invoke-ACPIAction -Action "QueryPowerStatus"
-                    Add-Type -TypeDefinition @"
-                        using System;
-                        using System.Runtime.InteropServices;
-                        public class Win32Power {
-                            [DllImport("PowrProf.dll", SetLastError = true)]
-                            public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);
-                        }
-"@
-                    [Win32Power]::SetSuspendState($false, $Force, $false)
-                }
-                "Hibernate" {
-                    Write-Host "Hibernating the computer..."
-                    Start-Sleep -Seconds $DelaySeconds
-                    Invoke-ACPIAction -Action "QueryPowerStatus"
-                    Add-Type -TypeDefinition @"
-                        using System;
-                        using System.Runtime.InteropServices;
-                        public class Win32Power {
-                            [DllImport("PowrProf.dll", SetLastError = true)]
-                            public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);
-                        }
-"@
-                    [Win32Power]::SetSuspendState($true, $Force, $false)
-                }
-                "Shutdown" {
-                    $Message = "Shutting down the computer"
-                    if ($Force) {
-                        $Message += " forcefully"
-                    }
-                    Write-Host "$Message..."
-                    Start-Sleep -Seconds $DelaySeconds
-                    Invoke-ACPIAction -Action "QueryPowerStatus"
-                    Stop-Computer -Force:$Force
-                }
-                "Reboot" {
-                    $Message = "Rebooting the computer"
-                    if ($Force) {
-                        $Message += " forcefully"
-                    }
-                    Write-Host "$Message..."
-                    Start-Sleep -Seconds $DelaySeconds
-                    Invoke-ACPIAction -Action "QueryPowerStatus"
-                    Restart-Computer -Force:$Force
-                }
-                "QueryPowerStatus" {
-                    $BatteryInfo = Get-WmiObject -Class Win32_Battery
-                    $PowerStatus = if ($BatteryInfo.BatteryStatus -eq 2) { "Battery" } else { "AC" }
-                    Write-Host "Power Status: $PowerStatus"
-                }
-                "BatteryInfo" {
-                    $BatteryInfo = Get-WmiObject -Class Win32_Battery
-                    Write-Host "Battery Status: $($BatteryInfo.BatteryStatus)"
-                    Write-Host "Battery Capacity: $($BatteryInfo.EstimatedChargeRemaining)%"
-                    Write-Host "Battery Voltage: $($BatteryInfo.DesignVoltage)mV"
-                }
-                default {
-                    throw "Unsupported ACPI action: $Action"
-                }
+            Write-Host "Performing $Action action..."
+            Start-Sleep -Seconds $DelaySeconds
+            if ($Action -in "Sleep", "Hibernate") {
+                [System.Runtime.InteropServices.Marshal]::LoadLibrary("PowrProf.dll")
+                [System.Windows.Forms.Application]::SetSuspendState($Action, $Force, $false)
+            }
+            elseif ($Action -eq "Shutdown") {
+                Stop-Computer -Force:$Force
+            }
+            elseif ($Action -eq "Reboot") {
+                Restart-Computer -Force:$Force
             }
         }
     }
