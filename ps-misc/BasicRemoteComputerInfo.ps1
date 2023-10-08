@@ -1,27 +1,27 @@
-Function BasicRemoteComputerInfo {
+Function Get-RemoteComputerInfo {
     <#
     .SYNOPSIS
-    Basic and detailed information about remote computers.
+    Retrieve detailed information about remote computers.
 
     .DESCRIPTION
-    This function retrieves basic information about remote computers, including computer name, operating system, manufacturer, model, serial number, and last boot time. When the DetailedReport parameter is specified, it also retrieves additional details such as network adapters, installed software, and user accounts.
+    This function retrieves various details about remote computers, including computer name, operating system, manufacturer, model, serial number, last boot time, and optionally includes hardware information, network adapters, installed software, and user accounts.
 
     .PARAMETER ComputerName
-    Mandatory - the names of the remote computers to retrieve information from.
+    Mandatory - The names of the remote computers to retrieve information from.
     .PARAMETER Username
-    Mandatory - username to authenticate with the remote computers.
+    Mandatory - Username to authenticate with the remote computers.
     .PARAMETER Password
-    Mandatory - password to authenticate with the remote computers.
-    .PARAMETER DetailedReport
-    NotMandatory - include a detailed report in the output.
+    Mandatory - Password to authenticate with the remote computers.
     .PARAMETER IncludeHardwareInfo
-    NotMandatory - include hardware information such as processor, memory, and disks.
+    NotMandatory - Include hardware information such as processor, memory, and disks.
+    .PARAMETER IncludeDetailedInfo
+    NotMandatory - Include detailed information such as network adapters, installed software, and user accounts.
 
     .EXAMPLE
-    BasicRemoteComputerInfo -ComputerName "your_remote_computer" -Username "your_remote_user" -Password "your_remote_pass" -IncludeHardwareInfo -DetailedReport
+    Get-RemoteComputerInfo -ComputerName "your_remote_computer" -Username "your_remote_user" -Pass "your_remote_pass" -IncludeHardwareInfo -IncludeDetailedInfo
 
     .NOTES
-    v0.0.1
+    Version: 0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -34,11 +34,11 @@ Function BasicRemoteComputerInfo {
         [Parameter(Position = 2, Mandatory = $true)]
         [string]$Pass,
 
-        [Parameter(Position = 3)]
-        [switch]$DetailedReport,
+        [Parameter()]
+        [switch]$IncludeHardwareInfo,
 
-        [Parameter(Position = 4)]
-        [switch]$IncludeHardwareInfo
+        [Parameter()]
+        [switch]$IncludeDetailedInfo
     ) 
     try {
         $Results = foreach ($Computer in $ComputerName) {
@@ -48,37 +48,35 @@ Function BasicRemoteComputerInfo {
                 $SystemInfo = Get-WmiObject -Class Win32_ComputerSystem
                 $OperatingSystem = Get-WmiObject -Class Win32_OperatingSystem
                 $Bios = Get-WmiObject -Class Win32_BIOS
-                if ($Using:IncludeHardwareInfo) {
-                    $Processor = Get-WmiObject -Class Win32_Processor
-                    $Memory = Get-WmiObject -Class Win32_PhysicalMemory
-                    $Disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3"
-                }
                 $Report = @{
                     ComputerName    = $SystemInfo.Name
                     OperatingSystem = $OperatingSystem.Caption
                     Manufacturer    = $SystemInfo.Manufacturer
                     Model           = $SystemInfo.Model
                     SerialNumber    = $Bios.SerialNumber
-                    LastBootTime    = $OperatingSystem.LastBootUpTime
+                    LastBootTime    = $OperatingSystem.ConvertToDateTime($OperatingSystem.LastBootUpTime)
                 }
                 if ($Using:IncludeHardwareInfo) {
+                    $Processor = Get-WmiObject -Class Win32_Processor
+                    $Memory = Get-WmiObject -Class Win32_PhysicalMemory
+                    $Disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3"
                     $Report.Processor = $Processor.Name
-                    $Report.Memory = ($Memory | Measure-Object -Property Capacity -Sum).Sum / 1GB
-                    $Report.Disks = $Disk | Select-Object DeviceID, VolumeName, @{Name = "Size (GB)"; Expression = { $_.Size / 1GB } }
+                    $Report.MemoryGB = [math]::Round(($Memory | Measure-Object -Property Capacity -Sum).Sum / 1GB, 2)
+                    $Report.Disks = $Disk | Select-Object DeviceID, VolumeName, @{Name = "SizeGB"; Expression = { [math]::Round($_.Size / 1GB, 2) } }
                 }
-                if ($Using:DetailedReport) {
+                if ($Using:IncludeDetailedInfo) {
                     $NetworkAdapters = Get-WmiObject -Class Win32_NetworkAdapter -Filter "NetConnectionStatus = 2"
                     $InstalledSoftware = Get-WmiObject -Class Win32_Product
                     $UserAccounts = Get-WmiObject -Class Win32_UserAccount
-
                     $Report.NetworkAdapters = $NetworkAdapters | Select-Object Name, NetConnectionID, Speed
                     $Report.InstalledSoftware = $InstalledSoftware | Select-Object Name, Version
                     $Report.UserAccounts = $UserAccounts | Select-Object Name, Description
                 }
                 $Report
-            }
-            Invoke-Command -Session $Session -ScriptBlock $ScriptBlock
+            } 
+            $ComputerInfo = Invoke-Command -Session $Session -ScriptBlock $ScriptBlock
             Remove-PSSession -Session $Session
+            $ComputerInfo
         }
         $Results
     }
