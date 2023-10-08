@@ -1,4 +1,4 @@
-Function SimpleWeatherReport {
+Function Get-WeatherReport {
     <#
     .SYNOPSIS
     Retrieves the current weather report or a forecast for a specified city.
@@ -26,12 +26,12 @@ Function SimpleWeatherReport {
     NotMandatory - if specified, opens the weather report URL in the default web browser.
 
     .EXAMPLE
-    SimpleWeatherReport -City Amsterdam -Provider wttrin -ShowInBrowser -Verbose
-    SimpleWeatherReport -City Rome -Provider wttr -Units imperial -Verbose
-    "$env:USERPROFILE\Desktop\Weather_Report.csv" | SimpleWeatherReport -City London -Provider wttr
+    Get-WeatherReport -City Amsterdam -Provider wttrin -ShowInBrowser -Verbose
+    Get-WeatherReport -City Rome -Provider wttr -Units imperial -Verbose
+    "$env:USERPROFILE\Desktop\Weather_Report.csv" | Get-WeatherReport -City London -Provider wttr
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param(
