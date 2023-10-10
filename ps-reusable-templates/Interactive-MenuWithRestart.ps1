@@ -1,43 +1,43 @@
-Function SimplestMenu {
+Function Interactive-MenuWithRestart {
     <#
     .SYNOPSIS
-    Simple menu with additonal features.
+    Interactive menu with additional features, including the option to restart the computer.
 
     .DESCRIPTION
-    This fucntion serves as template for menu wiht switch statement options with restart.
+    This function serves as a template for an interactive menu with a switch statement and restart functionality.
 
     .PARAMETER Title
-    NotMandatory - enter header menu title of choice.
+    Not Mandatory - Enter the menu title of your choice.
     .PARAMETER Choices
-    NotMandatory - declare you choices, which ever suits you.
+    Not Mandatory - Declare your menu choices as an array.
     .PARAMETER Timeout
-    NotMandatory - menu wil exit after certain period defined in parameter.
+    Not Mandatory - The menu will exit after a specified timeout.
     .PARAMETER Restart
-    NotMandatory - restart your computer in one of the switch statements.
+    Not Mandatory - Enable computer restart as one of the menu options.
     .PARAMETER RestartTime
-    NotMandatory time after computer will actually go to restart.
+    Not Mandatory - Specify the time before the computer restarts.
 
     .EXAMPLE
-    "your_menu_title" | SimplestMenu
-    SimplestMenu -Title "your_menu" -Choices @("choice#1","choice#2") -Restart
+    "your_menu_title" | Interactive-MenuWithRestart
+    Interactive-MenuWithRestart -Title "Your Menu" -Choices @("Choice #1", "Choice #2") -Restart
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [ValidateNotNullOrEmpty()]
-        [string]$Title = "Simplest Template Menu",
+        [string]$Title = "Interactive Menu With Restart",
 
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string[]]$Choices = @(
-            "SampleOption-1",
-            "SampleOption-2",
-            "SampleOption-3",
-            "SampleOption-4",
-            "SampleOption-5",
+            "Sample Option 1",
+            "Sample Option 2",
+            "Sample Option 3",
+            "Sample Option 4",
+            "Sample Option 5",
             "Restart Computer",
             "Exit"
         ),
@@ -60,47 +60,46 @@ Function SimplestMenu {
         for ($i = 0; $i -lt $Choices.Length; $i++) {
             Write-Host "$($i + 1). $($Choices[$i])" -ForegroundColor Cyan
         }
-        Write-Verbose -Message "Reading users input..."
+        Write-Verbose -Message "Reading user's input..."
         $Choice = Read-Host "`nEnter your choice (1-$($Choices.Length)): "
-        Write-Verbose -Message "Validating users input..."
-        If (!$Choice -or $Choice -lt 1 -or $Choice -gt $Choices.Length) {
+        Write-Verbose -Message "Validating user's input..."
+        if (!$Choice -or $Choice -lt 1 -or $Choice -gt $Choices.Length) {
             Write-Warning -Message "Invalid choice. Please try again."
             Start-Sleep -Seconds 2
-            SimplestMenu -Title $Title -Choices $Choices -Timeout $Timeout
+            Interactive-MenuWithRestart -Title $Title -Choices $Choices -Timeout $Timeout
             return
         }
-        ## act on user's choice
-        Switch ($Choices[$Choice - 1]) {
-            "SampleOption-1" {
+        switch ($Choices[$Choice - 1]) {
+            "Sample Option 1" {
                 Write-Host "Option 1 selected." -ForegroundColor DarkCyan
-                ## your_code here
+                ## Your code here
             }
-            "SampleOption-2" {
+            "Sample Option 2" {
                 Write-Host "Option 2 selected." -ForegroundColor DarkCyan
-                ## your_code here
+                ## Your code here
             }
-            "SampleOption-3" {
+            "Sample Option 3" {
                 Write-Host "Option 3 selected." -ForegroundColor DarkCyan
-                ## your_code here
+                ## Your code here
             }
-            "SampleOption-4" {
+            "Sample Option 4" {
                 Write-Host "Option 4 selected." -ForegroundColor DarkCyan
-                ## your_code here
+                ## Your code here
             }
-            "SampleOption-5" {
+            "Sample Option 5" {
                 Write-Host "Option 5 selected." -ForegroundColor DarkCyan
-                ## your_code here
+                ## Your code here
             }
             "Restart Computer" {
-                ## your_code here with optional restart
-                Write-Host "Option 5 selected." -ForegroundColor DarkCyan
+                ## Your code here with optional restart
+                Write-Host "Restart Computer selected." -ForegroundColor DarkCyan
                 if ($Restart) {
                     Write-Warning -Message "Restarting computer in $RestartTime seconds!"
-                    $Lenght = $RestartTime / 100
+                    $Length = $RestartTime / 100
                     for ($RestartTime; $RestartTime -gt -1; $RestartTime--) {
                         $Time = [int](([string]($RestartTime / 60)).Split('.')[0])
                         Write-Progress -Activity "Restarting in..." -Status "$Time minutes $RestartTime seconds left" `
-                            -PercentComplete ($RestartTime / $Lenght)
+                            -PercentComplete ($RestartTime / $Length)
                         Start-Sleep -Seconds 1
                     }
                     Restart-Computer -Force
@@ -114,6 +113,6 @@ Function SimplestMenu {
     }
     END {
         Write-Verbose -Message "Calling the menu again..."
-        SimplestMenu -Title $Title -Choices $Choices -Timeout $Timeout
+        Interactive-MenuWithRestart -Title $Title -Choices $Choices -Timeout $Timeout
     }
 }
