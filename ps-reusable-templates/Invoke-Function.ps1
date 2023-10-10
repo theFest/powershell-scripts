@@ -1,45 +1,39 @@
-Function InvokeFunction {
+Function Invoke-Function {
     <#
     .SYNOPSIS
-    Example function using simple background job.
+    A versatile PowerShell function for executing a command called "DoSomething" for each item in an array, with customizable parameters and asynchronous job support.
 
     .DESCRIPTION
-    purpose of this function is to execute a command called "DoSomething" for each item in the "InputObject" array, it accepts several parameters that allow the user to customize the behavior of the command.
+    The Invoke-Function PowerShell function is designed to execute a command named "DoSomething" for each item in the "InputObject" array. It offers flexibility through various parameters, allowing users to customize the behavior of the command. It provides the option to run tasks asynchronously using PowerShell's background job feature, making it suitable for lengthy operations or tasks that should run in the background while other work continues.
 
     .PARAMETER InputObject
-    Parameter description
+    Specifies the array of items on which the "DoSomething" command will be executed.
     .PARAMETER Param1
-    Parameter description
+    Specifies a required parameter for the "DoSomething" command.
     .PARAMETER Param2
-    Parameter description
+    Specifies a required parameter for the "DoSomething" command.
     .PARAMETER Switch1
-    Parameter description
+    Indicates an optional switch for the "DoSomething" command.
     .PARAMETER Switch2
-    Parameter description
+    Indicates another optional switch for the "DoSomething" command.
     .PARAMETER AsJob
-    Parameter description
+    A switch that enables running the function in the background as a job.
     .PARAMETER AdvancedParam1
-    Parameter description
+    Specifies an optional parameter that accepts values from a predefined set ("Option1" or "Option2").
     .PARAMETER AdvancedParam2
-    Parameter description
+    Specifies an optional parameter that accepts an integer value in the range of 1 to 5.
     .PARAMETER AdvancedParam3
-    Parameter description
+    Specifies an optional parameter that should be a valid file path.
     .PARAMETER AdvancedParam4
-    Parameter description
+    Specifies an optional parameter that should not be null or empty.
 
     .EXAMPLE
-    This is an example of a PowerShell function that uses a background job to execute a command called "DoSomething" for each item in the "InputObject" array.
-    The function accepts several parameters that allow the user to customize the behavior of the command, such as specifying parameters and switches.
-    The function uses the PowerShell CmdletBinding attribute to provide a number of features, including support for ShouldProcess and ConfirmImpact.
-    The ShouldProcess feature allows the function to ask the user for confirmation before performing any actions that could have an impact, while the ConfirmImpact feature allows the function to specify the level of impact for which confirmation is required.
-    The function uses the Begin, Process, and End blocks to perform different tasks. In the Begin block, the function initializes variables and sets up the parameters that will be passed to the DoSomething command.
-    In the Process block, the function loops through each item in the InputObject array, calls the DoSomething command with the appropriate parameters, and adds the results to an array.
-    In the End block, the function either returns the results or starts a background job to run the function with the AsJob parameter set to true.
-    This function provides an example of how to use PowerShell's background job feature to perform tasks asynchronously, which can be useful for long-running tasks or tasks that need to be performed in the background while the user continues to work on other tasks.
-    The function also demonstrates how to use various PowerShell features, such as parameter validation and support for ShouldProcess and ConfirmImpact.
+    This example demonstrates the use of the Invoke-Function with various parameters:
+    $items = @("Item1", "Item2", "Item3")
+    Invoke-Function -InputObject $items -Param1 "Value1" -Param2 "Value2" -Switch1 -AdvancedParam1 "Option1" -AdvancedParam2 4 -AdvancedParam3 "C:\Example\File.txt" -AdvancedParam4 "SomeValue"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
     param(
@@ -117,7 +111,7 @@ Function InvokeFunction {
     }
 }
 
-function DoSomething {
+Function DoSomething {
     param($In, $Param1, $Param2, $Switch1, $Switch2, $AdvancedParam1, $AdvancedParam2, $AdvancedParam3, $AdvancedParam4)
     $Output = "Input: $In, Param1: $Param1, Param2: $Param2, Switch1: $Switch1, Switch2: $Switch2, AdvancedParam1: $AdvancedParam1, AdvancedParam2: $AdvancedParam2, AdvancedParam3: $AdvancedParam3, AdvancedParam4: $AdvancedParam4"
     Write-Output $Output
