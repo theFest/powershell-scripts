@@ -1,29 +1,27 @@
-Function WMFUpdate {
+Function Install-WMFUpdate {
     <#
     .SYNOPSIS
-    This function is used to upgrade Windows Management Framework 5.1.
-    
+    Upgrade Windows Management Framework 5.1.
+
     .DESCRIPTION
-    This function is used to download, extract and upgrade Windows Management Framework and PS 5.1.
-    Both KB3191566 and KB2872035 are installed with KB3191566.
+    This function is used to download, extract, and upgrade Windows Management Framework and PowerShell 5.1. Both KB3191566 and KB2872035 are installed with KB3191566.
 
     .PARAMETER Key
-    NotMandatory - credentials to authentificate against some source to be able to download.
+    NotMandatory - Credentials to authenticate against a source for downloading.
     .PARAMETER Restart
-    NotMandatory - reboot is neccessery for update to apply so switch is optional if you plan to reboot later.
-    
+    NotMandatory - Reboot is necessary for the update to apply. Specify this switch if you want to reboot automatically after installation.
+
     .EXAMPLES
-    WMFUpdate -Restart
-    WMFUpdate -Key $Key
-   
+    Install-WMFUpdate -Restart
+    Install-WMFUpdate -Key $Key
+
     .NOTES
-    v1
-    https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/wmf/overview?view=powershell-7.1
+    v0.0.2
     #>
     [CmdletBinding()]
-    Param(
+    param(
         [Parameter(Mandatory = $false)]
-        [string]$Key,
+        [PSCredential]$Key,
 
         [Parameter(Mandatory = $false)]
         [switch]$Restart
@@ -38,7 +36,11 @@ Function WMFUpdate {
             Write-Host "WMF KB3191566 is missing, installing..."
             New-Item -Path $env:TEMP -Name WMF -ItemType Directory -Force -Verbose
             $WMF_url = 'https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip'
-            Invoke-WebRequest -Uri $WMF_url -OutFile "$env:TEMP\WMF\Win7AndW2K8R2-KB3191566-x64.zip"
+            if ($Key) {
+                Invoke-WebRequest -Uri $WMF_url -OutFile "$env:TEMP\WMF\Win7AndW2K8R2-KB3191566-x64.zip" -Credential $Key
+            } else {
+                Invoke-WebRequest -Uri $WMF_url -OutFile "$env:TEMP\WMF\Win7AndW2K8R2-KB3191566-x64.zip"
+            }
             Write-Host "WMF KB3191566 is downloading..."
             Expand-Archive -Path "$env:TEMP\WMF\Win7AndW2K8R2-KB3191566-x64.zip" -DestinationPath "$env:TEMP\WMF" -Force -Verbose
             $KB_path = Test-Path -Path "$env:TEMP\WMF\Win7AndW2K8R2-KB3191566-x64.msu" -Verbose
