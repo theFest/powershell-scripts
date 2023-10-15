@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-Function RandomPasswordGenerator {
+Function Get-RandomPassword {
   <#
   .SYNOPSIS
   PowerShell Desktop password generator.
@@ -35,17 +35,18 @@ Function RandomPasswordGenerator {
   NotManatory - switch, exclude any character that appears in a sequence of more than a certain length.
 
   .EXAMPLE
-  RandomPasswordGenerator -GenerateType Regular -PasswordLength 8
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 10 -MinUpperCase 1
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 12 -MinSpecialChar 2
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 16 -MaxRepeatedChar 4
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 18 -MaxRepeatedChar 4 -ExcludeSimilar
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 20 -MaxRepeatedChar 4 -ExcludeConfused
-  RandomPasswordGenerator -GenerateType Custom -PasswordLength 22 -MaxRepeatedChar 4 -ExcludeAmbiguous
+  Get-RandomPassword -GenerateType Regular -PasswordLength 8
+  Get-RandomPassword -GenerateType Custom -PasswordLength 10 -MinUpperCase 1
+  Get-RandomPassword -GenerateType Custom -PasswordLength 12 -MinSpecialChar 2
+  Get-RandomPassword -GenerateType Custom -PasswordLength 16 -MaxRepeatedChar 4
+  Get-RandomPassword -GenerateType Custom -PasswordLength 18 -MaxRepeatedChar 4 -ExcludeSimilar
+  Get-RandomPassword -GenerateType Custom -PasswordLength 20 -MaxRepeatedChar 4 -ExcludeConfused
+  Get-RandomPassword -GenerateType Custom -PasswordLength 22 -MaxRepeatedChar 4 -ExcludeAmbiguous
 
   .NOTES
-  v1.0.4
+  v0.0.4
   #>
+  [CmdletBinding(SupportsShouldProcess = $true)]
   param (
     [Parameter(Mandatory = $false)]
     [ValidateSet("Regular", "Custom")]

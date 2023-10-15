@@ -1,4 +1,5 @@
-Function RandomNumberGenerator {
+#Requires -Version 5.1
+Function Get-RandomNumber {
     <#
     .SYNOPSIS
     Generates random numbers=+chars within a specified range and with optional seeding, encoding, sorting, uniqueness, and exporting capabilities.
@@ -32,17 +33,17 @@ Function RandomNumberGenerator {
     NotMandatory - switch parameter that prevents the script from overwriting an existing file when exporting the random numbers.
     
     .EXAMPLE
-    RandomNumberGenerator -Min 1 -Max 10 -Count 5
-    RandomNumberGenerator -Min 1 -Max 50 -Count 10 -Sort
-    RandomNumberGenerator -Min 1 -Max 100 -Seed 1 -NumberType PseudoRandom
-    RandomNumberGenerator -Min 1 -Max 1000 -Count 15 -Unique -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv"
-    RandomNumberGenerator -Min 1 -Max 10000 -Count 20 -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv" -NoClobber
-    RandomNumberGenerator -Min 1 -Max 100000 -Count 25 -NumberType Random -Encoding -EncodingFormat "Hexadecimal" -Seed 12345
+    Get-RandomNumber -Min 1 -Max 10 -Count 5
+    Get-RandomNumber -Min 1 -Max 50 -Count 10 -Sort
+    Get-RandomNumber -Min 1 -Max 100 -Seed 1 -NumberType PseudoRandom
+    Get-RandomNumber -Min 1 -Max 1000 -Count 15 -Unique -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv"
+    Get-RandomNumber -Min 1 -Max 10000 -Count 20 -Export "$env:USERPROFILE\Desktop\RandomNumbers.csv" -NoClobber
+    Get-RandomNumber -Min 1 -Max 100000 -Count 25 -NumberType Random -Encoding -EncodingFormat "Hexadecimal" -Seed 12345
     
     .NOTES
-    1.1.3
+    0.1.3
     #>
-    [CmdletBinding(DefaultParameterSetName = "RandomNumberGenerator", SupportsShouldProcess = $true)]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [int]$Min,
