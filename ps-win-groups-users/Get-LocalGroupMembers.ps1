@@ -1,4 +1,4 @@
-Function CheckLocalGroupMembership {
+Function Get-LocalGroupMembers {
     <#
     .SYNOPSIS
     Retrieves the members of the specified local groups on a Windows system.
@@ -11,17 +11,15 @@ Function CheckLocalGroupMembership {
     Manatory - takes one or more group names as input. The script will retrieve the members of each of the specified groups.
     
     .EXAMPLE
-    CheckLocalGroupMembership -Group "Users", "Administrators"
-    CheckLocalGroupMembership -Group "Administrators", "Backup Operators"
-    CheckLocalGroupMembership -Group 'Administrators', 'Users' | Export-Csv -Path "$env:USERPROFILE\Desktop\UserManagement.csv" -NoTypeInformation
-    $GroupsToCheck = Import-Csv -Path "$env:USERPROFILE\Desktop\GroupsToCheckFile.csv" | Select-Object -ExpandProperty Group
-    CheckLocalGroupMembership -Group $GroupsToCheck | Export-Csv -Path "$env:USERPROFILE\Desktop\GroupMembership.csv" -NoTypeInformation
+    Get-LocalGroupMembers -Group "Users", "Administrators"
+    Get-LocalGroupMembers -Group "Administrators", "Backup Operators"
+    Get-LocalGroupMembers -Group 'Administrators', 'Users' | Export-Csv -Path "$env:USERPROFILE\Desktop\UserManagement.csv" -NoTypeInformation
     
     .NOTES
-    V1.0
+    V0.0.2
     #>
     [CmdletBinding()]
-    Param (
+    param (
       [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
       [string[]]$Group
     )
