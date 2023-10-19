@@ -1,10 +1,10 @@
-Function RemoteUserState {
+Function Get-RemoteUserStatus {
     <#
     .SYNOPSIS
     Retrieves user status and additional information on a remote computer.
 
     .DESCRIPTION
-    This function retrieves the user status, running processes, active sessions, hardware information, and network information on a remote computer, it requires the computer name, username, and password for authentication. It can also generate a secure password if specified.
+    This function retrieves the user status, running processes, active sessions, hardware information, and network information on a remote computer. It requires the computer name, username, and password for authentication. It can also generate a secure password if specified.
 
     .PARAMETER ComputerName
     Mandatory - name of the remote computer.
@@ -15,56 +15,54 @@ Function RemoteUserState {
     .PARAMETER GenerateSecurePassword
     NotMandatory - whether to generate a secure password. If specified, a secure password will be generated using the Membership.GeneratePassword method.
     .PARAMETER IncludeProcesses
-    NotMandatory - running processes on the remote computer.
+    NotMandatory - include running processes on the remote computer.
     .PARAMETER IncludeSessions
-    NotMandatory - the active sessions on the remote computer.
+    NotMandatory - include the active sessions on the remote computer.
     .PARAMETER IncludeHardware
-    NotMandatory - hardware information, including manufacturer, model, and total physical memory.
+    NotMandatory - include hardware information, including manufacturer, model, and total physical memory.
     .PARAMETER IncludeNetwork
-    NotMandatory - retrieves network information, including description and IP addresses.
+    NotMandatory - include network information, including description and IP addresses.
 
     .EXAMPLE
-    RemoteUserState -ComputerName "" -UserName "" -Pass "" -IncludeSessions
-    RemoteUserState -ComputerName "" -UserName "" -Pass "" -IncludeProcesses
-    RemoteUserState -ComputerName "" -UserName "" -Pass "" -IncludeHardware -Verbose
-    RemoteUserState -ComputerName "" -UserName "" -Pass "" -IncludeNetwork -Verbose
+    Get-RemoteUserStatus -ComputerName "Computer1" -UserName "User1" -Pass "Password123" -IncludeSessions
+    Get-RemoteUserStatus -ComputerName "Computer2" -UserName "User2" -Pass "Password456" -IncludeProcesses
+    Get-RemoteUserStatus -ComputerName "Computer3" -UserName "User3" -Pass "Password789" -IncludeHardware -Verbose
+    Get-RemoteUserStatus -ComputerName "Computer4" -UserName "User4" -Pass "Password987" -IncludeNetwork -Verbose
 
     .NOTES
-    This function requires administrative privileges on the remote computer for retrieving certain information.
-
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$ComputerName,
 
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$UserName,
 
-        [Parameter(Mandatory = $true, Position = 1)]
+        [Parameter(Mandatory = $true, Position = 2)]
         [string]$Pass,
 
-        [Parameter(Mandatory = $false, Position = 2)]
+        [Parameter(Mandatory = $false)]
         [switch]$GenerateSecurePassword,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeProcesses,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeSessions,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeHardware,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeNetwork
     )
     BEGIN {
-        Write-Verbose -Message "Checking and setting Executing Policy..."
+        Write-Verbose -Message "Checking and setting Execution Policy..."
         if ((Get-ExecutionPolicy -Scope CurrentUser) -ne "Unrestricted") {
-            Write-Host "Setting Executing Policy to 'Unrestricted'" -ForegroundColor Yellow
-            Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Verbose
+            Write-Host "Setting Execution Policy to 'Unrestricted'" -ForegroundColor Yellow
+            Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force -ErrorAction SilentlyContinue
         }
         Write-Verbose -Message "Elevating script as admin..."
         $CurrentPrincipal = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -149,7 +147,7 @@ Function RemoteUserState {
     }
     END {
         Clear-History -ErrorAction SilentlyContinue
-        Clear-Variable -Name Credential, Username, Pass -Force -ErrorAction SilentlyContinue
-        Remove-Variable -Name Credential, Username, Pass -Force -ErrorAction SilentlyContinue
+        Clear-Variable -Name Credential, UserName, Pass -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name Credential, UserName, Pass -Force -ErrorAction SilentlyContinue
     }
 }
