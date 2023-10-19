@@ -1,4 +1,4 @@
-function RemoteExportRegKey {
+Function Export-RegistryKey {
     <#
     .SYNOPSIS
     Exports a registry key from a remote or local computer.
@@ -16,15 +16,15 @@ function RemoteExportRegKey {
     Specifies the name of the remote computer from which to export the registry key, if not provided, the export will be performed on the local computer.
     .PARAMETER Username
     Specifies the username to use for the remote connection, required when exporting from a remote computer.
-    .PARAMETER Pass
+    .PARAMETER Password
     Specifies the password to use for the remote connection, required when exporting from a remote computer.
 
     .EXAMPLE
-    RemoteExportRegKey -RegPath "HKCU\AppEvents" -LocalExportPath "$env:USERPROFILE\Desktop\AppEvents.reg" -Verbose
-    "HKCU\you_key\you_subkey" | RemoteExportRegKey -LocalExportPath "$env:USERPROFILE\Desktop\you_subkey.reg" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
+    Export-RegistryKey -RegPath "HKCU\AppEvents" -LocalExportPath "$env:USERPROFILE\Desktop\AppEvents.reg" -Verbose
+    "HKCU\you_key\you_subkey" | Export-RegistryKey -LocalExportPath "$env:USERPROFILE\Desktop\you_subkey.reg" -ComputerName "remote_hostname" -Username "remote_user" -Password "remote_pass"
 
     .NOTES
-    Version: 0.0.2
+    Version: 0.0.3
     #>
     [CmdletBinding()]
     param (
@@ -46,7 +46,7 @@ function RemoteExportRegKey {
         [string]$Username,
 
         [Parameter(Mandatory = $false)]
-        [string]$Pass
+        [string]$Password
     )
     try {
         $Session = $null
@@ -62,9 +62,9 @@ function RemoteExportRegKey {
                 }
                 $isReachable
             }
-            $isComputerReachable = Invoke-Command -ComputerName $ComputerName -ScriptBlock $TestConnectionScriptBlock -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Pass -AsPlainText -Force))
+            $isComputerReachable = Invoke-Command -ComputerName $ComputerName -ScriptBlock $TestConnectionScriptBlock -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
             if ($isComputerReachable) {
-                $Session = New-PSSession -ComputerName $ComputerName -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Pass -AsPlainText -Force))
+                $Session = New-PSSession -ComputerName $ComputerName -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
                 $ExportScriptBlock = {
                     param($RegPath, $RemoteExportPath)
                     Write-Verbose -Message "Export on the remote computer has started..."
