@@ -1,4 +1,4 @@
-Function RemoteEventLogCleaner {
+Function Clear-RemoteEventLog {
     <#
     .SYNOPSIS
     Clears event logs on a remote computer.
@@ -16,11 +16,11 @@ Function RemoteEventLogCleaner {
     NotMandatory - password to use for authentication on the remote computer.
 
     .EXAMPLE
-    RemoteEventLogCleaner -LogName Application -Verbose
-    RemoteEventLogCleaner -LogName System -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -Verbose
+    Clear-RemoteEventLog -LogName Application -Verbose
+    Clear-RemoteEventLog -LogName System -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -Verbose
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
