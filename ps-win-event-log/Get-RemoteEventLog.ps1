@@ -1,4 +1,4 @@
-Function RemoteEventViewer {
+Function Get-RemoteEventLog {
     <#
     .SYNOPSIS
     Retrieves and filters remote event logs from one or more computers.
@@ -54,10 +54,10 @@ Function RemoteEventViewer {
     NotMandatory - output directory for exporting the filtered events. Defaults to the user's desktop.
 
     .EXAMPLE
-    RemoteEventViewer -ComputerName "remote_host" -UserName "remote_user" -Pass "remote_pass"
+    Get-RemoteEventLog -ComputerName "remote_host" -UserName "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
@@ -79,15 +79,12 @@ Function RemoteEventViewer {
         [datetime]$EndTime = (Get-Date),
 
         [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
         [string[]]$ComputerName,
 
         [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
         [string[]]$UserName,
 
         [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
         [string[]]$Pass,
 
         [Parameter(Mandatory = $false)]
