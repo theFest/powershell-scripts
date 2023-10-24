@@ -1,4 +1,4 @@
-Function ExtractISO {
+Function Invoke-IsoExtraction {
     <#
     .SYNOPSIS
     Function that extracts ISO's contents.
@@ -14,11 +14,11 @@ Function ExtractISO {
     NotMandatory - switch for integrity check which is done before extracting image's.
     
     .EXAMPLE
-    ExtractISO -ISOImage "$env:TEMP\YourImage.iso" -ISOExpandPath "$env:TEMP\MyImage"
-    ExtractISO -ISOImage "$env:TEMP\YourImage.iso" -ISOExpandPath "$env:TEMP\MyImage" -CheckIntegrity
+    Invoke-IsoExtraction -ISOImage "$env:TEMP\YourImage.iso" -ISOExpandPath "$env:TEMP\MyImage"
+    Invoke-IsoExtraction -ISOImage "$env:TEMP\YourImage.iso" -ISOExpandPath "$env:TEMP\MyImage" -CheckIntegrity
     
     .NOTES
-    v1.1
+    v0.1.1
     #>
     [CmdletBinding()]
     Param(
@@ -33,10 +33,10 @@ Function ExtractISO {
     )
     BEGIN {
         $StartTime = Get-Date
-        ## Check if 7-Zip is already installed
+        Write-Verbose -Message "Checking if 7-Zip is already installed"
         $7Zip = Get-Package -Provider Programs -IncludeWindowsInstaller -Name "7-Zip*" -AllVersions -ErrorAction SilentlyContinue
         if (!$7Zip) {
-            ## Download and install 7-Zip if it's not already installed
+            Write-Verbose -Message "Download and install 7-Zip if it's not already installed"
             Write-Output "7-Zip is not installed. Downloading and installing 7-Zip."
             $7zURL = "https://www.7-zip.org/a/7z1900-x64.exe"
             $7zInstaller = "$env:TEMP\7z1900-x64.exe"
@@ -45,20 +45,20 @@ Function ExtractISO {
         }
     }
     PROCESS {
-        ## Check if the 7-Zip version is 19.00 or higher
+        Write-Verbose -Message "Checking if the 7-Zip version is 19.00 or higher"
         if ($7Zip.Version -ge '19.00') {
-            ## Loop through each ISO image
+            Write-Verbose -Message "Loop through each ISO image"
             foreach ($Image in $ISOImage) {
-                ## Determine the file name of the ISO image without its extension
+                Write-Verbose -Message "Determine the file name of the ISO image without its extension"
                 $ISOExpandPathName = [System.IO.Path]::GetFileNameWithoutExtension($Image)
-                ## Check the integrity of the ISO image if requested
+                Write-Verbose -Message "Check the integrity of the ISO image if requested"
                 if ($CheckIntegrity) {
                     Write-Output "Checking the integrity of: $Image."
                     $7zPath = "$env:ProgramFiles\7-Zip\7z.exe"
                     $7zArgs = 't', $Image
                     Start-Process $7zPath -ArgumentList $7zArgs -Wait -WindowStyle Hidden
                 }
-                ## Expand the ISO image
+                Write-Verbose -Message "Expand the ISO image"
                 Write-Output "Extracting in progress: $Image."
                 $7zPath = "$env:ProgramFiles\7-Zip\7z.exe"
                 $7zArgs = 'x', '-y', "-o$ISOExpandPath\$ISOExpandPathName", $Image
