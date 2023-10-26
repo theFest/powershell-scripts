@@ -1,4 +1,4 @@
-Function ListFiles {
+Function List-FilesContent {
     <#
     .SYNOPSIS
     List folder contents and outputs to a file with additional functionalities. 
@@ -28,12 +28,12 @@ Function ListFiles {
     NotMandatory - array of strings that allows you to specify the names of files that should be excluded from the output. If no files are provided, all files will be processed.
 
     .EXAMPLE
-    ListFiles -FilesPath 'C:\Test' -Manage ListFiles -OutFile 'C:\Test\Test.txt' ##-->ListFiles
-    ListFiles -FilesPath 'C:\Test' -Manage ReplaceString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile
-    ListFiles -FilesPath 'C:\Test' -Manage ReplaceStringSubString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -Substring 3 -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile -FileExtension 'txt' -ExcludeFiles 'file1.txt','file2.txt'
+    List-FilesContent -FilesPath 'C:\Test' -Manage ListFiles -OutFile 'C:\Test\Test.txt' ##-->ListFiles
+    List-FilesContent -FilesPath 'C:\Test' -Manage ReplaceString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile
+    List-FilesContent -FilesPath 'C:\Test' -Manage ReplaceStringSubString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -Substring 3 -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile -FileExtension 'txt' -ExcludeFiles 'file1.txt','file2.txt'
 
     .NOTES
-    v1.3.1
+    v0.3.1
     #>
     [CmdletBinding()]
     param(
