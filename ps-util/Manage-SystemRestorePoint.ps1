@@ -1,4 +1,4 @@
-Function ManageRestorePoint {
+Function Manage-SystemRestorePoint {
     <#
     .SYNOPSIS
     Manage system restore points on a Windows computer.
@@ -29,12 +29,12 @@ Function ManageRestorePoint {
     NotMandatory - specifies the target drive where the restore point should be created. Only used when Action is "Create" or "Save".
 
     .EXAMPLE
-    ManageRestorePoint -Action Create -Description "Before software installation"
-    ManageRestorePoint -Action List
-    ManageRestorePoint -Action Remove -Description "Unwanted Restore Point"
+    Manage-SystemRestorePoint -Action Create -Description "Before software installation"
+    Manage-SystemRestorePoint -Action List
+    Manage-SystemRestorePoint -Action Remove -Description "Unwanted Restore Point"
 
     .NOTES
-    v0.0.4
+    v0.0.5
     #>
     [CmdletBinding()]
     param(
