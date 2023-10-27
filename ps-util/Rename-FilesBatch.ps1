@@ -1,4 +1,4 @@
-Function RenameFiles {
+Function Rename-FilesBatch {
     <#
     .SYNOPSIS
     Rename your data.
@@ -38,16 +38,15 @@ Function RenameFiles {
     NotMandatory - define location where your output file will be populated and resides.
     
     .EXAMPLE
-    RenameFiles -FilesPath 'F:\Test\a' -Manage RenameWithIndex -RenameFiles test ##-->RenameFiles
-    RenameFiles -FilesPath 'F:\Test\a' -Manage ChangeExtension -ReplaceExtensionTo .csv ##-->ChangeExtension
-    RenameFiles -FilesPath 'F:\Test\a' -Manage ReplaceString -ReplaceStringIn 'test_' -ReplaceStringOut 'demo_' ##-->ReplaceString
-    RenameFiles -FilesPath 'F:\Test\a' -Manage SetNewPrefixSuffix -AddNewPrefix YYYYY -AddNewSuffix ZZZZZ ##-->SetNewPrefixSuffix
-    RenameFiles -FilesPath 'F:\Test\a' -Manage MethodOptions -Methods ToLower ##-->MethodOptions
-    RenameFiles -FilesPath 'F:\Test\a' -Manage SubString -Substring 1 ##-->SubString
-    * also you can use $Recurse, $Force and $OutputToFile/$OutFile parametar to write results to a file.
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage RenameWithIndex -RenameFiles test ##-->RenameFiles
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage ChangeExtension -ReplaceExtensionTo .csv ##-->ChangeExtension
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage ReplaceString -ReplaceStringIn 'test_' -ReplaceStringOut 'demo_' ##-->ReplaceString
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage SetNewPrefixSuffix -AddNewPrefix YYYYY -AddNewSuffix ZZZZZ ##-->SetNewPrefixSuffix
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage MethodOptions -Methods ToLower ##-->MethodOptions
+    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage SubString -Substring 1 ##-->SubString
 
     .NOTES
-    v1
+    v0.1.1
     #>
     [CmdletBinding()]
     param(
