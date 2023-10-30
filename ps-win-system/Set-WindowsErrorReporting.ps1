@@ -13,9 +13,9 @@ Function Set-WindowsErrorReporting {
     Set-WindowsErrorReporting -Restart -Verbose
 
     .NOTES
-    Version: 0.1.1
+    Version: 0.1.2
     #>
-    [CmdletBinding(DefaultParameterSetName = "DisableWER")]
+    [CmdletBinding()]
     param(                
         [Parameter(Mandatory = $false)]
         [switch]$Restart
