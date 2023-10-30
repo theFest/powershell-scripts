@@ -1,4 +1,4 @@
-Function WaitProcess {
+Function Wait-ProcessWithWindow {
     <#
     .SYNOPSIS
     This function waits for a process to start.
@@ -13,11 +13,11 @@ Function WaitProcess {
     .PARAMETER CheckInterval
     Mandatory - interval between every next check, default is 1 second.
 
-    .NOTES
-    After successful check, process path is returned.
-
     .EXAMPLE
-    WaitProcess -Time 120 -Process mspaint -CheckInterval 10
+    Wait-ProcessWithWindow -Time 120 -Process mspaint -CheckInterval 10
+
+    .NOTES
+    v0.1.1
     #>
     [CmdletBinding()]
     Param(
