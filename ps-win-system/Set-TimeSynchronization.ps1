@@ -1,4 +1,4 @@
-Function TimeSync {
+Function Set-TimeSynchronization {
     <#
     .SYNOPSIS
     This function is syncing time.
@@ -24,22 +24,22 @@ Function TimeSync {
     The level of verbosity. Possible values are 'Silent', 'Verbose', and 'Debug'. Default is 'Silent'.
     
     .EXAMPLE
-    TimeSync -StartupType Automatic -NTP_Server time.nist.gov -TimeSource NTP -TimeOffset 0 -SyncOnStartup $true -SetLocalTimeServer $true -Verbosity Verbose
+    Set-TimeSynchronization -StartupType Automatic -NTP_Server time.nist.gov -TimeSource NTP -TimeOffset 0 -SyncOnStartup $true -SetLocalTimeServer $true -Verbosity Verbose
 
     .NOTES
-    v1.1
+    v0.1.2
     #>
     [CmdletBinding()]
     Param(
-        [ValidateSet('Automatic', 'Boot', 'Disabled', 'Manual', 'System')]
-        [string]$StartupType = 'Automatic',
+        [ValidateSet("Automatic", "Boot", "Disabled", "Manual", "System")]
+        [string]$StartupType = "Automatic",
 
         [ValidateNotNullOrEmpty()]
-        [ValidateSet('time.nist.gov', 'time.windows.com')]
-        [string]$NTP_Server = 'time.nist.gov',
+        [ValidateSet("time.nist.gov", "time.windows.com")]
+        [string]$NTP_Server = "time.nist.gov",
 
-        [ValidateSet('LocalCMOSClock', 'NTP', 'NoSync')]
-        [string]$TimeSource = 'NTP',
+        [ValidateSet("LocalCMOSClock", "NTP", "NoSync")]
+        [string]$TimeSource = "NTP",
 
         [ValidateRange(-12, 12)]
         [int]$TimeOffset = 0,
@@ -60,7 +60,7 @@ Function TimeSync {
             Wait        = $true
         }
         if (!(Get-Service -Name W32Time -ErrorAction SilentlyContinue)) {
-            Write-Verbose -Message 'Service is missing, installing and starting.'
+            Write-Verbose -Message "Service is missing, installing and starting"
             $W32tmS.ArgumentList = "/register"
             Start-Process @W32tmS
             $Serw32time = Get-Service -Name W32Time
@@ -68,7 +68,7 @@ Function TimeSync {
         }
     }
     PROCESS {
-        Write-Output 'Setting service to Automatic and syncing time.'
+        Write-Output "Setting service to Automatic and syncing time."
         Get-Service -Name W32Time | Set-Service -StartupType $StartupType
         $W32tmS.ArgumentList = "/resync /force"
         Start-Process @W32tmS
