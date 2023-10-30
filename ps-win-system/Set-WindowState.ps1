@@ -1,4 +1,4 @@
-Function SetWindowState {
+Function Set-WindowState {
     <#
     .SYNOPSIS
     Set window to wanted state.
@@ -16,12 +16,12 @@ Function SetWindowState {
     NotMandatory - switch to determine whether or not to set the foreground window.
     
     .EXAMPLE
-    Get-Process -Name pwsh | Set-WindowState -State MINIMIZE
-    
+    Set-WindowState -InputObject (Get-Process -Name "notepad") -State "MAXIMIZE" -SetForegroundWindow
+
     .NOTES
-    v1.0
+    v0.1.1
     #>
-    [CmdletBinding(DefaultParameterSetName = "InputObject")]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [System.Diagnostics.Process[]]$InputObject,
@@ -66,7 +66,7 @@ public static extern bool SetForegroundWindow(IntPtr hWnd);
         }
         if ($Handle -eq 0) {
             if (-not $SuppressErrors) {
-                Write-Error "Main Window handle is '0'"
+                Write-Error -Message "Main Window handle is '0'"
             }
             continue
         }
