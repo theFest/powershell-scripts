@@ -1,12 +1,11 @@
-Function SimpleSendKeys {
+Function Send-SimulatedKey {
     <#
     .SYNOPSIS
     This function sends keyboard keys to the active window using the .NET framework's System.Windows.Forms.SendKeys class.
     
     .DESCRIPTION
-    The SimpleSendKeys function allows you to send keyboard keys to the active window in a controlled manner.
+    This function allows you to send keyboard keys to the active window in a controlled manner.
     You can specify the key to be sent, the action (press or release), the number of times to repeat the action, and the key modifiers to be used (Alt, Ctrl, or Shift).
-    It uses the System.Windows.Forms.SendKeys class to send the keys.
     
     .PARAMETER Key
     Mandatory - specifies the key to be sent. The valid values are predefined in ValidateSet option.
@@ -18,15 +17,15 @@ Function SimpleSendKeys {
     NotMandatory - specifies the key modifiers to be used when sending the key. The valid values are "Alt", "Ctrl", and "Shift".
     
     .EXAMPLE
-    SimpleSendKeys -Key "Enter" -Repeat 5
-    SimpleSendKeys -Key "Tab" -Modifiers "Ctrl"
-    SimpleSendKeys -Key "Shift" -Action "Release"
-    SimpleSendKeys -Key "F5" -Modifiers "Ctrl", "Alt" -Repeat 3
-    SimpleSendKeys -Key "Tab" -Action "Press" -Repeat 2 -Modifiers @("Shift")
-    SimpleSendKeys -Key "Enter" -Repeat 1 ; Read-Host "I will autocomplete Hosts input by adding 'ENTER'"
+    Send-SimulatedKey -Key "Enter" -Repeat 5
+    Send-SimulatedKey -Key "Tab" -Modifiers "Ctrl"
+    Send-SimulatedKey -Key "Shift" -Action "Release"
+    Send-SimulatedKey -Key "F5" -Modifiers "Ctrl", "Alt" -Repeat 3
+    Send-SimulatedKey -Key "Tab" -Action "Press" -Repeat 2 -Modifiers @("Shift")
+    Send-SimulatedKey -Key "Enter" -Repeat 1 ; Read-Host "I will autocomplete Hosts input by adding 'ENTER'"
     
     .NOTES
-    v1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     param(
