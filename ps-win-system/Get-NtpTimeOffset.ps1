@@ -1,4 +1,4 @@
-Function TimeOffsetQuery {
+Function Get-NtpTimeOffset {
     <#
     .SYNOPSIS
     Query time offset.
@@ -13,13 +13,13 @@ Function TimeOffsetQuery {
     .PARAMETER Period
     NotMandatory - time between samples, in seconds. The default value is set to 2 seconds.
     .PARAMETER ExportResults
-    NotMandatory - you can export offset results to csv file, define path like "$env:TEMP\TimeOffsetQuery.csv".
+    NotMandatory - you can export offset results to csv file, define path like "$env:TEMP\NtpTimeOffset.csv".
     
     .EXAMPLE
-    TimeOffsetQuery -NtpServer 0.us.pool.ntp.org
+    Get-NtpTimeOffset -NtpServer 0.us.pool.ntp.org
     
     .NOTES
-    v1 -->https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/ff799054(v=ws.11)
+    v0.2.1 -->https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/ff799054(v=ws.11)
     #>
     [CmdletBinding()]
     param (
@@ -49,7 +49,7 @@ Function TimeOffsetQuery {
         }
         else {
             $FoundTime = $false
-            ## go through the 5 samples to find a response with timeoffset.
+            Write-Verbose -Message "Go through the 5 samples to find a response with timeoffset"
             for ($i = 3; $i -lt 8; $i++) {
                 if (-not $FoundTime) {
                     if ($W32Query[$i] -match ", ([-+]\d+\.\d+)s") {
@@ -58,10 +58,10 @@ Function TimeOffsetQuery {
                     } 
                 }
             }
-            ## if no time samples were found, check for error.
+            Write-Verbose -Message "If no time samples were found, check for error"
             if (-not $FoundTime) {
                 if ($W32Query[1..3] -match "error") {
-                    ## 0x800705B4 is not advertising/responding.
+                    Write-Verbose -Message "0x800705B4 is not advertising/responding"
                     $QueryStatus = "NTP not responding" ; $QueryOffset = "n/a"
                 }
                 else {
@@ -70,10 +70,10 @@ Function TimeOffsetQuery {
             }
         }
         $QueryObject = [PSCustomObject]@{
-            'NtpServer'   = $NtpServer
-            'Status'      = $QueryStatus
-            'Offset'      = $QueryOffset
-            'GetDateTime' = Get-Date -Format "MM/dd/yyyy|HH:mm"
+            "NtpServer"   = $NtpServer
+            "Status"      = $QueryStatus
+            "Offset"      = $QueryOffset
+            "GetDateTime" = Get-Date -Format "MM/dd/yyyy|HH:mm"
         }
     }
     END {
