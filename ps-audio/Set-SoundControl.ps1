@@ -1,4 +1,4 @@
-Function AudioControl {
+Function Set-SoundControl {
     <#
     .SYNOPSIS
     Adjust sound volume or mute with a timespan.
@@ -22,10 +22,10 @@ Function AudioControl {
     NotMandatory choose this switch to mute sound.
     
     .EXAMPLE
-    AudioControl -Volume 0.2 -Seconds 60 -Interval 5 (0.2 is 20%, 0.5 is 50%...)
+    Set-SoundControl -Volume 0.2 -Seconds 60 -Interval 5 (0.2 is 20%, 0.5 is 50%...)
     
     .NOTES
-    v1 (for other audio controls, use Nirsoft tool or AudioDeviceCmdlets)
+    v0.1.1 (for other audio controls, use Nirsoft tool or AudioDeviceCmdlets)
     #>
     [CmdletBinding()]
     param(
