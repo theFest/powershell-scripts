@@ -1,4 +1,4 @@
-Function SpeechSynthesizer {
+Function Invoke-SpeechSynthesizer {
     <#
     .SYNOPSIS
     Simple function for text to speech.
@@ -36,13 +36,13 @@ Function SpeechSynthesizer {
     NotMandatory - choose voice of a speaker, additional language packs are needed for your region.
     
     .EXAMPLE
-    SpeechSynthesizer -Mode Once -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
-    SpeechSynthesizer -Mode ForLoop -WebPhrases -Url "your_website" -IterationsCount 10 -Interval 2
-    SpeechSynthesizer -Mode TimeLoop -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt" -Seconds 60
-    SpeechSynthesizer -Mode Once -Computer "remote_computer" -User "user_of_remote_computer" -Password "pass_of_remote_computer" -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
+    Invoke-SpeechSynthesizer -Mode Once -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
+    Invoke-SpeechSynthesizer -Mode ForLoop -WebPhrases -Url "your_website" -IterationsCount 10 -Interval 2
+    Invoke-SpeechSynthesizer -Mode TimeLoop -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt" -Seconds 60
+    Invoke-SpeechSynthesizer -Mode Once -Computer "remote_computer" -User "user_of_remote_computer" -Password "pass_of_remote_computer" -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
     
     .NOTES
-    V1 
+    V0.1.1 
     *currently supporting en-US language ; Enables psremoting on destination computer
     *use alternative GUI app ("https://jztkft.dl.sourceforge.net/project/espeak/espeak/espeak-1.48/setup_espeak-1.48.04.exe")
     *for other languages, first install languange pack then if needed modify registry (https://winaero.com/unlock-extra-voices-windows-10/)
@@ -51,8 +51,8 @@ Function SpeechSynthesizer {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Once', 'ForLoop', 'TimeLoop')]
-        [string]$Mode = 'Once',
+        [ValidateSet("Once", "ForLoop", "TimeLoop")]
+        [string]$Mode = "Once",
 
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [string]$FilePath,
@@ -93,8 +93,8 @@ Function SpeechSynthesizer {
         [int]$Interval = 1,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Microsoft David Desktop', 'Microsoft Zira Desktop', 'Microsoft Matej')]
-        [string]$SelectVoice = 'Microsoft David Desktop'
+        [ValidateSet("Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Matej")]
+        [string]$SelectVoice = "Microsoft David Desktop"
     )
     BEGIN {
         $StartTime = Get-Date
@@ -132,16 +132,16 @@ Function SpeechSynthesizer {
             }
         }
         switch ($Mode) {
-            'Once' {
+            "Once" {
                 Invoke-Command -ScriptBlock $Speech
             } 
-            'ForLoop' {
+            "ForLoop" {
                 for ($Iterations = 0; $Iterations -lt $IterationsCount; $Iterations++) {
                     Invoke-Command -ScriptBlock $Speech
                     Start-Sleep -Seconds $Interval
                 } 
             }
-            'TimeLoop' {
+            "TimeLoop" {
                 $TimeOut = New-TimeSpan -Seconds:$Seconds #-Minutes:$Minutes -Hours:$Hours -Days:$Days
                 $EndTime = (Get-Date).Add($TimeOut)
                 do {
