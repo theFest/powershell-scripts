@@ -72,7 +72,7 @@ Class Calculator {
     }
 }
 
-Function SimpleCalc {
+Function Invoke-CustomCalculator {
     <#
     .SYNOPSIS
     Simple calculator that shows how to use class.
@@ -90,15 +90,15 @@ Function SimpleCalc {
     NotMandatory - specifies whether to calculate percentage. If specified, the value of RightOperand should be considered as percentage of LeftOperand.
 
     .EXAMPLE
-    SimpleCalc -Operation Add -LeftOperand 4 -RightOperand 4
-    SimpleCalc -Operation Subtract -LeftOperand 64 -RightOperand 48
-    SimpleCalc -Operation Multiply -LeftOperand 4 -RightOperand 8
-    SimpleCalc -Operation Remainder -LeftOperand 10 -RightOperand 3
-    SimpleCalc -Operation Divide -LeftOperand 512 -RightOperand 8
-    SimpleCalc -Operation Average -LeftOperand 56 -RightOperand 200
-    SimpleCalc -Operation Power -LeftOperand 8 -RightOperand 3
-    SimpleCalc -Operation Percentage -LeftOperand 1600 -Percentage 64
-    SimpleCalc -Operation Modulus -LeftOperand 20048 -RightOperand 3000
+    Invoke-CustomCalculator -Operation Add -LeftOperand 4 -RightOperand 4
+    Invoke-CustomCalculator -Operation Subtract -LeftOperand 64 -RightOperand 48
+    Invoke-CustomCalculator -Operation Multiply -LeftOperand 4 -RightOperand 8
+    Invoke-CustomCalculator -Operation Remainder -LeftOperand 10 -RightOperand 3
+    Invoke-CustomCalculator -Operation Divide -LeftOperand 512 -RightOperand 8
+    Invoke-CustomCalculator -Operation Average -LeftOperand 56 -RightOperand 200
+    Invoke-CustomCalculator -Operation Power -LeftOperand 8 -RightOperand 3
+    Invoke-CustomCalculator -Operation Percentage -LeftOperand 1600 -Percentage 64
+    Invoke-CustomCalculator -Operation Modulus -LeftOperand 20048 -RightOperand 3000
 
     .NOTES
     v0.6.5
