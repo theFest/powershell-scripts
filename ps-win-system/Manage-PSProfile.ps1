@@ -1,4 +1,4 @@
-Function ManagePowerShellProfile {
+Function Manage-PSProfile {
     <#
     .SYNOPSIS
     Manages the PowerShell ISE profile.
@@ -14,13 +14,13 @@ Function ManagePowerShellProfile {
     NotMandatory - specifies the scope of the profile file, default is CurrentUserCurrentHost.
 
     .EXAMPLE
-    ManagePowerShellProfile -Action Show
-    ManagePowerShellProfile -Action Create
-    ManagePowerShellProfile -Action Edit -Editor Notepad++
-    ManagePowerShellProfile -Action Delete -Verbose
+    Manage-PSProfile -Action Show
+    Manage-PSProfile -Action Create
+    Manage-PSProfile -Action Edit -Editor Notepad++
+    Manage-PSProfile -Action Delete -Verbose
 
     .NOTES
-    0.0.1
+    0.0.2
     #>
     [CmdletBinding()]
     param (
