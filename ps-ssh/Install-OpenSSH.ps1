@@ -1,4 +1,4 @@
-Function SetupOpenSSH {
+Function Install-OpenSSH {
     <#
     .SYNOPSIS
     Install OpenSSH function installs OpenSSH on a local or remote computer.
@@ -18,11 +18,11 @@ Function SetupOpenSSH {
     NotMandatory - URL of the OpenSSH installer MSI. You can provide "latest" to always download the latest version.
     .EXAMPLE
     
-    SetupOpenSSH
-    SetupOpenSSH -computerName "remote_host" -username "remote_user" -pass "remote_pass"
+    Install-OpenSSH
+    Install-OpenSSH -computerName "remote_host" -username "remote_user" -pass "remote_pass"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -78,7 +78,7 @@ Function SetupOpenSSH {
         if ($Session) {
             Remove-PSSession $Session -Verbose
         }
-        Remove-Item -Path $InstallerPath -Verbose -ErrorAction SilentlyContinue
+        Remove-Item -Path $InstallerPath -Force -Verbose -ErrorAction SilentlyContinue
     }
 }
     
