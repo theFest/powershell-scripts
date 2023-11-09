@@ -1,4 +1,4 @@
-Function RepairTaskPS1 {
+Function Set-ScheduledTaskFix {
     <#
     .SYNOPSIS
     Primary use is for when Task Scheduler throws an following error: "The selected task 'your_task' no longer exists. To see the current tasks, click Refresh."
@@ -34,12 +34,12 @@ Function RepairTaskPS1 {
     NotMandatory - predifined countdown time after which computer will be restarted, change it to suit your needs
 
     .EXAMPLE
-    RepairTaskPS1 -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret"
-    RepairTaskPS1 -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret" -WebUrlPath "https://your_web_source/some_path"
-    RepairTaskPS1 -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret" -RemoteComputer "\\hostname\C:\Share" -RemoteComputerUser "your_user" -RemoteComputerPass "your_pass"
+    Set-ScheduledTaskFix -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret"
+    Set-ScheduledTaskFix -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret" -WebUrlPath "https://your_web_source/some_path"
+    Set-ScheduledTaskFix -TaskPathName "\your_task_folder\task_name" -TaskSource "https://your_source_url/your_script.ps1" -WebPathKey "your_web_source_secret" -RemoteComputer "\\hostname\C:\Share" -RemoteComputerUser "your_user" -RemoteComputerPass "your_pass"
 
     .NOTES
-    v1
+    v0.1.1
     #>
     [CmdletBinding()]
     Param(
