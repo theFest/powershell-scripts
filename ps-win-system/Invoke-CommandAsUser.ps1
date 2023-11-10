@@ -1,4 +1,4 @@
-Function RunAsOtherUser {
+Function Invoke-CommandAsUser {
     <#
     .SYNOPSIS
     Execute commands as a specified user account on a local or remote computer.
@@ -32,10 +32,10 @@ Function RunAsOtherUser {
 
     .EXAMPLE
     $Command = "Stop-Service -Name Spooler -Force"
-    RunAsOtherUser -Switches System -Command $Command -CommExecType PsCommand -Username "your_user" -Pass "your_pass" -ComputerName "your_computer"
+    Invoke-CommandAsUser -Switches System -Command $Command -CommExecType PsCommand -Username "your_user" -Pass "your_pass" -ComputerName "your_computer"
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     Param (
