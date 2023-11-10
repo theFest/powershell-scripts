@@ -1,4 +1,4 @@
-Function InvokeCertValidation {
+Function Set-CertificateValidationOption {
     <#
     .SYNOPSIS
     Adopted for PowerShell instead of C# code.
@@ -20,11 +20,11 @@ Function InvokeCertValidation {
     NotMandatory - switch parameter, if set to true, the function will allow invalid certificates, otherwise it will return false.
     
     .EXAMPLE
-    InvokeCertValidation Ignore
-    InvokeCertValidation Validate
+    Set-CertificateValidationOption Ignore
+    Set-CertificateValidationOption Validate
     
     .NOTES
-    v0.7
+    v0.1.7
     #>
     [CmdletBinding()]
     param (
