@@ -1,4 +1,4 @@
-Function RunScriptAsOtherUser {
+Function Invoke-ScriptAsUser {
     <#
     .SYNOPSIS
     Simple function that allows a script block to be executed as a different user.
@@ -25,10 +25,10 @@ Function RunScriptAsOtherUser {
     $Username = "Administrator"
     $Pass = "!Password1234"
     #$ArgumentList = "-NoExit"
-    RunScriptAsOtherUser -Script $Script -Username $Username -Pass $Pass -ArgumentList $ArgumentList -Wait
+    Invoke-ScriptAsUser -Script $Script -Username $Username -Pass $Pass -ArgumentList $ArgumentList -Wait
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     param(
@@ -110,6 +110,3 @@ Function RunScriptAsOtherUser {
     $ErrorOutput = $ErrorTask.Result
     return $Output, $ErrorOutput
 }
-
-# Example 1: Run a script block as a different user and wait for it to complete
-
