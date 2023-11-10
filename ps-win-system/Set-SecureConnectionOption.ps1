@@ -1,4 +1,4 @@
-Function SimpleCertCallback {
+Function Set-SecureConnectionOption {
     <#
     .SYNOPSIS
     TLS, SSL circumvent certificate callback validation.
@@ -11,10 +11,10 @@ Function SimpleCertCallback {
     Mandatory - use to suppress or revert validation check. Works in a current session but system wide. 
     
     .EXAMPLE
-    SimpleCertCallback -Operate true
+    Set-SecureConnectionOption -Operate true
     
     .NOTES
-    v2.0.1
+    v0.2.1
     #>
     [CmdletBinding()]
     param (
