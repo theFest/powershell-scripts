@@ -1,4 +1,4 @@
-Function RunCommandAsOtherUser {
+Function Invoke-CommandAsDifferentUser {
     <#
     .SYNOPSIS
     Run a command as other user.
@@ -22,7 +22,7 @@ Function RunCommandAsOtherUser {
     $Arguments = "-noExit"
     $Username = "Administrator"
     $Pass = "_Pass1234!"
-    $ExecXc = RunCommandAsOtherUser -Command $Command -Arguments $Arguments -Username $Username -Pass $Pass -Wait
+    $ExecXc = Invoke-CommandAsDifferentUser -Command $Command -Arguments $Arguments -Username $Username -Pass $Pass -Wait
     if ($ExecXc -eq 0) {
         Write-Host "Command executed successfully." -ForegroundColor Green
     }
@@ -31,7 +31,7 @@ Function RunCommandAsOtherUser {
     }
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     Param (
