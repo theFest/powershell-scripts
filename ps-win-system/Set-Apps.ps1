@@ -1,10 +1,10 @@
-Function DependenciesManager {
+Function Set-Apps {
     <#
     .SYNOPSIS
-    Simple script/tool that helps manage software dependencies.
+    Simple script/tool that helps manage apps and software dependencies.
     
     .DESCRIPTION
-    DependenciesManager is a tool that makes it easier to manage software dependencies, packages, modules, cabinets, etc.
+    This is a tool that makes it easier to manage software dependencies, packages, modules, cabinets, etc.
     
     .PARAMETER Action
     Mandatory - action to perform: Install or Remove.
@@ -24,15 +24,15 @@ Function DependenciesManager {
     NotMandatory - countdown before restart after installation or removal of package finishes.
 
     .EXAMPLE
-    DependenciesManager -Action Install -Name "NetFx3" -Type "Windows Feature"
-    DependenciesManager -Action Install -Name "Az.Accounts" -Type "PowerShell Module"
-    DependenciesManager -Action Install -Name "Microsoft.NET.Framework.4.8" -Type ".NET Framework"
-    DependenciesManager -Action Install -Name "openjdk" -Type "Java Package" -Source "$env:USERPROFILE\Desktop\openjdk-14.0.2_windows-x64_bin.jar"
-    DependenciesManager -Action Install -Name "GoogleChrome" -Type "Chocolatey Package"
-    DependenciesManager -Action Install -Name "MyApp" -Type "Software Package" -Source "$env:USERPROFILE\Desktop\MyApp.exe"
+    Set-Apps -Action Install -Name "NetFx3" -Type "Windows Feature"
+    Set-Apps -Action Install -Name "Az.Accounts" -Type "PowerShell Module"
+    Set-Apps -Action Install -Name "Microsoft.NET.Framework.4.8" -Type ".NET Framework"
+    Set-Apps -Action Install -Name "openjdk" -Type "Java Package" -Source "$env:USERPROFILE\Desktop\openjdk-14.0.2_windows-x64_bin.jar"
+    Set-Apps -Action Install -Name "GoogleChrome" -Type "Chocolatey Package"
+    Set-Apps -Action Install -Name "MyApp" -Type "Software Package" -Source "$env:USERPROFILE\Desktop\MyApp.exe"
     
     .NOTES
-    v1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     param (
