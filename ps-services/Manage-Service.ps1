@@ -1,4 +1,4 @@
-Function ServiceManager {
+Function Manage-Service {
     <#
     .SYNOPSIS
     Perform various operations on Windows services.
@@ -34,14 +34,14 @@ Function ServiceManager {
     NotMandatory - command to be executed during recovery if the specified recovery actions are triggered.
 
     .EXAMPLE
-    ServiceManager -ServiceName "wuauserv" -Action Start
-    ServiceManager -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
-    ServiceManager -ServiceName "wuauserv" -Action GetStartupType
-    ServiceManager -ServiceName "wuauserv" -Action GetServiceAccountInfo
-    ServiceManager -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
+    Manage-Service -ServiceName "wuauserv" -Action Start
+    Manage-Service -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
+    Manage-Service -ServiceName "wuauserv" -Action GetStartupType
+    Manage-Service -ServiceName "wuauserv" -Action GetServiceAccountInfo
+    Manage-Service -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
 
     .NOTES
-    v0.0.6
+    v0.0.7
     #>
     [CmdletBinding()]
     param (
