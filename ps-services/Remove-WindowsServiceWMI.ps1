@@ -1,21 +1,21 @@
-﻿Function DeleteServiceWMI {
+﻿Function Remove-WindowsServiceWMI {
     <#
     .SYNOPSIS
-    Windows service removal script.
-    
+    Removes Windows service using WMI method.
+
     .DESCRIPTION
-    With this funtion you can delete Windows service using WMI method.
-    
+    This function allows you to delete a Windows service using the WMI method.
+
     .PARAMETER ServiceName
-    Mandator - declare name of the service you want to delete.
-    .PARAMETER ForceIf
-    NotMandatory - as a precaution measure, default is set to -Whatif. Use this switch to force deletion.
+    Mandatory - Declare the name of the service you want to delete.
+    .PARAMETER Force
+    Not Mandatory - As a precaution measure, the default is set to -WhatIf. Use this switch to force deletion.
 
     .EXAMPLE
-    DeleteServiceWMI -ServiceName W32Time (-ForceIf #-->use to delete)
-    
+    Remove-WindowsServiceWMI -ServiceName W32Time -Force
+
     .NOTES
-    v2
+    v0.1.2
     #>
     [CmdletBinding()]
     param(
@@ -23,23 +23,24 @@
         [string]$ServiceName,
 
         [Parameter(Mandatory = $false)]
-        [switch]$ForceIf
+        [switch]$Force
     )
     BEGIN {
         if (!(Get-Service $ServiceName -ErrorAction SilentlyContinue)) {
             Write-Host "Required service not found!" -ForegroundColor Red
+            return
         }
     }
     PROCESS {
         $Service = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'"
-        if (!$ForceIf.IsPresent) {
-            Write-Host "Use -ForceIf to actually delete!" -ForegroundColor Cyan
+        if (-not $Force.IsPresent) {
+            Write-Host "Use -Force to actually delete!" -ForegroundColor Cyan
         }
         else {
             $Service.StopService() | Out-Null
             Start-Sleep -Seconds 1
             $Service.Delete() | Out-Null
-            $Service.Dispose() | Out-Null             
+            $Service.Dispose() | Out-Null
         }
     }
     END {
