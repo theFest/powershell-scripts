@@ -1,4 +1,4 @@
-﻿Function DecryptFile {
+﻿Function Invoke-FileDecryption {
     <#
     .SYNOPSIS
     Decrypt a file with it's predeclared password.
@@ -20,11 +20,11 @@
     NotMandatory - choose padding mode, default is set to Zeros.
     
     .EXAMPLE
-    DecryptFile -PreDefinedKey 'my_private_password' -Path "$env:USERPROFILE\Desktop\encrypted_file.txt.aes"
-    DecryptFile -PreGeneratedKey '62u8v/KwIhRd7n9LRq75sCa5bOOejuJGC53A3grCZz0=' -Path "$env:USERPROFILE\Desktop\encrypted_file.txt.aes"
+    Invoke-FileDecryption -PreDefinedKey 'my_private_password' -Path "$env:USERPROFILE\Desktop\encrypted_file.txt.aes"
+    Invoke-FileDecryption -PreGeneratedKey '62u8v/KwIhRd7n9LRq75sCa5bOOejuJGC53A3grCZz0=' -Path "$env:USERPROFILE\Desktop\encrypted_file.txt.aes"
     
     .NOTES
-    v1
+    v0.1.2
     #>
     [CmdletBinding()]
     param(
@@ -44,12 +44,12 @@
         [int]$BlockSize = 128,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('CBC', 'CFB', 'CTS', 'ECB', 'OFB')]
-        $CipherMode = 'CBC',
+        [ValidateSet("CBC", "CFB", "CTS", "ECB", "OFB")]
+        $CipherMode = "CBC",
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Zeros', 'ANSIX923', 'ISO10126', 'PKCS7', 'None')]
-        $PaddingMode = 'Zeros'
+        [ValidateSet("Zeros", "ANSIX923", "ISO10126", "PKCS7", "None")]
+        $PaddingMode = "Zeros"
     )
     BEGIN {
         $ShaManaged = New-Object System.Security.Cryptography.SHA256Managed
@@ -61,10 +61,10 @@
         $AesManaged.BlockSize = $BlockSize
         $AesManaged.KeySize = $KeySize
         switch ($PSBoundParameters.Keys) {
-            'PreGeneratedKey' {                
+            "PreGeneratedKey" {                
                 $AesManaged.Key = [System.Convert]::FromBase64String($PreGeneratedKey)
             }
-            'PreDefinedKey' {
+            "PreDefinedKey" {
                 $AesManaged.Key = $ShaManaged.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($PreDefinedKey))
             }
         }
