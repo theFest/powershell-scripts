@@ -1,4 +1,4 @@
-﻿Function EncryptFile {
+﻿Function Invoke-FileEncryption {
     <#
     .SYNOPSIS
     Encrypt a file with it's secure password.
@@ -22,11 +22,11 @@
     NotMandatory - choose padding mode, default is set to Zeros.
     
     .EXAMPLE
-    EncryptFile -DefinedKey 'my_private_password' -Path "$env:USERPROFILE\Desktop\file_to_encrypt.txt"
-    EncryptFile -GeneratedKey -Path "$env:USERPROFILE\Desktop\file_to_encrypt.txt"
+    Invoke-FileEncryption -DefinedKey 'my_private_password' -Path "$env:USERPROFILE\Desktop\file_to_encrypt.txt"
+    Invoke-FileEncryption -GeneratedKey -Path "$env:USERPROFILE\Desktop\file_to_encrypt.txt"
     
     .NOTES
-    v1
+    v0.1.2
     #>
     [CmdletBinding()]
     param(
@@ -49,12 +49,12 @@
         [int]$BlockSize = 128,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('CBC', 'CFB', 'CTS', 'ECB', 'OFB')]
-        $CipherMode = 'CBC',
+        [ValidateSet("CBC", "CFB", "CTS", "ECB", "OFB")]
+        $CipherMode = "CBC",
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Zeros', 'ANSIX923', 'ISO10126', 'PKCS7', 'None')]
-        $PaddingMode = 'Zeros'
+        [ValidateSet("Zeros", "ANSIX923", "ISO10126", "PKCS7", "None")]
+        $PaddingMode = "Zeros"
     )
     BEGIN {
         $ShaManaged = New-Object System.Security.Cryptography.SHA256Managed
@@ -66,10 +66,10 @@
         $AesManaged.BlockSize = $BlockSize
         $AesManaged.KeySize = $KeySize
         switch ($PSBoundParameters.Keys) {
-            'DefinedKey' {
+            "DefinedKey" {
                 $AesManaged.Key = $ShaManaged.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($DefinedKey))
             }
-            'GeneratedKey' {                
+            "GeneratedKey" {                
                 $AesManaged.GenerateKey()
                 $RandomlyGeneratedKey = [System.Convert]::ToBase64String($AesManaged.Key)
             }
