@@ -1,4 +1,4 @@
-Function SendFileS3 {
+Function Send-FileS3 {
     <#
     .SYNOPSIS
     This function sends Logs and Transcripts to S3.
@@ -18,10 +18,10 @@ Function SendFileS3 {
     NotMandatory - destination of where you want transcript file to reside. If you define another destination, define it's key also.
 
     .EXAMPLE
-    SendFileS3 -Key 'your_bucket_key' -ReportFilePath "$env:TEMP\Report.csv" -TranscriptFilePath "$env:TEMP\Transcript.txt" -LogUrl 'https://your_destination_path/' -TranscriptUrl 'https://your_destinationpath/'
+    Send-FileS3 -Key 'your_bucket_key' -ReportFilePath "$env:TEMP\Report.csv" -TranscriptFilePath "$env:TEMP\Transcript.txt" -LogUrl 'https://your_destination_path/' -TranscriptUrl 'https://your_destinationpath/'
 
     .NOTES
-    v1
+    v0.1.2
     #>
     [CmdletBinding()]
     Param(
