@@ -1,4 +1,4 @@
-Function SchTasksManager {
+Function Invoke-ScheduledTaskOperation {
     <#
     .SYNOPSIS
     Manage scheduled tasks using the SCHTASKS utility.
@@ -65,17 +65,17 @@ Function SchTasksManager {
     NotMandatory - the path for exporting the list of scheduled tasks to a CSV file.
 
     .EXAMPLE
-    SchTasksManager -Operation CreateTask -WebContentURL "https://example.com/your_script.ps1" -WebContentLocalPath "C:\your_scripts" -TaskName "your_sch_task" -TriggerType DAILY -Interval 1
-    SchTasksManager -Operation CreateTask -FilePath "C:\Scripts" -FileName "your_script.ps1" -TaskName "your_sch_task" -TriggerType DAILY -Interval 1 -ProgramPath "C:\Scripts\your_script.ps1" -Verbose
-    SchTasksManager -Operation CreateTask -XMLImportPath "C:\Scripts\TaskDefinition.xml" -XMLScriptPath "C:\Scripts\your_script.ps1" -TaskName "your_sch_task" -RunAsUser "your_user" -RunAsUserPass "your_pass"
-    SchTasksManager -Operation ChangeTask -TaskName "your_task" -TriggerType DAILY -Interval 30 -ProgramPath "$env:USERPROFILE\Desktop\your_script.ps1" -Verbose
-    SchTasksManager -Operation QueryTask -TaskName "your_task"
-    SchTasksManager -Operation RunTask -TaskName "your_task"
-    SchTasksManager -Operation EndTask -TaskName "your_task" -Verbose
-    SchTasksManager -Operation DeleteTask -TaskName "your_task" -Verbose
+    Invoke-ScheduledTaskOperation -Operation CreateTask -WebContentURL "https://example.com/your_script.ps1" -WebContentLocalPath "C:\your_scripts" -TaskName "your_sch_task" -TriggerType DAILY -Interval 1
+    Invoke-ScheduledTaskOperation -Operation CreateTask -FilePath "C:\Scripts" -FileName "your_script.ps1" -TaskName "your_sch_task" -TriggerType DAILY -Interval 1 -ProgramPath "C:\Scripts\your_script.ps1" -Verbose
+    Invoke-ScheduledTaskOperation -Operation CreateTask -XMLImportPath "C:\Scripts\TaskDefinition.xml" -XMLScriptPath "C:\Scripts\your_script.ps1" -TaskName "your_sch_task" -RunAsUser "your_user" -RunAsUserPass "your_pass"
+    Invoke-ScheduledTaskOperation -Operation ChangeTask -TaskName "your_task" -TriggerType DAILY -Interval 30 -ProgramPath "$env:USERPROFILE\Desktop\your_script.ps1" -Verbose
+    Invoke-ScheduledTaskOperation -Operation QueryTask -TaskName "your_task"
+    Invoke-ScheduledTaskOperation -Operation RunTask -TaskName "your_task"
+    Invoke-ScheduledTaskOperation -Operation EndTask -TaskName "your_task" -Verbose
+    Invoke-ScheduledTaskOperation -Operation DeleteTask -TaskName "your_task" -Verbose
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding(DefaultParameterSetName = "FilePathContent")]
     param(
