@@ -1,4 +1,4 @@
-﻿Function GetFileS3 {
+﻿Function Get-FileS3 {
     <#
     .SYNOPSIS
     This function downloads file from Internet.
@@ -20,7 +20,10 @@
     *for reusability purposes, remove following: WriteLog(declare_at_the_end)
 
     .EXAMPLE
-    GetFileS3 -Key $Key -FileUrl $your_url -DestinationPath $your_data_path
+    Get-FileS3 -Key $Key -FileUrl $your_url -DestinationPath $your_data_path
+
+    .NOTES
+    v0.1.2
     #>
     [CmdletBinding()]
     Param(
