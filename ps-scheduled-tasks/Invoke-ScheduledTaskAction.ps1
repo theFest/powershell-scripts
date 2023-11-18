@@ -1,4 +1,4 @@
-Function ScheduledTasksChecker {
+Function Invoke-ScheduledTaskAction {
     <#
     .SYNOPSIS
     ScheduledTasksChecker allows you to perform various actions on Windows scheduled tasks.
@@ -20,16 +20,16 @@ Function ScheduledTasksChecker {
     .EXAMPLE
     $TaskName = "SilentCleanup"
     $TaskPath = "\Microsoft\Windows\DiskCleanup\"
-    ScheduledTasksChecker -Action Start -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action Stop -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action GetStatus -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action Disable -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action Enable -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action GetInfo -TaskName $TaskName -TaskPath $TaskPath -AsJob
-    ScheduledTasksChecker -Action Export -TaskName $TaskName -TaskPath $TaskPath -ExportPath "$env:USERPROFILE\Desktop"
+    Invoke-ScheduledTaskAction -Action Start -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action Stop -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action GetStatus -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action Disable -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action Enable -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action GetInfo -TaskName $TaskName -TaskPath $TaskPath -AsJob
+    Invoke-ScheduledTaskAction -Action Export -TaskName $TaskName -TaskPath $TaskPath -ExportPath "$env:USERPROFILE\Desktop"
     
     .NOTES
-    v1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     param (   
