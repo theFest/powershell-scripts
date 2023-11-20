@@ -1,139 +1,4 @@
-<# Class AzureAutomation {
-  [string]$AutomationAccountName
-  [string]$ResourceGroupName
-  AzureAutomation(
-    [string]$AutomationAccountName,
-    [string]$ResourceGroupName) {
-    $this.AutomationAccountName = $AutomationAccountName
-    $this.ResourceGroupName = $ResourceGroupName
-  }
-  [void] UploadRunbook(
-    [string]$RunbookName,
-    [string]$Path,
-    [switch]$Overwrite,
-    [string]$Type,
-    [string]$Description,
-    [string]$ImportRunbook,
-    [string]$StartRunbook,
-    [switch]$Publish = $false) {
-    Get-AzAutomationAccount -Name $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -Verbose
-    $Runbook = Get-AzAutomationRunbook -Name $RunbookName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -ErrorAction SilentlyContinue `
-      -Verbose
-    switch ($Runbook) {
-      $null {
-        break
-      }
-      default {
-        switch ($Overwrite) {
-          $true {
-            Remove-AzAutomationRunbook -Name $RunbookName `
-              -AutomationAccountName $this.AutomationAccountName `
-              -ResourceGroupName $this.ResourceGroupName `
-              -Force -Verbose
-            break
-          }
-          default {
-            throw "Runbook already exists and -Overwrite switch not specified"
-          }
-        }
-      }
-    }
-    Get-Content $Path -Raw -Force -Verbose
-    $Runbook = New-AzAutomationRunbook -Name $RunbookName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -Description $this.Description `
-      -Type $this.Type `
-      -Verbose
-
-    Set-AzAutomationRunbook -Name $RunbookName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -Description -Verbose
-    switch ($ImportRunbook) {
-      $null {            }
-      default {
-        Import-AzAutomationRunbook -Name $RunbookName `
-          -AutomationAccountName $this.AutomationAccountName `
-          -ResourceGroupName $this.ResourceGroupName `
-          -Description $Description `
-          -Path $ImportRunbook `
-          -Type $Type `
-          -Verbose `
-          -Force
-      }
-    }
-    switch ($Publish) {
-      $false {
-        break
-      }
-      default {
-        Publish-AzAutomationRunbook -Name $RunbookName `
-          -AutomationAccountName $this.AutomationAccountName `
-          -ResourceGroupName $this.ResourceGroupName `
-          -Verbose
-      }
-    }
-    switch (StartRunbook) {
-      try {
-        Start-AzAutomationRunbook -Name $RunbookName `
-          -AutomationAccountName $this.AutomationAccountName `
-          -ResourceGroupName $this.ResourceGroupName `
-          -Confirm:$true `
-          -WhatIf:$true
-        Write-Verbose "Runbook '$RunbookName' started"
-      }
-      catch {
-        Write-Error $_.Exception
-      }
-    }
-  }
-  [void] ExportRunbook(
-    [string]$RunbookName,
-    [string]$Path) {
-    Export-AzAutomationRunbook -Name $RunbookName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -Path $Path -Force -Verbose
-  }
-  [void] ScheduleRunbook(
-    [string]$RunbookName,
-    [string]$ScheduleName,
-    [string]$Schedule) {
-    New-AzAutomationSchedule -Name $ScheduleName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -RunbookName $RunbookName `
-      -Schedule $Schedule `
-      -Verbose
-  }
-  [void] RegisterScheduledRunbook(
-    [string]$RunbookName,
-    [string]$ScheduleName) {
-    Register-AzAutomationScheduledRunbook -Name $RunbookName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -ScheduleName $ScheduleName `
-      -Verbose
-  }
-  [void] UnregisterScheduledRunbook(
-    [string]$RunbookName,
-    [string]$ScheduleName) {
-    Unregister-AzAutomationScheduledRunbook -Name $RunbookName `
-      -AutomationAccountName $this.AutomationAccountName `
-      -ResourceGroupName $this.ResourceGroupName `
-      -ScheduleName $ScheduleName `
-      -Force `
-      -Verbose
-  }
-} #>
-
-Function AzureAutoRunBookManage {
+Function Set-AzAutomationRunbookResource {
   <#
   .SYNOPSIS
   Simple function for managing Azure Automation Runbook.
@@ -163,13 +28,13 @@ Function AzureAutoRunBookManage {
   NotMandatory - if runbook already exists, it will be overwritten with this switch.
 
   .EXAMPLE
-  "your_RunBook" | AzureAutoRunBookManage -Path "your_local_script_path" -AutomationAccountName "your_az_automationaccountname" -ResourceGroupName "your_resource_group" `
+  "your_RunBook" | Set-AzAutomationRunbookResource -Path "your_local_script_path" -AutomationAccountName "your_az_automationaccountname" -ResourceGroupName "your_resource_group" `
     -Description "some_description" -Type PowerShell -Publish -Overwrite -Verbose
-  AzureAutoRunBookManage -RunbookName "your_RunBook" -Path "your_local_script_path" -AutomationAccountName "your_az_automationaccountname" -ResourceGroupName "your_resource_group" `
+  Set-AzAutomationRunbookResource -RunbookName "your_RunBook" -Path "your_local_script_path" -AutomationAccountName "your_az_automationaccountname" -ResourceGroupName "your_resource_group" `
     -Description "some_description" -Type PowerShell -Publish -Overwrite -Verbose
 
   .NOTES
-  v1.3.3
+  v1.3.4
   #>
   [CmdletBinding()]
   param(
