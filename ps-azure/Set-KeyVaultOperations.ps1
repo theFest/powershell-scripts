@@ -1,4 +1,4 @@
-Function KeyVaultManager {
+Function Set-KeyVaultOperations {
     <#
     .SYNOPSIS
     Simple Azure Key Vault Manager.
@@ -42,18 +42,18 @@ Function KeyVaultManager {
     NotMandatory - removes a certificate from the key vault, requires the CertificateName parameter.
 
     .EXAMPLE
-    KeyVaultManager -ResourceGroupName "your_rg" -CreateKeyVaultName "create_your_keyvault_name"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListSecrets
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetSecret "your_secret"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListCertificates
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetCertificate "your_cert"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddSecret -SecretName "SecretKey" -SecretValue "Secret Value"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveSecret -SecretName "SecretKey"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddCertificate Default -CertificateName "you_cert_name" -CertificatePath "$env:SystemDrive\Temp\your_dn.com.pfx" -CertPass "mySecretPass12345!"
-    KeyVaultManager -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveCertificate -CertificateName "you_cert_name"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -CreateKeyVaultName "create_your_keyvault_name"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListSecrets
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetSecret "your_secret"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -ListCertificates
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -GetCertificate "your_cert"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddSecret -SecretName "SecretKey" -SecretValue "Secret Value"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveSecret -SecretName "SecretKey"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -AddCertificate Default -CertificateName "you_cert_name" -CertificatePath "$env:SystemDrive\Temp\your_dn.com.pfx" -CertPass "mySecretPass12345!"
+    Set-KeyVaultOperations -ResourceGroupName "your_rg" -VaultName "your_keyvault" -RemoveCertificate -CertificateName "you_cert_name"
 
     .NOTES
-    v1.0.1
+    v1.0.2
     #>
     [CmdletBinding()]
     param (
