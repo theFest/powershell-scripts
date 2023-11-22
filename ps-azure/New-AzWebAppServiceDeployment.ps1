@@ -1,4 +1,4 @@
-Function SimpleNewAppServicePack {
+Function New-AzWebAppServiceDeployment {
   <#
   .SYNOPSIS
   Creates a new Azure App Service and deploys a web app package.
@@ -40,13 +40,13 @@ Function SimpleNewAppServicePack {
   NotMandatory - runs the function as a background job. The output of the function is stored in the job object.
 
   .EXAMPLE
-  SimpleNewAppServicePack -AzAccountId "your@e_mail.com" -Verbose
-  SimpleNewAppServicePack Subscription "your_subscription_name" -Verbose
-  SimpleNewAppServicePack -WebAppAction Publish -Subscription "My Subscription" -Location "East US" -Environment Production -InstanceNumber 1 -WebAppName "MyWebApp" `
+  New-AzWebAppServiceDeployment -AzAccountId "your@e_mail.com" -Verbose
+  New-AzWebAppServiceDeployment Subscription "your_subscription_name" -Verbose
+  New-AzWebAppServiceDeployment -WebAppAction Publish -Subscription "My Subscription" -Location "East US" -Environment Production -InstanceNumber 1 -WebAppName "MyWebApp" `
   -ResourceGroupName "MyResourceGroup" -AppServicePlanTier Standard -ManagedPipelineMode Integrated -WebSocketsEnabled $true -AlwaysOn $true -HttpsOnly $true -MinTlsVersion 1.2 -Http20Enabled $true
 
   .NOTES
-  v0.8.2
+  v0.8.3
   #>
   [CmdletBinding()]
   param (
