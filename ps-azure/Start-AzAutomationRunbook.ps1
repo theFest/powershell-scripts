@@ -28,7 +28,7 @@ Class AzureAutomationRunbook {
   }
 }
 
-Function StartAzAutomationRunbook {
+Function Start-AzAutomationRunbook {
   <#
   .SYNOPSIS
   Start Runbook on Azure Automation.
@@ -49,10 +49,10 @@ Function StartAzAutomationRunbook {
 
   .EXAMPLE
   #$Params = @{ "ResourceGroupName" = "rg-application-reg-env-instance" }
-  StartAzAutomationRunbook -RunbookName "your_AzRunBook" -AutomationAccountName "your_AzAutomationName" -ResourceGroupName "AzAuto" -Params $Params -WaitForCompletion -Verbose
+  Start-AzAutomationRunbook -RunbookName "your_AzRunBook" -AutomationAccountName "your_AzAutomationName" -ResourceGroupName "AzAuto" -Params $Params -WaitForCompletion -Verbose
   
   .NOTES
-  v1.0.1
+  v1.0.2
   #>
   [CmdletBinding()]
   param(
