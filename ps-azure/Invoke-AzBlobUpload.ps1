@@ -26,7 +26,7 @@ Class AzureStorageUploader {
   }
 }
 
-Function UploadToAzureStorage {
+Function Invoke-AzBlobUpload {
   <#
   .SYNOPSIS
   Simple example of class usage for purpose of upload a file to Azure Blob Storage.
@@ -50,10 +50,10 @@ Function UploadToAzureStorage {
   Mandatory - if runbook already exists, it will be overwritten with this switch.
 
   .EXAMPLE
-  UploadToAzureStorage -LocalFilePath "$env:TEMP\your_file.csv" -StorageAccountName "" -StorageAccountKey "" -ContainerName "" -BlobName "" -Overwrite -Verbose
+  Invoke-AzBlobUpload -LocalFilePath "$env:TEMP\your_file.csv" -StorageAccountName "" -StorageAccountKey "" -ContainerName "" -BlobName "" -Overwrite -Verbose
 
   .NOTES
-  v1.0.1
+  v1.0.2
   #>
   [CmdletBinding()]
   param(
