@@ -1,4 +1,4 @@
-Function GetBlobStorage {
+Function Get-BlobStorage {
   <#
   .SYNOPSIS
   Download blobs from Azure Storage.
@@ -28,13 +28,13 @@ Function GetBlobStorage {
   NotMandatory - path to the location where you want to download the blob(s) to.
 
   .EXAMPLE
-  GetBlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ListContainers
-  GetBlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -ListBlobs
-  GetBlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -DownloadBlob "your_single_blob"
-  GetBlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -DownloadBlobsFromFile "$env:USERPROFILE\Desktop\your_blobs_list_file.txt"
+  Get-BlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ListContainers
+  Get-BlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -ListBlobs
+  Get-BlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -DownloadBlob "your_single_blob"
+  Get-BlobStorage -StorageAccountName "your_storage_acc" -StorageAccountKey "your_storage_key" -ContainerName "your_container_name" -DownloadBlobsFromFile "$env:USERPROFILE\Desktop\your_blobs_list_file.txt"
 
   .NOTES
-  v1.0.2
+  v1.0.3
   #>
   [CmdletBinding()]
   param (
