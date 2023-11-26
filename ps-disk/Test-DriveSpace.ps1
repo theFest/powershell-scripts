@@ -1,4 +1,4 @@
-Function CheckDiskSpace {
+Function Test-DriveSpace {
     <#
     .SYNOPSIS
     This function queries free space with options.
@@ -19,40 +19,43 @@ Function CheckDiskSpace {
     NotMandatory - pick an operator.
 
     .EXAMPLE
-    CheckDiskSpace -Drive C -Size 60 ##-->(choose your size) 
+    Test-DriveSpace -Drive C -Size 60
+
+    .NOTES
+    v0.1.2
     #>
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
-        [ValidateRange('A', 'Z')]
+        [ValidateRange("A", "Z")]
         [string]$Drive,
 
         [Parameter(Mandatory = $true)]
         [int]$Size,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('KB', 'MB', 'GB', 'TB')]
-        [string]$Units = 'GB',
+        [ValidateSet("KB", "MB", "GB", "TB")]
+        [string]$Units = "GB",
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('2', '3', '4', '5')]
-        [string]$Type = '3',
+        [ValidateSet("2", "3", "4", "5")]
+        [string]$Type = "3",
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('GreaterThan', 'LessThan', 'GreaterThanOrEqualTo', 'LessThanOrEqualTo', 'EqualTo', 'NotEqualTo')]
-        [string]$OptionSize = 'GreaterThan'
+        [ValidateSet("GreaterThan", "LessThan", "GreaterThanOrEqualTo", "LessThanOrEqualTo", "EqualTo", "NotEqualTo")]
+        [string]$OptionSize = "GreaterThan"
     )
     switch ($Disks = Get-CimInstance Win32_LogicalDisk -Filter DriveType=$Type | `
             Select-Object DeviceID,
         @{'Name' = 'Size'; 'Expression' = { [math]::truncate($_.Size / "1$Units") } }, 
         @{'Name' = 'FreeSpace'; 'Expression' = { [math]::truncate($_.FreeSpace / "1$Units") } } | `
             Where-Object -Property DeviceID -EQ $Drive':') {
-        { $OptionSize -eq 'GreaterThan' } { $Disks.FreeSpace -gt $Size }
-        { $OptionSize -eq 'LessThan' } { $Disks.FreeSpace -lt $Size }
-        { $OptionSize -eq 'GreaterThanOrEqualTo' } { $Disks.FreeSpace -ge $Size }
-        { $OptionSize -eq 'LessThanOrEqualTo' } { $Disks.FreeSpace -le $Size }
-        { $OptionSize -eq 'NotEqualTo' } { $Disks.FreeSpace -eq $Size }
-        { $OptionSize -eq 'EqualTo' } { $Disks.FreeSpace -ne $Size }
+        { $OptionSize -eq "GreaterThan" } { $Disks.FreeSpace -gt $Size }
+        { $OptionSize -eq "LessThan" } { $Disks.FreeSpace -lt $Size }
+        { $OptionSize -eq "GreaterThanOrEqualTo" } { $Disks.FreeSpace -ge $Size }
+        { $OptionSize -eq "LessThanOrEqualTo" } { $Disks.FreeSpace -le $Size }
+        { $OptionSize -eq "NotEqualTo" } { $Disks.FreeSpace -eq $Size }
+        { $OptionSize -eq "EqualTo" } { $Disks.FreeSpace -ne $Size }
     }
     return $Disks
 }
