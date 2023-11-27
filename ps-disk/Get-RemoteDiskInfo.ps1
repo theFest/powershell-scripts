@@ -1,10 +1,10 @@
-Function GetRemoteDiskSpace {
+Function Get-RemoteDiskInfo {
     <#
     .SYNOPSIS
     Retrieves disk space information for remote computers.
 
     .DESCRIPTION
-    The GetRemoteDiskSpace function retrieves disk space information for one or more remote computers. It provides details such as used space, total space, and percentage used for each disk on the specified computers.
+    This function retrieves disk space information for one or more remote computers. It provides details such as used space, total space, and percentage used for each disk on the specified computers.
 
     .PARAMETER ComputerName
     Mandatory - name or IP address of the remote computer(s) to retrieve disk space information from. Multiple computer names can be provided.
@@ -26,10 +26,10 @@ Function GetRemoteDiskSpace {
     NotMandatory - specifies whether to display the total percentage used for each disk. If set, the function will display the total percentage used. By default, this parameter is not set.
     
     .EXAMPLE
-    GetRemoteDiskSpace -ComputerName "" -Username "" -Pass "" -WarningThreshold 75 -ErrorThreshold 90 
+    Get-RemoteDiskInfo -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -WarningThreshold 75 -ErrorThreshold 90 
     
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param(
