@@ -1,7 +1,7 @@
-Function FirewallManagerHNC {
+Function Set-FirewallHNC {
     <#
     .SYNOPSIS
-    Manages Windows Firewall rules and Windows Firewall control.
+    Manages Windows Firewall rules and Windows Firewall control via FwPolicy2.
 
     .DESCRIPTION
     This function manages firewall rules in Windows Firewall. Firewall rules can be created, modified, or removed using this function.
@@ -62,12 +62,12 @@ Function FirewallManagerHNC {
     NotMandatory - clears any duplicate firewall rules.
 
     .EXAMPLE
-    FirewallRulesManagerFWPolicy -ClearDuplicates -Verbose
-    FirewallRulesManagerFWPolicy -Operate Add -Name "AAAabc" -Description "AAAabc" -ApplicationName "C:\temp\myapp.exe" -Action Allow -Direction Inbound -Protocol TCP `
+    Set-FirewallHNC -ClearDuplicates -Verbose
+    Set-FirewallHNC -Operate Add -Name "AAAabc" -Description "AAAabc" -ApplicationName "C:\temp\myapp.exe" -Action Allow -Direction Inbound -Protocol TCP `
         -LocalPort "80" -RemotePort '2334' -LocalAddress "192.168.100.5", "192.168.100.2" -RemoteAddress "192.168.100.3", "192.168.100.2" -Enable -Verbose -Force
 
     .NOTES
-    v0.1.0
+    v0.1.1
     #>
     [CmdletBinding()]
     Param (
