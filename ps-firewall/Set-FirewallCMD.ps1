@@ -1,11 +1,11 @@
 #Requires -Version 5.1
-Function FirewallManagerCMD {
+Function Set-FirewallCMD {
     <#
     .SYNOPSIS
-    Manage Windows Firewall rules.
+    Manage Windows Firewall rules via PS CMDlets.
 
     .DESCRIPTION
-    This PowerShell function is used to manage Windows Firewall rules, it allows you to add, remove, modify, enable or disable a firewall rule.
+    This function is used to manage Windows Firewall rules, it allows you to add, remove, modify, enable or disable a firewall rule.
 
     .PARAMETER Action
     Mandatory - action to be taken, valid values are declared in validate set.
@@ -43,21 +43,21 @@ Function FirewallManagerCMD {
     Parameter - performs the action on all firewall rule groups.
     
     .EXAMPLE
-    FirewallManagerCMD -Action List
-    FirewallManagerCMD -Action Show
-    FirewallManagerCMD -Action Get -Name "your_rule"
-    FirewallManagerCMD -Action Add -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
-    FirewallManagerCMD -Action Remove -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
-    FirewallManagerCMD -Action Modify -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol UDP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
-    FirewallManagerCMD -Action Enable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
-    FirewallManagerCMD -Action Disable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
-    FirewallManagerCMD -Action Rename -Name "old_name" -NewName "new_name"
-    FirewallManagerCMD -Action Export -ImportExportPath "$env:USERPROFILE\Desktop\fw_rules_ex.csv"
-    FirewallManagerCMD -Action Start
-    FirewallManagerCMD -Action Stop
+    Set-FirewallCMD -Action List
+    Set-FirewallCMD -Action Show
+    Set-FirewallCMD -Action Get -Name "your_rule"
+    Set-FirewallCMD -Action Add -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
+    Set-FirewallCMD -Action Remove -Name "your_rule" -Description "ADesc" -Direction Inbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
+    Set-FirewallCMD -Action Modify -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol UDP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Enabled True -Verbose
+    Set-FirewallCMD -Action Enable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
+    Set-FirewallCMD -Action Disable -Name "your_rule" -Description "ADesc" -Direction Outbound -Protocol TCP -LocalPort 80 -LocalAddress 10.100.10.1 -RemotePort 546 -RemoteAddress 10.100.10.2 -Verbose
+    Set-FirewallCMD -Action Rename -Name "old_name" -NewName "new_name"
+    Set-FirewallCMD -Action Export -ImportExportPath "$env:USERPROFILE\Desktop\fw_rules_ex.csv"
+    Set-FirewallCMD -Action Start
+    Set-FirewallCMD -Action Stop
 
     .NOTES
-    v0.0.4
+    v0.0.5
     #>
     [CmdletBinding()]
     param(
