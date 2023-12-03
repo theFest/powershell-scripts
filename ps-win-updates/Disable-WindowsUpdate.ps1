@@ -9,18 +9,18 @@ Function Disable-WindowsUpdate {
     .PARAMETER UpdateOperation
     NotMandatory - update operation to perform, the available options are '/D', '/E', and '/D /P' (default). '/D' disables updates, '/E' enables updates, and '/D /P' disables updates permanently. Default is '/D /P'.
     .PARAMETER WudUrl
-    NotMandatory - specifies the URL of the Windows Update Disabler tool to download. Default is "https://www.sordum.org/files/downloads.php?st-windows-update-blocker".
+    NotMandatory - specifies the URL of the Windows Update Disabler tool to download.
     .PARAMETER RemoveWUB
     NotMandatory - whether to remove Windows Update Disable tool after disabling Windows Updates.
     .PARAMETER Restart
     NotMandatory - indicates whether to restart the computer after applying the update operation.
 
     .EXAMPLE
-    Disable-WindowsUpdate
+    Disable-WindowsUpdate -Verbose
     Disable-WindowsUpdate -UpdateOperation /E -Restart
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param(
@@ -40,7 +40,7 @@ Function Disable-WindowsUpdate {
     try {
         New-Item -Path "$env:TEMP" -Name "WU_Disable" -ItemType Directory -Force | Out-Null
         if (!(Test-Path -Path "$env:TEMP\WU_Disable\Wub_v1.8.zip")) {
-            Write-Host "Downloading Windows Update disabler..."
+            Write-Host "Downloading Windows Update disabler..." -ForegroundColor Green
             Invoke-WebRequest -Uri $WudUrl -OutFile "$env:TEMP\WU_Disable\Wub_v1.8.zip" -UseBasicParsing -Verbose
         }
         Expand-Archive -Path "$env:TEMP\WU_Disable\Wub_v1.8.zip" -DestinationPath "$env:TEMP\WU_Disable" -Force -Verbose
@@ -49,7 +49,7 @@ Function Disable-WindowsUpdate {
         Start-Process cmd -ArgumentList "/c $env:TEMP\WU_Disable\Wub\Wub_x64.exe $UpdateOperation" -WindowStyle Minimized -Wait
     }
     catch {
-        Write-Error "An error occurred: $_"
+        Write-Error -Message "An error occurred: $_"
     }
     finally {
         if (("wuauserv", "WaaSMedicSvc" | Get-Service).Status -eq "Stopped") {
