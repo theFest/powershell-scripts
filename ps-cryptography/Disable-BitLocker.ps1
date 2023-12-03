@@ -13,7 +13,6 @@ Function Disable-BitLocker {
     Disable-BitLocker -MountPoint "C:"
 
     .NOTES
-    v0.0.1
     #>
     [CmdletBinding()]
     param (
