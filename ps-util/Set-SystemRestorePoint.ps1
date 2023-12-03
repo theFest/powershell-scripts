@@ -1,11 +1,10 @@
-Function Manage-SystemRestorePoint {
+Function Set-SystemRestorePoint {
     <#
     .SYNOPSIS
     Manage system restore points on a Windows computer.
 
     .DESCRIPTION
     This function provides an easy way to create, customize, and restore system restore points on a Windows computer.
-    System restore points are snapshots of your system's state that can be used to restore your computer to a previous state if issues arise.
 
     .PARAMETER Action
     Specifies the action to perform. Valid values are "Create", "Save", "Restore", "List", and "Remove".
@@ -29,12 +28,12 @@ Function Manage-SystemRestorePoint {
     NotMandatory - specifies the target drive where the restore point should be created. Only used when Action is "Create" or "Save".
 
     .EXAMPLE
-    Manage-SystemRestorePoint -Action Create -Description "Before software installation"
-    Manage-SystemRestorePoint -Action List
-    Manage-SystemRestorePoint -Action Remove -Description "Unwanted Restore Point"
+    Set-SystemRestorePoint -Action List -Verbose
+    Set-SystemRestorePoint -Action Create -Description "Before software installation"
+    Set-SystemRestorePoint -Action Remove -Description "Unwanted Restore Point"
 
     .NOTES
-    v0.0.5
+    v0.0.6
     #>
     [CmdletBinding()]
     param(
@@ -62,42 +61,42 @@ Function Manage-SystemRestorePoint {
     )
     switch ($Action) {
         "Create" {
-            Write-Host "Creating a new system restore point..."
+            Write-Verbose -Message "Creating a new system restore point..."
             $null = Checkpoint-Computer -Description $Description -TargetPath $TargetDrive
-            Write-Host "System restore point created." -ForegroundColor Green
+            Write-Host "System restore point created" -ForegroundColor Green
         }
         "Save" {
-            Write-Host "Creating a custom system restore point..." -ForegroundColor Yellow
+            Write-Verbose -Message "Creating a custom system restore point..."
             $null = Checkpoint-Computer -Description $Description -IncludeRegistry:$IncludeRegistry -IncludeDrivers:$IncludeDrivers -CustomName $CustomName -BackupPath $BackupPath -TargetPath $TargetDrive
-            Write-Host "Custom system restore point created."
+            Write-Host "Custom system restore point created" -ForegroundColor Green
         }
         "Restore" {
-            Write-Host "Restoring system to the most recent restore point..." -ForegroundColor Yellow
+            Write-Verbose -Message "Restoring system to the most recent restore point..."
             $RestorePoint = Get-ComputerRestorePoint | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
             if ($RestorePoint) {
                 $null = Restore-Computer -RestorePoint $RestorePoint
-                Write-Host "System restored to the most recent restore point."
+                Write-Host "System restored to the most recent restore point" -ForegroundColor Green
             }
             else {
-                Write-Host "No restore points available." -ForegroundColor DarkCyan
+                Write-Warning -Message "No restore points available!"
             }
         }
         "List" {
-            Write-Host "Listing available restore points..." -ForegroundColor Yellow
+            Write-Verbose -Message "Listing available restore points..."
             Get-ComputerRestorePoint | Format-Table -AutoSize
         }
         "Remove" {
-            Write-Host "Removing specified restore points..." -ForegroundColor Yellow
+            Write-Verbose -Message "Removing specified restore points..."
             $RestorePoints = Get-ComputerRestorePoint | Where-Object { $_.Description -eq $Description }
             if ($RestorePoints) {
                 $RestorePoints | ForEach-Object {
-                    Write-Host "Removing restore point: $($_.Description)" -ForegroundColor Yellow
+                    Write-Host "Removing restore point: $($_.Description)" -ForegroundColor DarkCyan
                     Disable-ComputerRestore -RestorePoint $_
                 }
                 Write-Host "Specified restore points removed." -ForegroundColor Green
             }
             else {
-                Write-Host "No matching restore points found." -ForegroundColor DarkCyan
+                Write-Warning -Message "No matching restore points found!"
             }
         }
     }
