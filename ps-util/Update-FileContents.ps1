@@ -1,10 +1,10 @@
-Function List-FilesContent {
+Function Update-FileContents {
     <#
     .SYNOPSIS
-    List folder contents and outputs to a file with additional functionalities. 
+    Updates file contents based on specified operations like listing files, replacing strings, or extracting substrings from file names.
 
     .DESCRIPTION
-    List folder contents and outputs to a file with options such as replace, substring, filter by file extension, exclude specific files by name and more.
+    This function performs various operations on files located at a specified path. It can list files, replace specific strings within file names, or extract substrings from file names.
 
     .PARAMETER FilesPath
     Mandatory - path of the folder that contents you would like to list to a file.
@@ -15,7 +15,7 @@ Function List-FilesContent {
     .PARAMETER Substring
     NotMandatory - remove 'n' number of characters from start of the string. 
     .PARAMETER Manage
-    Mandatory - change option like mentioned in examples. 
+    NotMandatory - change option like mentioned in examples. 
     .PARAMETER OutFile
     Mandatory - specify where you would like for a file to reside.
     .PARAMETER IncludeExtension
@@ -28,45 +28,45 @@ Function List-FilesContent {
     NotMandatory - array of strings that allows you to specify the names of files that should be excluded from the output. If no files are provided, all files will be processed.
 
     .EXAMPLE
-    List-FilesContent -FilesPath 'C:\Test' -Manage ListFiles -OutFile 'C:\Test\Test.txt' ##-->ListFiles
-    List-FilesContent -FilesPath 'C:\Test' -Manage ReplaceString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile
-    List-FilesContent -FilesPath 'C:\Test' -Manage ReplaceStringSubString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -Substring 3 -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile -FileExtension 'txt' -ExcludeFiles 'file1.txt','file2.txt'
+    Update-FileContents -FilesPath 'C:\Test' -Manage ListFiles -OutFile 'C:\Test\Test.txt' ##-->ListFiles
+    Update-FileContents -FilesPath 'C:\Test' -Manage ReplaceString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile
+    Update-FileContents -FilesPath 'C:\Test' -Manage ReplaceStringSubString -ReplaceStringIn 'panel_' -ReplaceStringOut 'new_panel_' -Substring 3 -OutFile 'C:\Test\Test.txt' -IncludeExtension -AppendToFile -FileExtension 'txt' -ExcludeFiles 'file1.txt','file2.txt'
 
     .NOTES
-    v0.3.1
+    v0.3.2
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [ValidateSet('ListFiles', 'ReplaceString', 'ReplaceStringSubString')]
-        [string]$Manage = 'ListFiles',
-
-        [Parameter(Mandatory = $true)]
+        [ValidateSet("ListFiles", "ReplaceString", "ReplaceStringSubString")]
+        [string]$Manage = "ListFiles",
+        
+        [Parameter(Mandatory = $true, HelpMessage = "Path to the directory containing the files")]
         [string]$FilesPath,
-
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "The string to be replaced in the file contents")]
         [string]$ReplaceStringIn = $null,
-
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "The string to replace the matched string")]
         [string]$ReplaceStringOut = $null,
-
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "The starting index for substring extraction")]
         [int]$Substring,
-
-        [Parameter(Mandatory = $true)]
+        
+        [Parameter(Mandatory = $true, HelpMessage = "The path to the output file")]
         [string]$OutFile,
-    
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Include file extension in the output")]
         [switch]$IncludeExtension,
-    
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Append output to the file")]
         [switch]$AppendToFile,
-    
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Filter files by extension")]
         [ValidateScript({ Test-Path -Path $_ -PathType 'Leaf' })]
         [string]$FileExtension,
-    
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Array of files to exclude")]
         [string[]]$ExcludeFiles
     )
     BEGIN {
@@ -81,7 +81,7 @@ Function List-FilesContent {
             $Files = $Files | Where-Object { $ExcludeFiles -notcontains $_.Name }
         }
         if (!$Files) {
-            Write-Error "No files found with the specified extension"
+            Write-Error -Message "No files found with the specified extension!"
             return
         }
         if ($AppendToFile) {
@@ -92,10 +92,10 @@ Function List-FilesContent {
         }
         ForEach ($File in $Files) {
             switch ($Manage) {
-                'ListFiles' {
+                "ListFiles" {
                     $F = $File.Name | Out-File $OutFile $OutOption
                 }
-                'ReplaceString' {
+                "ReplaceString" {
                     $F = $File.BaseName
                     $S = ($F).Replace("$ReplaceStringIn", "$ReplaceStringOut") 
                     if ($IncludeExtension) {
@@ -103,7 +103,7 @@ Function List-FilesContent {
                     }
                     $S | Out-File $OutFile $OutOption
                 }
-                'ReplaceStringSubString' {
+                "ReplaceStringSubString" {
                     $F = $File.BaseName
                     $S = ($F).Replace("$ReplaceStringIn", "$ReplaceStringOut")
                     $S = $S.Substring($Substring)
