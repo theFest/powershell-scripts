@@ -1,55 +1,49 @@
 Function Rename-FilesBatch {
     <#
     .SYNOPSIS
-    Rename your data.
-    
+    Rename files based on various options.
+
     .DESCRIPTION
-    Simple function for renaming files, folders, extensions and more.
-    
+    This function renames files based on the specified management option. Options include renaming with an index, changing file extensions, replacing strings, adding prefixes or suffixes, modifying case, and extracting substrings.
+
     .PARAMETER FilesPath
-    Mandatory - location of your data.  
+    Mandatory - the path of the files to be processed.
     .PARAMETER RenameFiles
-    NotMandatory - batch of files to be renamed.
+    NotMandatory - new name for files when using the 'RenameWithIndex' option.
     .PARAMETER ReplaceStringIn
-    NotMandatory - declare string that you want to be removed.  
+    NotMandatory - string to be replaced when using the 'ReplaceString' option.
     .PARAMETER ReplaceStringOut
-    NotMandatory - declare string that you want to be added.
+    NotMandatory - string to replace with when using the 'ReplaceString' option.
     .PARAMETER AddNewPrefix
-    NotMandatory - declare prefix string that you want to be added. 
+    NotMandatory - prefix to be added when using the 'SetNewPrefixSuffix' option.
     .PARAMETER AddNewSuffix
-    NotMandatory - declare suffix string that you want to be added.  
+    NotMandatory - suffix to be added when using the 'SetNewPrefixSuffix' option.
     .PARAMETER Substring
-    NotMandatory - define substring that you want to be removed.  
+    NotMandatory - number of characters to extract when using the 'SubString' option.
     .PARAMETER PSIsContainer
-    NotMandatory - rename either files or folders with this switch.  
+    NotMandatory - indicates whether to process container items.
     .PARAMETER Methods
-    NotMandatory - currently use available methods to upper/lower case your files. 
+    NotMandatory - case modification method ('ToLower' or 'ToUpper') when using the 'MethodOptions' option.
     .PARAMETER ReplaceExtensionTo
-    NotMandatory - choose extension that you wish to replace.  
+    NotMandatory - the new file extension when using the 'ChangeExtension' option.
     .PARAMETER Manage
-    Mandatory - choose operation that you want to use.
+    Mandatory - specifies the management option. Valid options are 'RenameWithIndex', 'ChangeExtension', 'ReplaceString', 'MethodOptions', 'SubString', and 'SetNewPrefixSuffix'.
     .PARAMETER Recurse
-    NotMandatory - include subdirectories.
+    NotMandatory - indicates whether to include subdirectories.
     .PARAMETER Force
-    NotMandatory - force to override.
-    .PARAMETER OutputToFile
-    NotMandatory - if you want result to be written to file, use this switch together with Outfile. 
+    NotMandatory - forces the operation to proceed without prompting for confirmation.
     .PARAMETER OutFile
-    NotMandatory - define location where your output file will be populated and resides.
-    
+    NotMandatory - specifies the output file for detailed information.
+
     .EXAMPLE
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage RenameWithIndex -RenameFiles test ##-->RenameFiles
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage ChangeExtension -ReplaceExtensionTo .csv ##-->ChangeExtension
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage ReplaceString -ReplaceStringIn 'test_' -ReplaceStringOut 'demo_' ##-->ReplaceString
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage SetNewPrefixSuffix -AddNewPrefix YYYYY -AddNewSuffix ZZZZZ ##-->SetNewPrefixSuffix
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage MethodOptions -Methods ToLower ##-->MethodOptions
-    Rename-FilesBatch -FilesPath 'F:\Test\a' -Manage SubString -Substring 1 ##-->SubString
+    Rename-FilesBatch -FilesPath "C:\MyFiles" -RenameFiles "File" -Manage RenameWithIndex -Recurse -Force
+    Rename-FilesBatch -FilesPath "C:\MyFiles" -ReplaceStringIn "Old" -ReplaceStringOut "New" -Manage ReplaceString -Recurse
 
     .NOTES
-    v0.1.1
+    v0.1.2
     #>
     [CmdletBinding()]
-    param(
+    param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$FilesPath,
 
@@ -75,15 +69,15 @@ Function Rename-FilesBatch {
         [switch]$PSIsContainer,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('ToLower', 'ToUpper')]
+        [ValidateSet("ToLower", "ToUpper")]
         [string]$Methods,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('.ps1', '.txt', '.csv', '.ini', '.json', '.exe', '.xml', '.jpg', '.msu', '.log', '.bin')]
+        [ValidateSet(".ps1", ".txt", ".csv", ".ini", ".json", ".exe", ".xml", ".jpg", ".msu", ".log", ".bin")]
         [string]$ReplaceExtensionTo,
 
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [ValidateSet('RenameWithIndex', 'ChangeExtension', 'ReplaceString', 'MethodOptions', 'SubString', 'SetNewPrefixSuffix')]
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("RenameWithIndex", "ChangeExtension", "ReplaceString", "MethodOptions", "SubString", "SetNewPrefixSuffix")]
         [string]$Manage,
 
         [Parameter(Mandatory = $false)]
@@ -93,47 +87,60 @@ Function Rename-FilesBatch {
         [switch]$Force,
 
         [Parameter(Mandatory = $false)]
-        [switch]$OutputToFile,
-
-        [Parameter(Mandatory = $false)]
         [string]$OutFile
     )
     $FilesPathLocation = [System.IO.Path]::GetDirectoryName($FilesPath)
-    Set-Location -Path $FilesPathLocation
+    Set-Location -Path $FilesPathLocation -Verbose
     $Files = Get-ChildItem -Path $FilesPath -Recurse:$Recurse -Force:$Force | Where-Object { $_.PSIsContainer -eq $PSIsContainer }
-    #$Files = Get-ChildItem -Path $FilesPath -File:$FilesOnly -Filter $Filter -Include $Include -Exclude $Exclude -ReadOnly:$ReadOnly -Hidden:$Hidden -System:$System -Recurse:$Recurse -Depth $Depth | Where-Object { $_.PSIsContainer -eq $PSIsContainer }
-    switch ($Manage) {
-        'RenameWithIndex' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files renamed to; $RenameFiles`n"
-            $AddExtension = $Files.Extension | Select-Object -First 1
-            $F = $Files.FullName | ForEach-Object -Begin { $Count = 1 } -Process { Rename-Item $_ -NewName $RenameFiles$Count$AddExtension -PassThru -Verbose; $Count++ } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+    $RenamedFiles = switch ($Manage) {
+        "RenameWithIndex" {
+            Write-Output "`nTotal : $($Files.Count) Files renamed to; $RenameFiles`n"
+            $Files | ForEach-Object -Process {
+                $NewName = "{0}{1}{2}" -f $RenameFiles, $_.BaseName, $_.Extension
+                $_ | Rename-Item -NewName $NewName -PassThru -Verbose
+            } -End { Out-Null }
         }
-        'ChangeExtension' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files have changed extension to; $ReplaceExtensionTo`n"
-            $F = $Files.FullName | ForEach-Object -Process { Rename-Item $_ -NewName ([System.IO.Path]::ChangeExtension($_, "$ReplaceExtensionTo")) -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+        "ChangeExtension" {
+            Write-Output "`nTotal : $($Files.Count) Files have changed extension to; $ReplaceExtensionTo`n"
+            $Files | ForEach-Object -Process {
+                $_ | Rename-Item -NewName ([System.IO.Path]::ChangeExtension($_.FullName, "$ReplaceExtensionTo")) -PassThru -Verbose
+            } -End { Out-Null }
         }
-        'ReplaceString' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files that have replaced string; $ReplaceStringIn>>$ReplaceStringOut`n"
-            $F = $Files.FullName | ForEach-Object -Process { Rename-Item $_ -NewName $_.Replace("$ReplaceStringIn", "$ReplaceStringOut") -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+        "ReplaceString" {
+            Write-Output "`nTotal : $($Files.Count) Files that have replaced string; $ReplaceStringIn>>$ReplaceStringOut`n"
+            $Files | ForEach-Object -Process {
+                $NewName = $_.Name.Replace("$ReplaceStringIn", "$ReplaceStringOut")
+                $_ | Rename-Item -NewName $NewName -PassThru -Verbose
+            } -End { Out-Null }
         }
-        'SetNewPrefixSuffix' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files that changed Prefix;$AddNewPrefix and/or suffix; $AddNewSuffix`n"
-            $F = $Files | ForEach-Object -Process { Rename-Item -Path $_ -NewName "$AddNewPrefix$($_.BaseName)$AddNewSuffix$($_.Extension)" -PassThru -Verbose } -End { Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null }
+        "SetNewPrefixSuffix" {
+            Write-Output "`nTotal : $($Files.Count) Files that changed Prefix;$AddNewPrefix and/or suffix; $AddNewSuffix`n"
+            $Files | ForEach-Object -Process {
+                $NewName = "{0}{1}{2}{3}" -f $AddNewPrefix, $_.BaseName, $AddNewSuffix, $_.Extension
+                $_ | Rename-Item -NewName $NewName -PassThru -Verbose
+            } -End { Out-Null }
         }
-        'MethodOptions' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files that changed method; $Methods`n"
-            $F = $Files | Rename-Item -NewName { $_.BaseName.$Methods() + $_.Extension } -PassThru -Verbose
-            Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null
+        "MethodOptions" {
+            Write-Output "`nTotal : $($Files.Count) Files that changed method; $Methods`n"
+            $Files | ForEach-Object -Process {
+                $newName = switch ($Methods) {
+                    "ToLower" { $_.BaseName.ToLower() + $_.Extension }
+                    "ToUpper" { $_.BaseName.ToUpper() + $_.Extension }
+                }
+                $_ | Rename-Item -NewName $newName -PassThru -Verbose
+            } -End { Out-Null }
         }
-        'SubString' {
-            $WO = Write-Output "`nTotal : "$Files.Count "Files that have added substring; $Substring`n"
-            $F = $Files | Rename-Item -NewName { $_.BaseName.Substring($Substring) + $_.Extension } -PassThru -Verbose
-            Tee-Object -InputObject $WO -Variable 'RenamedFiles' | Out-Null
+        "SubString" {
+            Write-Output "`nTotal : $($Files.Count) Files that have added substring; $Substring`n"
+            $Files | ForEach-Object -Process {
+                $NewName = "{0}{1}{2}" -f $_.BaseName.Substring(0, $Substring), $_.Extension
+                $_ | Rename-Item -NewName $NewName -PassThru -Verbose
+            } -End { Out-Null }
         }
     }
-    Write-Host $RenamedFiles
-    if ($OutputToFile.IsPresent) {
-        $F | Select-Object FullName, CreationTime, LastAccessTime, LastWriteTime, Attributes, Extension, Exists `
-        | Format-Table | Out-File $OutFile
+    return $RenamedFiles
+    if ($OutFile) {
+        $Files | Select-Object FullName, CreationTime, LastAccessTime, LastWriteTime, Attributes, Extension, Exists |
+        Format-Table | Out-File $OutFile
     }
 }
