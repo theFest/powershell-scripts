@@ -17,7 +17,7 @@ Function Compress-GZipFile {
     Compress-GZipFile -InputFile "C:\Path\To\Input\File.txt" -OutputFile "C:\Path\To\Output\File.gz" -LogFile "C:\Path\To\Log\log.txt"
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -30,37 +30,57 @@ Function Compress-GZipFile {
         [Parameter(Mandatory = $false)]
         [string]$LogFile
     )
-    try {
-        if (-not (Test-Path $InputFile -PathType Leaf)) {
-            Write-Host "Error: Input file '$InputFile' not found!" -ForegroundColor DarkGray
+    BEGIN {
+        $DriveLetter = [System.IO.Path]::GetPathRoot($OutputFile)
+        $Drive = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name -eq $DriveLetter }
+        if ($Drive) {
+            $FreeSpaceGB = $Drive.AvailableFreeSpace / 1GB
+            if ($FreeSpaceGB -ge 1) {
+                Write-Host "There is enough free space on disk for compression" -ForegroundColor DarkGreen
+            }
+            else {
+                Write-Host "Error: Not enough free space on disk for compression" -ForegroundColor DarkGray
+                return
+            }
+        }
+        else {
+            Write-Host "Error: Drive information not found" -ForegroundColor DarkGray
             return
         }
-        $InputStream = New-Object IO.FileStream(
-            $InputFile,
-            [IO.FileMode]::Open,
-            [IO.FileAccess]::Read
-        )
-        $OutputStream = New-Object IO.FileStream(
-            $OutputFile,
-            [IO.FileMode]::Create,
-            [IO.FileAccess]::Write
-        )
-        $GzipStream = New-Object System.IO.Compression.GZipStream(
-            $OutputStream,
-            [IO.Compression.CompressionMode]::Compress
-        )
-        $InputStream.CopyTo($GzipStream)
-        $GzipStream.Dispose()
-        $LogMessage = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Compression successful for '$InputFile'."
-        Add-Content -Path $LogFile -Value $LogMessage
-        Write-Host $LogMessage
     }
-    catch {
-        $ErrorMessage = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Error: $_"
-        Add-Content -Path $LogFile -Value $ErrorMessage
-        Write-Host $ErrorMessage -ForegroundColor Red
+    PROCESS {
+        try {
+            if (-not (Test-Path $InputFile -PathType Leaf)) {
+                Write-Host "Error: Input file '$InputFile' not found!" -ForegroundColor DarkGray
+                return
+            }
+            $InputStream = New-Object IO.FileStream(
+                $InputFile,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::Read
+            )
+            $OutputStream = New-Object IO.FileStream(
+                $OutputFile,
+                [IO.FileMode]::Create,
+                [IO.FileAccess]::Write
+            )
+            $GzipStream = New-Object System.IO.Compression.GZipStream(
+                $OutputStream,
+                [IO.Compression.CompressionMode]::Compress
+            )
+            $InputStream.CopyTo($GzipStream)
+            $GzipStream.Dispose()
+            $LogMessage = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Compression successful for '$InputFile'"
+            Add-Content -Path $LogFile -Value $LogMessage
+            Write-Host $LogMessage
+        }
+        catch {
+            $ErrorMessage = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - Error: $_"
+            Add-Content -Path $LogFile -Value $ErrorMessage
+            Write-Host $ErrorMessage -ForegroundColor Red
+        }
     }
-    finally {
+    END {
         if ($InputStream) {
             $InputStream.Close() 
         }
