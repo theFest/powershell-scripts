@@ -1,4 +1,4 @@
-Function ExportDriversPnpUtil {
+Function Export-DriverWithPnPUtil {
     <#
     .SYNOPSIS
     Export driver package(s) from the driver store into a target directory using PnPUtil.
@@ -24,11 +24,11 @@ Function ExportDriversPnpUtil {
     NotMandatory - path to the directory where the exported driver packages will be copied on the local machine.
 
     .EXAMPLE
-    ExportDriversPnpUtil -DriverName "oem12.inf" -TargetDirectory "$env:USERPROFILE\Desktop\Driver" -Verbose
-    ExportDriversPnpUtil -DriverName "*" -TargetDirectory "C:\remote_host\targer_folder" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
+    Export-DriverWithPnPUtil -DriverName "oem12.inf" -TargetDirectory "$env:USERPROFILE\Desktop\Driver" -Verbose
+    Export-DriverWithPnPUtil -DriverName "*" -TargetDirectory "C:\remote_host\targer_folder" -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.5
+    v0.0.6
     #>
     [CmdletBinding()]
     param (
