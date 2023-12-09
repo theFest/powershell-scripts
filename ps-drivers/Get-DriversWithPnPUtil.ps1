@@ -1,4 +1,4 @@
-Function GetDriversPnpUtil {
+Function Get-DriversWithPnPUtil {
     <#
     .SYNOPSIS
     Retrieves the list of installed drivers on the local or remote computer using PnPUtil.
@@ -19,13 +19,13 @@ Function GetDriversPnpUtil {
     NotMandatory - the path of the CSV file to which the driver information will be exported.
 
     .EXAMPLE
-    GetDriversPnpUtil -IncludeMicrosoftDrivers -Verbose
-    GetDriversPnpUtil -CsvPath "$env:USERPROFILE\Desktop\DriverList.csv"
-    "remote_computer" | GetDriversPnpUtil -Username "remote_user" -Pass "remote_pass" -IncludeMicrosoftDrivers -Verbose
-    "remote_computer" | GetDriversPnpUtil -Username "remote_user" -Pass "remote_pass" -CsvPath "$env:USERPROFILE\Desktop\DriverList.csv"
+    Get-DriversWithPnPUtil -IncludeMicrosoftDrivers -Verbose
+    Get-DriversWithPnPUtil -CsvPath "$env:USERPROFILE\Desktop\DriverList.csv"
+    "remote_computer" | Get-DriversWithPnPUtil -Username "remote_user" -Pass "remote_pass" -IncludeMicrosoftDrivers -Verbose
+    "remote_computer" | Get-DriversWithPnPUtil -Username "remote_user" -Pass "remote_pass" -CsvPath "$env:USERPROFILE\Desktop\DriverList.csv"
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
