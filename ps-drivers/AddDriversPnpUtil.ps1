@@ -1,4 +1,4 @@
-Function AddDriversPnpUtil {
+Function Install-DriverWithPnPUtil {
     <#
     .SYNOPSIS
     Installs drivers using PnPUtil on the local or remote machine.
@@ -23,10 +23,10 @@ Function AddDriversPnpUtil {
     NotMandatory - switch to indicate whether to reboot the machine after driver installation.
 
     .EXAMPLE
-    AddDriversPnpUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverPath "C:\drivers_folder_path" -Install -Subdirs -Reboot -Verbose
+    Install-DriverWithPnPUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverPath "C:\drivers_folder_path" -Install -Subdirs -Reboot -Verbose
 
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
