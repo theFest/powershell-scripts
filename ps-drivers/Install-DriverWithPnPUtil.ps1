@@ -10,9 +10,9 @@ Function Install-DriverWithPnPUtil {
     .PARAMETER ComputerName
     Mandatory - name of the remote computer where you want to install the drivers. If not provided, the drivers will be installed on the local machine.
     .PARAMETER Username
-    Mandatory - username used for authentication when connecting to the remote machine. Required if the ComputerName parameter is specified.
+    Mandatory if ComputerName is provided - username used for authentication when connecting to the remote machine.
     .PARAMETER Pass
-    Mandatory - password for the specified username. Required if the ComputerName parameter is specified.
+    Mandatory if ComputerName is provided - password for the specified username.
     .PARAMETER DriverPath
     Mandatory - path to the folder containing the driver files (INF files) that need to be installed.
     .PARAMETER Subdirs
@@ -26,46 +26,49 @@ Function Install-DriverWithPnPUtil {
     Install-DriverWithPnPUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverPath "C:\drivers_folder_path" -Install -Subdirs -Reboot -Verbose
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, HelpMessage = "Name of the remote computer where you want to install the drivers")]
         [string]$ComputerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Username used for authentication when connecting to the remote machine")]
         [string]$Username,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Password for the specified username")]
         [string]$Pass,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "Path to the folder containing the driver files (INF files) that need to be installed")]
         [string]$DriverPath,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Whether to include subdirectories when searching for driver INF files in the DriverPath")]
         [switch]$Subdirs,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "To perform the installation of the drivers")]
         [switch]$Install,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Switch to indicate whether to reboot the machine after driver installation")]
         [switch]$Reboot
     )
-    Write-Verbose -Message "Validating the existence of the driver folder..."
     if (-not (Test-Path $DriverPath -PathType Container)) {
-        Write-Error -Message "Driver folder not found at '$DriverPath'. Please provide a valid path."
+        Write-Error -Message "Driver folder not found at '$DriverPath'. Please provide a valid path"
+        return
+    }
+    if ($ComputerName -ne $env:COMPUTERNAME -and (-not $Username -or -not $Pass)) {
+        Write-Error -Message "When providing a ComputerName, both Username and Pass parameters are mandatory for authentication"
         return
     }
     $DriverFiles = Get-ChildItem $DriverPath -Recurse -Filter "*.inf" -File
     if ($DriverFiles.Count -eq 0) {
-        Write-Warning "No driver files found in the specified folder."
+        Write-Warning -Message "No driver files found in the specified folder"
         return
     }
     $Session = $null
     if ($ComputerName -ne $env:COMPUTERNAME) {
-        Write-Verbose "Testing connection to remote computer $ComputerName..."
+        Write-Verbose -Message "Testing connection to remote computer $ComputerName..."
         if (-not (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet)) {
-            Write-Error -Message "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity."
+            Write-Error "Unable to connect to the remote computer $ComputerName. Please check the computer name or network connectivity"
             return
         }
         Write-Verbose -Message "Creating remote session to $ComputerName..."
@@ -73,7 +76,7 @@ Function Install-DriverWithPnPUtil {
         $Credential = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
         $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential
         if (!$Session) {
-            Write-Error -Message "Unable to establish a remote session to the computer $ComputerName. Please check the credentials or the remote configuration."
+            Write-Error -Message "Unable to establish a remote session to the computer $ComputerName. Please check the credentials or the remote configuration"
             return
         }
     }
@@ -113,7 +116,7 @@ Function Install-DriverWithPnPUtil {
     finally {
         if ($Session) {
             Write-Verbose -Message "Closing the remote session to $ComputerName..."
-            Remove-PSSession -Session $Session
+            Remove-PSSession -Session $Session -ErrorAction SilentlyContinue
         }
     }
 }
