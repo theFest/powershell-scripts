@@ -1,4 +1,4 @@
-Function DeleteDriverPnpUtil {
+Function Remove-DriverWithPnPUtil {
     <#
     .SYNOPSIS
     Deletes a driver using PnPUtil on the local or remote machine.
@@ -23,10 +23,10 @@ Function DeleteDriverPnpUtil {
     NotMandatory - indicate whether to reboot the machine after driver deletion.
 
     .EXAMPLE
-    DeleteDriverPnpUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverInfFile "C:\Windows\INF\oem26.inf" -Uninstall -Force -Reboot -Verbose
+    Remove-DriverWithPnPUtil -ComputerName "remote_hostname" -Username "remote_user" -Pass "remote_pass" -DriverInfFile "C:\Windows\INF\oem26.inf" -Uninstall -Force -Reboot -Verbose
 
     .NOTES
-    v0.0.2
+    v0.0.3
     #>
     [CmdletBinding()]
     param (
