@@ -1,24 +1,23 @@
-Function OutdatedDriversAudit {
+Function Remove-OutdatedDrivers {
     <#
     .SYNOPSIS
-    Check and remove outdated drivers.
-    
+    Checks and removes outdated drivers.
+
     .DESCRIPTION
-    This function can check and forcefully remove outdated drivers, it has outputformat and admin check.
-    
+    This function checks for outdated drivers and can remove them forcefully if required, with the option to specify the output format.
+
     .PARAMETER OutputFormat
-    NotMandatory - format out either in Table or List.
+    NotMandatory - Specifies the output format as either 'Table' or 'List'.
     .PARAMETER RemoveOutdated
-    NotMandatory - use if want to remove outdated.
+    NotMandatory - Use this switch if you want to remove outdated drivers.
     .PARAMETER Force
-    NotMandatory - use with RemoveOutdated to forcefully remove drivers.
-    
+    NotMandatory - Use with RemoveOutdated to forcefully remove drivers without confirmation.
+
     .EXAMPLE
-    OutdatedDriversAudit -Verbose
-    OutdatedDriversAudit -RemoveOutdated -Force
-    
+    Remove-OutdatedDrivers -RemoveOutdated -Force -Verbose
+
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -46,13 +45,11 @@ Function OutdatedDriversAudit {
             Name     = $Fields[1]
         }
     }
-    Write-Verbose -Message "Getting list of outdated drivers..."
-    $OutdatedDrivers = $drivers |
-    Group-Object FileName |
-    Where-Object { $_.Count -gt 1 } |
-    ForEach-Object { $_.Group | Sort-Object Name | Select-Object -Last 1 }
+    Write-Verbose -Message "Getting a list of outdated drivers..."
+    $OutdatedDrivers = $Drivers | Group-Object FileName | Where-Object { $_.Count -gt 1 } `
+    | ForEach-Object { $_.Group | Sort-Object Name | Select-Object -Last 1 }
     if ($OutdatedDrivers) {
-        Write-Host "Outdated drivers:"
+        Write-Host "Outdated drivers:" -ForegroundColor DarkGray
         if ($OutputFormat -eq 'Table') {
             $OutdatedDrivers | Format-Table -AutoSize
         }
@@ -60,7 +57,7 @@ Function OutdatedDriversAudit {
             $OutdatedDrivers | Format-List
         }
         if ($RemoveOutdated -and $Force) {
-            Write-Verbose -Message "Remove outdated drivers without prompting for confirmation"
+            Write-Verbose -Message "Removing outdated drivers without prompting for confirmation"
             $OutdatedDrivers | ForEach-Object {
                 $Name = $_.Name
                 Write-Warning -Message "Removing driver $Name"
@@ -73,11 +70,11 @@ Function OutdatedDriversAudit {
             }
         }
         elseif ($RemoveOutdated) {
-            Write-Verbose -Message "Prompt user for confirmation before removing outdated drivers"
+            Write-Verbose -Message "Prompting user for confirmation before removing outdated drivers"
             if ($PSCmdlet.ShouldProcess("Remove outdated drivers?")) {
                 $OutdatedDrivers | ForEach-Object {
                     $Name = $_.Name
-                    Write-Host "Removing driver $Name"
+                    Write-Host "Removing driver $Name" -ForegroundColor Yellow
                     pnputil.exe -d $Name | Out-Null
                 }
             }
