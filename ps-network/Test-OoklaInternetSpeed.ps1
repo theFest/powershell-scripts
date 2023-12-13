@@ -1,4 +1,4 @@
-Function OoklaConnectionTester {
+Function Test-OoklaInternetSpeed {
     <#
     .SYNOPSIS
     Ookla tester for Internet connection performance and network stability. 
@@ -34,14 +34,14 @@ Function OoklaConnectionTester {
     NotMandatory - if you wish to use Ookla GUI tester, use this switch. Executable URL is predifined.
     
     .EXAMPLE
-    OoklaConnectionTester -GuiTester
-    OoklaConnectionTester -Retries 25 -LocalPath "$env:USERPROFILE\Desktop\OoklaST" -LogFilePath "$env:USERPROFILE\Desktop\OoklaST\SpeedTest.csv"
-    OoklaConnectionTester -Retries 25 -LocalPath "$env:USERPROFILE\Desktop\OoklaST" -LogFilePath "$env:USERPROFILE\Desktop\OoklaST\SpeedTest.csv" -OpenLog
-    OoklaConnectionTester -Retries 50 -SendLog RemoteComputer -RemoteComputerName "Hostname_of_remote_computer" -RemoteComputerLocation "C:\Temp" -RemoteUser "username_of_remote_computer" -RemotePass "password_of_remote_computer"
-    OoklaConnectionTester -Retries 100 -SendLog RemoteWebPath -WebPathUrl "https://desired_web_path/destination_folder" -WebPathKey "web_path_secret_key"
+    Test-OoklaInternetSpeed -GuiTester
+    Test-OoklaInternetSpeed -Retries 25 -LocalPath "$env:USERPROFILE\Desktop\OoklaST" -LogFilePath "$env:USERPROFILE\Desktop\OoklaST\SpeedTest.csv"
+    Test-OoklaInternetSpeed -Retries 25 -LocalPath "$env:USERPROFILE\Desktop\OoklaST" -LogFilePath "$env:USERPROFILE\Desktop\OoklaST\SpeedTest.csv" -OpenLog
+    Test-OoklaInternetSpeed -Retries 50 -SendLog RemoteComputer -RemoteComputerName "Hostname_of_remote_computer" -RemoteComputerLocation "C:\Temp" -RemoteUser "username_of_remote_computer" -RemotePass "password_of_remote_computer"
+    Test-OoklaInternetSpeed -Retries 100 -SendLog RemoteWebPath -WebPathUrl "https://desired_web_path/destination_folder" -WebPathKey "web_path_secret_key"
     
     .NOTES
-    v1
+    v0.2.2
     #>
     [CmdletBinding()]
     param(
@@ -58,7 +58,7 @@ Function OoklaConnectionTester {
         [System.IO.FileInfo]$LogFilePath = "$env:TEMP\OoklaSpeedTest\SpeedTestResults.csv",
 
         [Parameter(Mandatory = $false, Position = 4)]
-        [ValidateSet('RemoteComputer', 'RemoteWebPath')]
+        [ValidateSet("RemoteComputer", "RemoteWebPath")]
         [string]$SendLog,
 
         [Parameter(Mandatory = $false, Position = 5)]
@@ -168,7 +168,7 @@ Function OoklaConnectionTester {
         $TotalTime = Write-Output "TotalTestTime[$((Get-Date).Subtract($StartTime).Duration() -replace ".{8}$")]"
         Add-Content -Value $TotalTime -Path $LogFilePath -Verbose
         switch ($SendLog) {
-            'RemoteComputer' {
+            "RemoteComputer" {
                 Write-Output "Sending log to remote computer: '$RemoteComputerName'..."
                 $SecRemotePassword = ConvertTo-SecureString -AsPlainText $RemotePass -Force
                 $SecuredCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $RemoteUser, $SecRemotePassword
@@ -184,7 +184,7 @@ Function OoklaConnectionTester {
                     Write-Error -Message "WinRM is not properly configured on: '$RemoteComputerName'!"
                 }
             }
-            'RemoteWebPath' {
+            "RemoteWebPath" {
                 Write-Output "Sending log to Web destination: '$WebPathUrl'..."
                 [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls, ssl3"
                 $Headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
