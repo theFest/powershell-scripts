@@ -1,11 +1,11 @@
 ﻿#requires -version 5.1
-Function CIMSessionExecution {
+Function Invoke-CIMRemoteCommand {
     <#
     .SYNOPSIS
     Execute commands/scripts via CIM session.
     
     .DESCRIPTION
-    This advanced Function can be used to execute commands to remote computer, now includes PsExec.
+    This function can be used to execute commands to remote computer, now includes PsExec.
     
     .PARAMETER User
     Mandatory - user of the target machine.
@@ -38,11 +38,11 @@ Function CIMSessionExecution {
     
     .EXAMPLE
     $ScriptBlock = "Stop-Service -Name Spooler -Force" 
-    CIMSessionExecution -Computer "your_computer_hostname" -User "your_user" -Pass "your_pass" -ScriptBlock $ScriptBlock -Verbose
-    CIMSessionExecution -Computer "your_computer_hostname" -User "your_user" -Pass "your_pass" -ScriptBlock $ScriptBlock -RestartTime 10 -Verbose
+    Invoke-CIMRemoteCommand -Computer "your_computer_hostname" -User "your_user" -Pass "your_pass" -ScriptBlock $ScriptBlock -Verbose
+    Invoke-CIMRemoteCommand -Computer "your_computer_hostname" -User "your_user" -Pass "your_pass" -ScriptBlock $ScriptBlock -RestartTime 10 -Verbose
     
     .NOTES
-    v1.9
+    v1.9.2
     #>
     [CmdletBinding()]
     param(
