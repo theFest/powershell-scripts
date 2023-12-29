@@ -1,4 +1,4 @@
-Function AdvancedRemoteExecution {
+Function Invoke-AdvancedRemoteExecution {
     <#
     .SYNOPSIS
     Execute commands and scripts via various types of deployments.
@@ -35,10 +35,10 @@ Function AdvancedRemoteExecution {
     
     .EXAMPLE
     $ExecutionCommand = "Stop-Service -Name Spooler -NoWait -Force"
-    AdvancedRemoteExecution -ExecutionCommand "$ExecutionCommand" -ComputerInventoryFile "$env:USERPROFILE\Desktop\list.csv" -ExecutionMethod CIM -AsJob
+    Invoke-AdvancedRemoteExecution -ExecutionCommand "$ExecutionCommand" -ComputerInventoryFile "$env:USERPROFILE\Desktop\list.csv" -ExecutionMethod CIM -AsJob
     
     .NOTES
-    0.1.2
+    0.1.3
     #>
     [CmdletBinding()]
     param(
