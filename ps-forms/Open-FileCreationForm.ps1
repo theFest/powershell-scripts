@@ -2,22 +2,21 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 Function ShowAboutDialog {
-    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.0.8", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("FW File Creation Form`nVersion 0.0.9", "About", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 Function ShowHelpDialog {
     [System.Windows.Forms.MessageBox]::Show(@"
 This application allows you to create multiple files with custom content.
-
-Enhancements in Version 0.0.0.8:
+Enhancements in Version 0.0.9:
 ...
 Enjoy creating files with even more features and options!
 
 "@, "Help", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
-Function FileCreationForm {
-    param (
+Function Open-FileCreationForm {
+    param ( ## v0.0.9
         [string]$DefaultPath = "$env:USERPROFILE\Desktop",
         [string]$DefaultPrefix = "",
         [string]$DefaultSuffix = "",
@@ -30,25 +29,19 @@ Function FileCreationForm {
     $Form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
     $Form.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
     $Form.ForeColor = [System.Drawing.Color]::White
-
     $Style = [System.Windows.Forms.FlatStyle]::Flat
-
     $MenuBar = New-Object System.Windows.Forms.MenuStrip
     $MenuBar.ForeColor = [System.Drawing.Color]::White
     $MenuBar.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
     $MenuBar.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
-
     $FileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenu.Text = "&File"
-
     $HelpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
     $HelpMenu.Text = "&Help"
-
     $FileMenuItem_CreateFiles = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenuItem_CreateFiles.Text = "Create Files"
     $FileMenuItem_CreateFiles.Add_Click({ CreateFiles })
     $FileMenu.DropDownItems.Add($FileMenuItem_CreateFiles)
-
     $FileMenuItem_Browse = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenuItem_Browse.Text = "Browse..."
     $FileMenuItem_Browse.Add_Click({
@@ -60,27 +53,21 @@ Function FileCreationForm {
             }
         })
     $FileMenu.DropDownItems.Add($FileMenuItem_Browse)
-
     $FileMenuItem_Exit = New-Object System.Windows.Forms.ToolStripMenuItem
     $FileMenuItem_Exit.Text = "Exit"
     $FileMenuItem_Exit.Add_Click({ $Form.Close() })
     $FileMenu.DropDownItems.Add($FileMenuItem_Exit)
-
     $HelpMenuItem_About = New-Object System.Windows.Forms.ToolStripMenuItem
     $HelpMenuItem_About.Text = "About"
     $HelpMenuItem_About.Add_Click({ ShowAboutDialog })
     $HelpMenu.DropDownItems.Add($HelpMenuItem_About)
-
     $HelpMenuItem_Help = New-Object System.Windows.Forms.ToolStripMenuItem
     $HelpMenuItem_Help.Text = "Help"
     $HelpMenuItem_Help.Add_Click({ ShowHelpDialog })
     $HelpMenu.DropDownItems.Add($HelpMenuItem_Help)
-
     $MenuBar.Items.Add($FileMenu)
     $MenuBar.Items.Add($HelpMenu)
-
     $Form.Controls.Add($MenuBar)
-
     $LabelPath = New-Object Windows.Forms.Label
     $LabelPath.Text = "Path:"
     $LabelPath.Location = New-Object Drawing.Point(20, 42)
@@ -88,14 +75,12 @@ Function FileCreationForm {
     $LabelPath.ForeColor = [System.Drawing.Color]::White
     $LabelPath.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelPath)
-
     $TextBoxPath = New-Object Windows.Forms.TextBox
     $TextBoxPath.Text = $DefaultPath
     $TextBoxPath.Location = New-Object Drawing.Point(100, 40)
     $TextBoxPath.Size = New-Object Drawing.Size(550, 30)
     $TextBoxPath.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxPath)
-
     $ButtonBrowse = New-Object Windows.Forms.Button
     $ButtonBrowse.Text = "Browse..."
     $ButtonBrowse.Location = New-Object Drawing.Point(670, 40)
@@ -107,13 +92,11 @@ Function FileCreationForm {
     $ButtonBrowse.Add_Click({
             $FolderBrowserDialog = New-Object Windows.Forms.FolderBrowserDialog
             $Result = $FolderBrowserDialog.ShowDialog()
-
             if ($Result -eq [Windows.Forms.DialogResult]::OK) {
                 $TextBoxPath.Text = $FolderBrowserDialog.SelectedPath
             }
         })
     $Form.Controls.Add($ButtonBrowse)
-
     $CheckBoxPrefix = New-Object Windows.Forms.CheckBox
     $CheckBoxPrefix.Text = "Prefix:"
     $CheckBoxPrefix.Location = New-Object Drawing.Point(20, 80)
@@ -122,14 +105,12 @@ Function FileCreationForm {
     $CheckBoxPrefix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxPrefix.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxPrefix)
-
     $TextBoxPrefix = New-Object Windows.Forms.TextBox
     $TextBoxPrefix.Text = $DefaultPrefix
     $TextBoxPrefix.Location = New-Object Drawing.Point(100, 75)
     $TextBoxPrefix.Size = New-Object Drawing.Size(200, 30)
     $TextBoxPrefix.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxPrefix)
-
     $CheckBoxSuffix = New-Object Windows.Forms.CheckBox
     $CheckBoxSuffix.Text = "Suffix:"
     $CheckBoxSuffix.Location = New-Object Drawing.Point(320, 80)
@@ -138,14 +119,12 @@ Function FileCreationForm {
     $CheckBoxSuffix.ForeColor = [System.Drawing.Color]::White
     $CheckBoxSuffix.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxSuffix)
-
     $TextBoxSuffix = New-Object Windows.Forms.TextBox
     $TextBoxSuffix.Text = $DefaultSuffix
     $TextBoxSuffix.Location = New-Object Drawing.Point(400, 75)
     $TextBoxSuffix.Size = New-Object Drawing.Size(200, 30)
     $TextBoxSuffix.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxSuffix)
-
     $LabelExtension = New-Object Windows.Forms.Label
     $LabelExtension.Text = "Extension:"
     $LabelExtension.Location = New-Object Drawing.Point(20, 130)
@@ -153,14 +132,12 @@ Function FileCreationForm {
     $LabelExtension.ForeColor = [System.Drawing.Color]::White
     $LabelExtension.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelExtension)
-
     $ComboBoxExtension = New-Object Windows.Forms.ComboBox
     $ComboBoxExtension.Location = New-Object Drawing.Point(130, 125)
     $ComboBoxExtension.Size = New-Object Drawing.Size(100, 30)
     $ComboBoxExtension.Text = $DefaultExtension
     $ComboBoxExtension.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($ComboBoxExtension)
-
     $LabelNumberOfFiles = New-Object Windows.Forms.Label
     $LabelNumberOfFiles.Text = "Number of Files:"
     $LabelNumberOfFiles.Location = New-Object Drawing.Point(296, 130)
@@ -168,14 +145,12 @@ Function FileCreationForm {
     $LabelNumberOfFiles.ForeColor = [System.Drawing.Color]::White
     $LabelNumberOfFiles.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelNumberOfFiles)
-
     $TextBoxNumberOfFiles = New-Object Windows.Forms.TextBox
     $TextBoxNumberOfFiles.Text = $DefaultNumberOfFiles
     $TextBoxNumberOfFiles.Location = New-Object Drawing.Point(450, 125)
     $TextBoxNumberOfFiles.Size = New-Object Drawing.Size(50, 30)
     $TextBoxNumberOfFiles.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxNumberOfFiles)
-
     $CheckBoxOverwrite = New-Object Windows.Forms.CheckBox
     $CheckBoxOverwrite.Text = "Overwrite existing files"
     $CheckBoxOverwrite.Location = New-Object Drawing.Point(20, 180)
@@ -184,7 +159,6 @@ Function FileCreationForm {
     $CheckBoxOverwrite.ForeColor = [System.Drawing.Color]::White
     $CheckBoxOverwrite.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxOverwrite)
-
     $CheckBoxOpenFiles = New-Object Windows.Forms.CheckBox
     $CheckBoxOpenFiles.Text = "Open files after creation"
     $CheckBoxOpenFiles.Location = New-Object Drawing.Point(20, 210)
@@ -192,7 +166,6 @@ Function FileCreationForm {
     $CheckBoxOpenFiles.ForeColor = [System.Drawing.Color]::White
     $CheckBoxOpenFiles.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxOpenFiles)
-
     $LabelContentTemplate = New-Object Windows.Forms.Label
     $LabelContentTemplate.Text = "Content Template:"
     $LabelContentTemplate.Location = New-Object Drawing.Point(20, 250)
@@ -200,15 +173,13 @@ Function FileCreationForm {
     $LabelContentTemplate.ForeColor = [System.Drawing.Color]::White
     $LabelContentTemplate.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelContentTemplate)
-
     $TextBoxContentTemplate = New-Object Windows.Forms.TextBox
     $TextBoxContentTemplate.Location = New-Object Drawing.Point(20, 280)
     $TextBoxContentTemplate.Multiline = $true
-    $TextBoxContentTemplate.ScrollBars = "Both" # Add auto-scroll functionality
+    $TextBoxContentTemplate.ScrollBars = "Both"
     $TextBoxContentTemplate.Size = New-Object Drawing.Size(760, 120)
     $TextBoxContentTemplate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($TextBoxContentTemplate)
-
     $LabelCreationDate = New-Object Windows.Forms.Label
     $LabelCreationDate.Text = "Creation Date:"
     $LabelCreationDate.Location = New-Object Drawing.Point(20, 420)
@@ -216,14 +187,12 @@ Function FileCreationForm {
     $LabelCreationDate.ForeColor = [System.Drawing.Color]::White
     $LabelCreationDate.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelCreationDate)
-
     $DateTimePickerCreationDate = New-Object Windows.Forms.DateTimePicker
     $DateTimePickerCreationDate.Format = [Windows.Forms.DateTimePickerFormat]::Custom
     $DateTimePickerCreationDate.CustomFormat = "yyyy-MM-dd HH:mm:ss"
     $DateTimePickerCreationDate.Location = New-Object Drawing.Point(150, 415)
     $DateTimePickerCreationDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($DateTimePickerCreationDate)
-
     $CheckBoxIncrementalNumbering = New-Object Windows.Forms.CheckBox
     $CheckBoxIncrementalNumbering.Text = "Use Incremental Numbering"
     $CheckBoxIncrementalNumbering.Location = New-Object Drawing.Point(20, 460)
@@ -231,7 +200,6 @@ Function FileCreationForm {
     $CheckBoxIncrementalNumbering.ForeColor = [System.Drawing.Color]::White
     $CheckBoxIncrementalNumbering.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxIncrementalNumbering)
-
     $CheckBoxRandomizeContent = New-Object Windows.Forms.CheckBox
     $CheckBoxRandomizeContent.Text = "Randomize File Content"
     $CheckBoxRandomizeContent.Location = New-Object Drawing.Point(20, 490)
@@ -239,7 +207,6 @@ Function FileCreationForm {
     $CheckBoxRandomizeContent.ForeColor = [System.Drawing.Color]::White
     $CheckBoxRandomizeContent.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxRandomizeContent)
-
     $LabelFileSize = New-Object Windows.Forms.Label
     $LabelFileSize.Text = "File Size (KB):"
     $LabelFileSize.Location = New-Object Drawing.Point(296, 460)
@@ -247,13 +214,11 @@ Function FileCreationForm {
     $LabelFileSize.ForeColor = [System.Drawing.Color]::White
     $LabelFileSize.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelFileSize)
-
     $NumericUpDownFileSize = New-Object Windows.Forms.NumericUpDown
     $NumericUpDownFileSize.Location = New-Object Drawing.Point(450, 455)
     $NumericUpDownFileSize.Size = New-Object Drawing.Size(70, 30)
     $NumericUpDownFileSize.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($NumericUpDownFileSize)
-
     $CheckBoxCompressFiles = New-Object Windows.Forms.CheckBox
     $CheckBoxCompressFiles.Text = "Compress Files"
     $CheckBoxCompressFiles.Location = New-Object Drawing.Point(20, 520)
@@ -261,7 +226,6 @@ Function FileCreationForm {
     $CheckBoxCompressFiles.ForeColor = [System.Drawing.Color]::White
     $CheckBoxCompressFiles.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxCompressFiles)
-
     $LabelFilePermissions = New-Object Windows.Forms.Label
     $LabelFilePermissions.Text = "File Permissions:"
     $LabelFilePermissions.Location = New-Object Drawing.Point(296, 490)
@@ -269,7 +233,6 @@ Function FileCreationForm {
     $LabelFilePermissions.ForeColor = [System.Drawing.Color]::White
     $LabelFilePermissions.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelFilePermissions)
-
     $ComboBoxFilePermissions = New-Object Windows.Forms.ComboBox
     $ComboBoxFilePermissions.Location = New-Object Drawing.Point(450, 485)
     $ComboBoxFilePermissions.Size = New-Object Drawing.Size(200, 30)
@@ -278,7 +241,6 @@ Function FileCreationForm {
     $ComboBoxFilePermissions.Items.Add("Read-Write")
     $ComboBoxFilePermissions.Items.Add("Full Control")
     $Form.Controls.Add($ComboBoxFilePermissions)
-
     $CheckBoxEncryption = New-Object Windows.Forms.CheckBox
     $CheckBoxEncryption.Text = "Encrypt Files"
     $CheckBoxEncryption.Location = New-Object Drawing.Point(20, 550)
@@ -286,7 +248,6 @@ Function FileCreationForm {
     $CheckBoxEncryption.ForeColor = [System.Drawing.Color]::White
     $CheckBoxEncryption.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($CheckBoxEncryption)
-
     $LabelCreationDateRange = New-Object Windows.Forms.Label
     $LabelCreationDateRange.Text = "Creation Date Range:"
     $LabelCreationDateRange.Location = New-Object Drawing.Point(20, 590)
@@ -294,14 +255,12 @@ Function FileCreationForm {
     $LabelCreationDateRange.ForeColor = [System.Drawing.Color]::White
     $LabelCreationDateRange.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelCreationDateRange)
-
     $DateTimePickerStartDate = New-Object Windows.Forms.DateTimePicker
     $DateTimePickerStartDate.Format = [Windows.Forms.DateTimePickerFormat]::Custom
     $DateTimePickerStartDate.CustomFormat = "yyyy-MM-dd HH:mm:ss"
     $DateTimePickerStartDate.Location = New-Object Drawing.Point(200, 585)
     $DateTimePickerStartDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($DateTimePickerStartDate)
-
     $LabelTo = New-Object Windows.Forms.Label
     $LabelTo.Text = "to"
     $LabelTo.Location = New-Object Drawing.Point(330, 590)
@@ -309,14 +268,12 @@ Function FileCreationForm {
     $LabelTo.ForeColor = [System.Drawing.Color]::White
     $LabelTo.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $Form.Controls.Add($LabelTo)
-
     $DateTimePickerEndDate = New-Object Windows.Forms.DateTimePicker
     $DateTimePickerEndDate.Format = [Windows.Forms.DateTimePickerFormat]::Custom
     $DateTimePickerEndDate.CustomFormat = "yyyy-MM-dd HH:mm:ss"
     $DateTimePickerEndDate.Location = New-Object Drawing.Point(415, 585)
     $DateTimePickerEndDate.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
     $Form.Controls.Add($DateTimePickerEndDate)
-
     $ButtonCreate = New-Object Windows.Forms.Button
     $ButtonCreate.Text = "Create Files"
     $ButtonCreate.Location = New-Object Drawing.Point(330, 630)
@@ -327,7 +284,6 @@ Function FileCreationForm {
     $ButtonCreate.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $ButtonCreate.Add_Click({ CreateFiles })
     $Form.Controls.Add($ButtonCreate)
-
     $StatusBar = New-Object System.Windows.Forms.StatusStrip
     $StatusBar.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
     $StatusBar.ForeColor = [System.Drawing.Color]::White
@@ -337,17 +293,14 @@ Function FileCreationForm {
     $StatusBarLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
     $StatusBar.Items.Add($StatusBarLabel)
     $Form.Controls.Add($StatusBar)
-
     $ClockTimer = New-Object System.Windows.Forms.Timer
     $ClockTimer.Interval = 1000
     $ClockTimer.Add_Tick({
             $StatusBarLabel.Text = "Current Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
         })
     $ClockTimer.Start()
-
     $Form.Add_Shown({ $Form.Activate() })
     PopulateExtensionComboBox
-
     $Form.ShowDialog()
 }
 
@@ -488,4 +441,4 @@ Function CreateFiles {
     }
 }
 
-FileCreationForm
+Open-FileCreationForm
