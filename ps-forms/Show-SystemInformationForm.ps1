@@ -1,23 +1,23 @@
-Function BasicSystemInfoForm {
+Function Show-SystemInformationForm {
     <#
     .SYNOPSIS
-    Gui Forms System Info tool.
-    
+    Shows a GUI form for displaying system information.
+
     .DESCRIPTION
-    n/a atm
+    This function generates a graphical user interface (GUI) form to display various system information categories.
 
     .PARAMETER InfoType
-    Parameter - 
+    NotMandatory - type of system information to display, default is "ComputerName".
     .PARAMETER FormWidth
-    Parameter - 
+    NotMandatory - specifies the width of the form, default is 1920 pixels.
     .PARAMETER FormHeight
-    Parameter - 
-    
+    NotMandatory - specifies the height of the form, default is 1080 pixels.
+
     .EXAMPLE
-    BasicSystemInfoForm -Verbose
-    
+    Show-SystemInformationForm -Verbose
+
     .NOTES
-    v0.0.1
+    Version: 0.0.4
     #>
     [CmdletBinding()]
     param (
@@ -725,5 +725,3 @@ Function BasicSystemInfoForm {
     $Form.Add_Shown({ $ComboBox.Focus() })
     $Form.ShowDialog()
 }
-
-BasicSystemInfoForm -Verbose
