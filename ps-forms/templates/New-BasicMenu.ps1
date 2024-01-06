@@ -1,4 +1,4 @@
-Function BasicMenu {
+Function New-BasicMenu {
     <#
     .SYNOPSIS
     This is a basic menu function.
@@ -14,21 +14,10 @@ Function BasicMenu {
     NotMandatory - timeout value for user input in seconds.
     
     .EXAMPLE
-    BasicMenu -Title "Main Menu" -Choices @("Search Files", "Copy Files", "Delete Files", "Exit") -Timeout 60
-    $Choices = @(
-    "Search Files",
-    "Copy Files",
-    "Delete Files",
-    "View Logs",
-    "Get Services",
-    "Get Processes",
-    "Download File",
-    "Exit"
-    )
-    BasicMenu -Title "Main Menu" -Choices $Choices -Timeout 60
+    New-BasicMenu -Title "Main Menu" -Choices @("Search Files", "Copy Files", "Delete Files", "Exit") -Timeout 60
     
     .NOTES
-    v0.0.1
+    v0.0.2
     #>
     [CmdletBinding()]
     param (
@@ -91,5 +80,5 @@ Function BasicMenu {
             return
         }
     }
-    Show-Menu -Title $Title -Choices $Choices -Timeout $Timeout
+    New-BasicMenu -Title $Title -Choices $Choices -Timeout $Timeout
 }
