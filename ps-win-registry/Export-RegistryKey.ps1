@@ -11,60 +11,66 @@ Function Export-RegistryKey {
     .PARAMETER LocalExportPath
     Specifies the local path where the exported registry file will be saved.
     .PARAMETER RemoteExportPath
-    Specifies the remote path where the exported registry file will be temporarily saved on the remote computer, if not provided, a default path will be used.
+    Specifies the remote path where the exported registry file will be temporarily saved on the remote computer, if not provided a default path will be used.
     .PARAMETER ComputerName
     Specifies the name of the remote computer from which to export the registry key, if not provided, the export will be performed on the local computer.
-    .PARAMETER Username
+    .PARAMETER User
     Specifies the username to use for the remote connection, required when exporting from a remote computer.
-    .PARAMETER Password
+    .PARAMETER Pass
     Specifies the password to use for the remote connection, required when exporting from a remote computer.
 
     .EXAMPLE
-    Export-RegistryKey -RegPath "HKCU\AppEvents" -LocalExportPath "$env:USERPROFILE\Desktop\AppEvents.reg" -Verbose
-    "HKCU\you_key\you_subkey" | Export-RegistryKey -LocalExportPath "$env:USERPROFILE\Desktop\you_subkey.reg" -ComputerName "remote_hostname" -Username "remote_user" -Password "remote_pass"
+    Export-RegistryKey -RegPath "HKCU\AppEvents" -LocalExportPath "$env:USERPROFILE\Desktop\local_reg_export.reg" -Verbose
+    "HKLM\SOFTWARE" | Export-RegistryKey -LocalExportPath "$env:USERPROFILE\Desktop\remote_reg_export.reg" -ComputerName "remote_hostname" -User "remote_user" -Pass "remote_pass"
 
     .NOTES
-    Version: 0.0.3
+    Version: 0.0.4
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Alias("p")]
         [ValidateNotNullOrEmpty()]
         [string]$RegPath,
 
         [Parameter(Mandatory = $true)]
+        [Alias("l")]
         [ValidateNotNullOrEmpty()]
         [string]$LocalExportPath,
 
         [Parameter(Mandatory = $false)]
+        [Alias("r")]
         [string]$RemoteExportPath = "C:\Users\Default\AppData\Local\Temp\exported.reg",
 
         [Parameter(Mandatory = $false)]
+        [Alias("c")]
         [string]$ComputerName,
 
         [Parameter(Mandatory = $false)]
-        [string]$Username,
+        [Alias("u")]
+        [string]$User,
 
         [Parameter(Mandatory = $false)]
-        [string]$Password
+        [Alias("p")]
+        [string]$Pass
     )
     try {
         $Session = $null
         if ($ComputerName) {
             $TestConnectionScriptBlock = {
                 param($Using:ComputerName)
-                $isReachable = (Test-Connection -ComputerName $Using:ComputerName -Count 1 -Quiet) -and (Test-WSMan -ComputerName $Using:ComputerName -Authentication Default)
-                if ($isReachable) {
+                $IsReachable = (Test-Connection -ComputerName $Using:ComputerName -Count 1 -Quiet) -and (Test-WSMan -ComputerName $Using:ComputerName -Authentication Default)
+                if ($IsReachable) {
                     Write-Host "Connection to the remote computer '$Using:ComputerName' established..." -ForegroundColor Green
                 }
                 else {
-                    Write-Host "Failed to establish a connection to the remote computer '$Using:ComputerName'" -ForegroundColor Red 
+                    Write-Error -Message "Failed to establish a connection to the remote computer '$Using:ComputerName'"
                 }
-                $isReachable
+                $IsReachable
             }
-            $isComputerReachable = Invoke-Command -ComputerName $ComputerName -ScriptBlock $TestConnectionScriptBlock -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
-            if ($isComputerReachable) {
-                $Session = New-PSSession -ComputerName $ComputerName -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
+            $IsComputerReachable = Invoke-Command -ComputerName $ComputerName -ScriptBlock $TestConnectionScriptBlock -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, (ConvertTo-SecureString -String $Pass -AsPlainText -Force))
+            if ($IsComputerReachable) {
+                $Session = New-PSSession -ComputerName $ComputerName -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, (ConvertTo-SecureString -String $Pass -AsPlainText -Force))
                 $ExportScriptBlock = {
                     param($RegPath, $RemoteExportPath)
                     Write-Verbose -Message "Export on the remote computer has started..."
@@ -75,7 +81,7 @@ Function Export-RegistryKey {
                 Copy-Item -FromSession $Session -Path $RemoteExportPath -Destination $LocalExportPath -Force -Verbose
                 Invoke-Command -Session $Session -ScriptBlock {
                     param($RemoteExportPath)
-                    Remove-Item -Path $RemoteExportPath -Force
+                    Remove-Item -Path $RemoteExportPath -Force -Verbose
                 } -ArgumentList $RemoteExportPath
             }
             else {
@@ -90,7 +96,7 @@ Function Export-RegistryKey {
             Write-Host "Registry key exported to '$LocalExportPath'" -ForegroundColor Green
         }
         else {
-            Write-Error -Message "Failed to export the registry key"
+            Write-Error -Message "Failed to export the registry key!"
         }
     }
     catch {
