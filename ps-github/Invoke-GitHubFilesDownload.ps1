@@ -1,4 +1,4 @@
-Function GetGitHubContent {
+Function Invoke-GitHubFilesDownload {
     <#
     .SYNOPSIS
     GitHub content downloader with extended capabilities.
@@ -26,14 +26,18 @@ Function GetGitHubContent {
     NotMandatory - local destination path to save the downloaded files, default is "$env:USERPROFILE\Desktop".
     .PARAMETER GitHubBaseUrl
     NotMandatory - base URL for the GitHub content, default is "https://raw.githubusercontent.com".
+    .PARAMETER Overwrite
+    NotMandatory - if specified, overwrite existing files in the destination path.
+    .PARAMETER Force
+    NotMandatory - if specified, force the creation of destination folders even if they exist.
 
     .EXAMPLE
-    GetGitHubContent -Owner "your_GitHub_name" -Repository "your_repo_name" -Branch "your_branch" -AuthToken "ghp_xyz" -Paths "your_repo_folder/your_file_on_GitHub.ps1" -Verbose
-    GetGitHubContent -Owner "your_GitHub_name" -Repository "your_repo_name" -Branch "your_branch" -AuthToken "ghp_xyz" -Paths "your_repo_folder/your_file_on_GitHub.ps1", "your_repo_folder/your_file_on_GitHub.ps1"
-    "ghp_xyz" | GetGitHubContent -Owner "theFest" -Repository "PowerShell-Scripts" -Branch "main" -Paths "your_repo_folder/your_file_on_GitHub.ps1" -Commit "commit_hash" -DestinationPath "$env:SystemDrive\Temp"
-    
+    Invoke-GitHubFilesDownload -Owner "your_GitHub_name" -Repository "your_repo_name" -Branch "your_branch" -AuthToken "ghp_xyz" -Paths "your_repo_folder/your_file_on_GitHub.ps1" -Verbose
+    Invoke-GitHubFilesDownload -Owner "your_GitHub_name" -Repository "your_repo_name" -Branch "your_branch" -AuthToken "ghp_xyz" -Paths "your_repo_folder/your_file_on_GitHub.ps1", "your_repo_folder/your_file_on_GitHub.ps1"
+    "ghp_xyz" | Invoke-GitHubFilesDownload -Owner "theFest" -Repository "PowerShell-Scripts" -Branch "main" -Paths "your_repo_folder/your_file_on_GitHub.ps1" -Commit "commit_hash" -DestinationPath "$env:SystemDrive\Temp" -Force -Overwrite
+
     .NOTES
-    v0.0.3
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
@@ -74,14 +78,16 @@ Function GetGitHubContent {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("PAT", "Basic")]
-        [string]$AuthMethod = "PAT"
+        [string]$AuthMethod = "PAT",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Overwrite,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
     )
     BEGIN {
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-        if (-not (Test-Path -Path $DestinationPath)) {
-            Write-Verbose -Message "Creating new folder..."
-            New-Item -ItemType Directory -Path $DestinationPath -InformationAction SilentlyContinue -Verbose
-        }
     }
     PROCESS {
         try {
@@ -100,32 +106,37 @@ Function GetGitHubContent {
                 $DestinationFile = Join-Path -Path $DestinationPath -ChildPath $DecodedPath
                 $DestinationDirectory = Split-Path -Path $DestinationFile -Parent
                 if (-not (Test-Path -Path $DestinationDirectory)) {
-                    New-Item -ItemType Directory -Path $DestinationDirectory -Force -Verbose
+                    New-Item -ItemType Directory -Path $DestinationDirectory -Force:$Force -Verbose
                 }
-                try {
-                    $Headers = @{
-                        "User-Agent" = "powershell-script"
-                    }
-                    if ($AuthMethod -eq "PAT") {
-                        $Headers["Authorization"] = "Bearer $AuthToken"
-                    }
-                    elseif ($AuthMethod -eq "Basic") {
-                        $Base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$AuthToken"))
-                        $Headers["Authorization"] = "Basic $Base64Auth"
-                    }
-                    $Response = Invoke-WebRequest -Uri $ContentUrl -Headers $Headers -UseBasicParsing -ErrorAction Stop
-                    if ($Response.StatusCode -eq 200) {
-                        Write-Information "Network check passed, starting download..."
-                        $ContentBytes = [System.Text.Encoding]::UTF8.GetBytes($Response.Content)
-                        [System.IO.File]::WriteAllBytes($DestinationFile, $ContentBytes)
-                        Write-Output -InputObject "Downloaded: $($Response.BaseResponse.ResponseUri.AbsoluteUri)"
-                    }
-                    else {
-                        Write-Error -Message "Failed to download: $ContentUrl. Status code: $($Response.StatusCode)"
-                    }
+                if (Test-Path $DestinationFile -and !$Overwrite) {
+                    Write-Warning "File already exists: $DestinationFile. Use -Overwrite to force overwrite."
                 }
-                catch {
-                    Write-Error -Message "Failed to download: $ContentUrl. Error: $($_.Exception.Message)"
+                else {
+                    try {
+                        $Headers = @{
+                            "User-Agent" = "powershell-script"
+                        }
+                        if ($AuthMethod -eq "PAT") {
+                            $Headers["Authorization"] = "Bearer $AuthToken"
+                        }
+                        elseif ($AuthMethod -eq "Basic") {
+                            $Base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$AuthToken"))
+                            $Headers["Authorization"] = "Basic $Base64Auth"
+                        }
+                        $Response = Invoke-WebRequest -Uri $ContentUrl -Headers $Headers -UseBasicParsing -ErrorAction Stop
+                        if ($Response.StatusCode -eq 200) {
+                            Write-Information "Network check passed, starting download..."
+                            $ContentBytes = [System.Text.Encoding]::UTF8.GetBytes($Response.Content)
+                            [System.IO.File]::WriteAllBytes($DestinationFile, $ContentBytes)
+                            Write-Output -InputObject "Downloaded: $($Response.BaseResponse.ResponseUri.AbsoluteUri)"
+                        }
+                        else {
+                            Write-Error -Message "Failed to download: $ContentUrl. Status code: $($Response.StatusCode)"
+                        }
+                    }
+                    catch {
+                        Write-Error -Message "Failed to download: $ContentUrl. Error: $($_.Exception.Message)"
+                    }
                 }
             }
         }
