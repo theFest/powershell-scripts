@@ -1,4 +1,4 @@
-Function RemoveGitHubRepositories {
+Function Remove-GitHubRepositories {
     <#
     .SYNOPSIS
     Deletes one or more GitHub repositories using the GitHub CLI.
@@ -7,26 +7,26 @@ Function RemoveGitHubRepositories {
     This function uses the GitHub CLI to delete one or more GitHub repositories, with ability to use CSV file containing a list of repository names.
 
     .PARAMETER Repositories
-    NotMandatory - array of repositories to be deleted. Each repository should be in the format "username/reponame".
+    Array of repositories to be deleted. Each repository should be in the format "username/reponame".
     .PARAMETER Token
-    Mandatory - the authentication token to use for interacting with the GitHub API, classic is recommended.
+    The authentication token to use for interacting with the GitHub API, classic is recommended.
     .PARAMETER InputFile
-    NotMandatory - string that specifies the path of a file containing a list of repositories to delete, one per line.
+    String that specifies the path of a file containing a list of repositories to delete, one per line.
     .PARAMETER InputDelimiter
-    NotMandatory - string that specifies the delimiter character used in the input file. The default value is a comma.
+    String that specifies the delimiter character used in the input file. The default value is a comma.
     .PARAMETER IncludeForks
-    NotMandatory - if forked repositories should also be included for deletion, by default, this parameter is not enabled and only the repositories owned by the authenticated user are deleted.
+    If forked repositories should also be included for deletion, by default, this parameter is not enabled and only the repositories owned by the authenticated user are deleted.
     .PARAMETER IncludeArchived
-    NotMandatory - if archived repositories should also be included for deletion, by default, this parameter is not enabled and only the active repositories are deleted, if this parameter is used, archived repositories will also be deleted.
+    If archived repositories should also be included for deletion, by default, this parameter is not enabled and only the active repositories are deleted, if this parameter is used, archived repositories will also be deleted.
     .PARAMETER Confirm
-    NotMandatory - switch parameter that prompts the user to confirm each repository deletion.
+    Switch parameter that prompts the user to confirm each repository deletion.
 
     .EXAMPLE
-    "https://github.com/your_user/repo_1","https://github.com/your_user/repo_1" | RemoveGitHubRepositories -Token "ghp_xyz" -Verbose
-    RemoveGitHubRepositories -InputFile "$env:USERPROFILE\Desktop\ght.txt" -Token -Verbose
+    "https://github.com/your_user/repo_1","https://github.com/your_user/repo_1" | Remove-GitHubRepositories -Token "ghp_xyz" -Verbose
+    Remove-GitHubRepositories -InputFile "$env:USERPROFILE\Desktop\ght.txt" -Token -Verbose
 
     .NOTES
-    v0.0.4
+    v0.0.6
     #>
     [CmdletBinding()]
     param (
