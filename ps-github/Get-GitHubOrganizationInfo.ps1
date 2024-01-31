@@ -1,4 +1,4 @@
-Function RepositoryInformer {
+Function Get-GitHubOrganizationInfo {
     <#
     .SYNOPSIS
     Retrieves information about a organizational GitHub repositories.
@@ -7,20 +7,20 @@ Function RepositoryInformer {
     This function retrieves detailed information about all repositories of the GitHub organization.
     
     .PARAMETER Token
-    Mandatory - personal access token to use for authentication with the GitHub API.
+    Personal access token to use for authentication with the GitHub API.
     .PARAMETER OrgName
-    Mandatory - name of the organization to retrieve repository information for.
+    Name of the organization to retrieve repository information for.
     .PARAMETER ExportResults
-    NotMandatory - export the results to a CSV file, also use it to define output destination.
+    Export the results to a CSV file, also use it to define output destination.
     .PARAMETER OpenTranscript
-    NotMandatory - whether to open the transcript file after the command is executed, will be opened in default program.
+    Open the transcript file after the command is executed, will be opened in default program.
     
     .EXAMPLE
-    "your_org" | RepositoryInformer -Token "github_pat_xyz" -ExportResults "$env:USERPROFILE\Desktop\repo_info.csv" -Verbose
-    RepositoryInformer -Token "github_pat_xyz" -OrgName "your_org" -ExportResults "$env:USERPROFILE\Desktop\repo_info.csv" -OpenTranscript -Verbose
+    "your_org" | Get-GitHubOrganizationInfo -Token "github_pat_xyz" -ExportResults "$env:USERPROFILE\Desktop\repo_info.csv" -Verbose
+    Get-GitHubOrganizationInfo -Token "github_pat_xyz" -OrgName "your_org" -ExportResults "$env:USERPROFILE\Desktop\repo_info.csv" -OpenTranscript
     
     .NOTES
-    v0.0.1
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
