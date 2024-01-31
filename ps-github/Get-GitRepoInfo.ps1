@@ -1,38 +1,34 @@
-Function GetGitInfo {
+Function Get-GitRepoInfo {
     <#
     .SYNOPSIS
-    Gets information about a Git repository.
+    Retrieves information about a Git repository, either from a local path or a remote URL.
 
     .DESCRIPTION
-    This function gets information about a Git repository, including the remote URL of the repository, the local path of the repository, and the status of the repository (whether there are uncommitted changes or not).
+    This function provides details about a Git repository, including the repository name, URL, branch information, commit count, file count, and size.
 
-    .PARAMETER Path
-    NotMandatory - local path of the Git repository to get information for. If not specified, the function will use the current directory.
-    .PARAMETER RemoteUrl
-    NotMandatory - either this or LocalPath, the function will set the remote URL of the repository to the specified value.
-    .PARAMETER LocalPath
-    NotMandatory - either this or RemoteUrl, the function will move the repository to the specified local path.
+    .PARAMETER Local
+    Local path to the Git repository, used when retrieving information from a local repository.
+    .PARAMETER Remote
+    Remote URL of the Git repository, used when retrieving information from a remote repository.
     .PARAMETER Branch
-    NotMandatory - main is predefined, choose what's your default.
+    Specifies the branch name to retrieve information about, default is "main."
     .PARAMETER ListBranches
-    NotMandatory - switch parameter for listing branches.
+    Switch parameter to output a list of all branches in the repository.
 
     .EXAMPLE
-    GetGitInfo -LocalPath "$env:SystemDrive\Repos\your_local_repo"
-    GetGitInfo -Remote "https://github.com/powershell/powershell" -Verbose
-    GetGitInfo -Remote "https://github.com/powershell/powershell" -ListBranches -Verbose
+    Get-GitRepoInfo -Local "C:\Path\To\Local\Repository"
+    Get-GitRepoInfo -Remote "https://github.com/username/repo"
 
     .NOTES
-    v0.1.1
+    v0.1.8
     #>
     [CmdletBinding(DefaultParameterSetName = "Remote")]
     [OutputType("GitInfo")]
-    Param (
-        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [string]$Path = (Get-Location).Path,
-
+    param (
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline, ValueFromPipelineByPropertyName, ParameterSetName = "Local")]
-        [ValidateScript({ Test-Path $_ -PathType Container })]
+        [ValidateScript({ 
+                Test-Path $_ -PathType Container
+            })]
         [string]$Local,
 
         [Parameter(Mandatory = $true, Position = 2, ValueFromPipeline, ValueFromPipelineByPropertyName, ParameterSetName = "Remote")]
@@ -47,27 +43,23 @@ Function GetGitInfo {
         [switch]$ListBranches
     )
     BEGIN {
-        Write-Verbose -Message "Starting $($MyInvocation.MyCommand)"
-        ## Check if Git is installed on the system
+        Write-Verbose -Message "Checking if Git is installed on the system..."
         if (-not (Get-Command git.exe -ErrorAction SilentlyContinue)) {
-            ## If Git is not installed, download the Git for Windows installer
-            $GitInstallURL = "https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe"
-            $GitInstallPath = "$env:TEMP\Git-2.31.1-64-bit.exe"
+            Write-Verbose -Message "Git is not installed, downloading"
+            $GitInstallURL = "https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.exe"
+            $GitInstallPath = "$env:TEMP\Git-2.43.0-64-bit.exe"
             Invoke-WebRequest -Uri $GitInstallURL -OutFile $GitInstallPath
-            ## Install Git silently using the downloaded installer
+            Write-Verbose -Message "Installing Git silently using the downloaded installer"
             $Arguments = '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /SP-'
             Start-Process -FilePath $GitInstallPath -ArgumentList $Arguments -Wait
         }
     }
     PROCESS {
-        ## Verify connectivity
-        if ($Remote -and (!(Test-NetConnection -ComputerName $Remote -InformationLevel Quiet))) {
-            Write-Error "Unable to establish secure connection. Exiting function."
-            return
-        }
-        try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        try { 
+            $Object = $null
             if ($PSCmdlet.ParameterSetName -eq "Remote") {
-                Write-Verbose "Retrieving information about remote Git repository $Remote"
+                Write-Verbose "Retrieving information about the remote Git repository $Remote"
                 $Output = git ls-remote $Remote
                 $RepoName = $Remote.Split('/')[-1].Split('.')[0]
                 $Branches = $output -replace '^.*refs/heads/', '' -replace '\s.*$' , '' | Select-Object -Unique
@@ -88,12 +80,10 @@ Function GetGitInfo {
                 $FullPath = Resolve-Path -Path $Local
                 Write-Verbose -Message "Processing path $FullPath"
                 $GitPath = Join-Path $FullPath ".git"
-                Write-Verbose -Message  "Checking if $GitPath exists, running on $env:COMPUTERNAME"
                 if (Test-Path -Path $GitPath) {
-                    Write-Verbose "Retrieving information about local Git repository $FullPath"
+                    Write-Verbose "Retrieving information about the local Git repository $FullPath"
                     $CommitCount = git -C $FullPath rev-list --count HEAD
-                    $Stat = Get-ChildItem -Path $GitPath -Recurse -File `
-                    | Measure-Object -Property Length -Sum
+                    $Stat = Get-ChildItem -Path $GitPath -Recurse -File | Measure-Object -Property Length -Sum
                     $Object = [PSCustomObject]@{
                         PSTypeName = "GitInfo"
                         Path       = $FullPath
@@ -109,17 +99,17 @@ Function GetGitInfo {
                     }
                 }
                 else {
-                    Write-Verbose -Message "Git repository not found in $FullPath"
+                    Write-Host "Git repository not found in $FullPath" -ForegroundColor Red
                 }
             }
-            if ($ListBranches) {
+            if ($Object -and $ListBranches) {
                 Write-Output -InputObject $Object.Branches
             }
             return $Object
         }
         catch {
             Write-Verbose -Message "Error: $($_.Exception.Message)"
-            Write-Error "Failed to retrieve repository size information for $_"
+            Write-Error -Message "Failed to retrieve repository information: $_"
         }
     }
 }
