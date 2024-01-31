@@ -1,46 +1,47 @@
-Function GetGitRepoProgLang {
+Function Get-GitRepoFileLanguageCount {
     <#
     .SYNOPSIS
-    This function is used to download a Git repository and get all the source code files in the repository that are written in a specified programming language.
+    Gets the count of programming language files in a Git repository.
 
     .DESCRIPTION
-    Function can take either a local repository path or a remote repository path. If a remote repository path is provided, the function will download the repository to a temporary folder and change the current working directory to the cloned repository.
-    We can filter files by extension based on the specified programming language. The function also supports filtering files based on the maximum depth of subdirectories to search, as well as including and excluding files based on patterns.
+    This function retrieves the count of files for specific programming languages in a Git repository, either by specifying a local repository path or a remote repository URL.
 
     .PARAMETER LocalRepoPath
-    Mandatory - the local path to a Git repository.
+    Local path of the Git repository, mandatory when using the local repository.
     .PARAMETER RemoteRepoPath
-    Mandatory - the remote path to a Git repository.
+    URL of the remote Git repository, mandatory when using the remote repository.
     .PARAMETER CloneRemoteRepoPath
-    NotMandatory - the local path where the remote repository will be cloned, default value is "$env:TEMP".
+    Local path where the remote repository will be cloned, default is "$env:TEMP".
     .PARAMETER Language
-    NotMandatory - the programming language to filter files by extension, default value is "all".
+    Programming language to filter, default is "all". Valid values include "all", "c", "cpp", "csharp", and others.
     .PARAMETER MaxDepth
-    NotMandatory - maximum depth of subdirectories to search, default value is [int]::MaxValue.
+    Maximum depth for recursive file search, default is [int]::MaxValue.
     .PARAMETER Exclude
-    NotMandatory - an array of patterns to exclude files.
+    Specifies an array of file patterns to exclude from the analysis.
     .PARAMETER Include
-    NotMandatory - an array of patterns to include files.
+    Specifies an array of file patterns to include in the analysis.
     .PARAMETER RepoClonePath
-    NotMandatory - local path where the remote repository is cloned, default value is "$env:TEMP".
+    Local path where the repository is cloned, default is "$env:TEMP".
     .PARAMETER RedirectStandardOutput
-    NotMandatory - file path to redirect standard output, default value is "$env:TEMP\GetGitRepoProgLang_strout.txt".
+    Path for redirecting standard output, default is "$env:TEMP\GetGitRepoProgLang_strout.txt".
     .PARAMETER RedirectStandardError
-    NotMandatory - file path to redirect standard erroe, default value is "$env:TEMP\GetGitRepoProgLang_strerror.txt".
+    Path for redirecting standard error, default is "$env:TEMP\GetGitRepoProgLang_strerror.txt".
     .PARAMETER Recurse
-    NotMandatory - switch to enable recursive searching of subdirectories.
+    Indicates whether to include files from subdirectories recursively.
 
     .EXAMPLE
-    GetGitRepoProgLang -RemoteRepoPath "https://github.com/powershell/powershell"
-    GetGitRepoProgLang -LocalRepoPath "C:\your_git_repo" -Language "powershell" -MaxDepth 2 -Recurse
+    Get-GitRepoFileLanguageCount -RemoteRepoPath "https://github.com/powershell/powershell"
+    Get-GitRepoFileLanguageCount -LocalRepoPath "C:\Users\Administrator\Documents\GitHub\powershell-scripts"
 
     .NOTES
-    v0.1.4
+    v0.1.7
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ParameterSetName = "LocalRepoPath", Position = 0)]
-        [ValidateScript({ Test-Path $_ -PathType "Container" })]
+        [ValidateScript({ 
+                Test-Path $_ -PathType "Container"
+            })]
         [string]$LocalRepoPath,
 
         [Parameter(Mandatory = $true, ParameterSetName = "RemoteRepoPath", Position = 0)]
@@ -148,7 +149,7 @@ Function GetGitRepoProgLang {
         return $Counts
     }
     catch {
-        Write-Error $_.Exception.Message
+        Write-Error -Message $_.Exception.Message
         return $null
     }
 }
