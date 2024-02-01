@@ -1,7 +1,6 @@
 #Requires -Version 5.1
-Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
 Set-StrictMode -Version Latest -Verbose
-Function ManageRepositoryBranches {
+Function Use-GitHubRepositoryBranchesManager {
     <#
     .SYNOPSIS
     GitHub repository branches manager.
@@ -10,23 +9,23 @@ Function ManageRepositoryBranches {
     With this function you can manage branches of GitHub repository's.
 
     .PARAMETER Action
-    Mandatory - action to be performed on the branches, accepted values are "View", "Create", or "Delete".
+    Action to be performed on the branches, accepted values are "View", "Create", or "Delete".
     .PARAMETER Repository
-    Mandatory - repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
+    Repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
     .PARAMETER Token
-    NotMandatory - specifies the personal access token for authentication with GitHub.
+    Specifies the personal access token for authentication with GitHub.
     .PARAMETER NewBranchName
-    NotMandatory - name of the new branch or branches to be created.
+    Name of the new branch or branches to be created.
     .PARAMETER DeleteBranchName
-    NotMandatory - names of the branche or branches to be deleted.
+    Names of the branche or branches to be deleted.
 
     .EXAMPLE
-    "https://github.com/your_user/your_repo" | ManageRepositoryBranches -Action View -Token "ghp_xyz"
-    ManageRepositoryBranches -Action Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -NewBranchName "your_new_branch_1", "your_new_branch_2"
-    ManageRepositoryBranches -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -DeleteBranchName "your_new_branch_1", "your_new_branch_2"
+    "https://github.com/your_user/your_repo" | Use-GitHubRepositoryBranchesManager -Action View -Token "ghp_xyz"
+    Use-GitHubRepositoryBranchesManager -Action Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -NewBranchName "your_new_branch_1", "your_new_branch_2"
+    Use-GitHubRepositoryBranchesManager -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -DeleteBranchName "your_new_branch_1", "your_new_branch_2"
 
     .NOTES
-    v0.0.4
+    v0.0.6
     #>
     [CmdletBinding()]
     param (
