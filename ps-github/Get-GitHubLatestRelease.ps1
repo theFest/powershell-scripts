@@ -1,30 +1,30 @@
 Function Get-GitHubLatestRelease {
     <#
     .SYNOPSIS
-    Download latest SW release from GitHub.
+    Downloads the latest release file from a GitHub repository.
 
     .DESCRIPTION
-    This simple function that downloads latest software/code release from GitHub API's.
+    This function retrieves information about the latest release of a GitHub repository, allowing users to download specific files based on search criteria.
 
     .PARAMETER SearchType
-    Choose type of download, combine FileNamePattern with SearchString.
+    Type of search to perform, use "Exact" for an exact match search or "Pattern" for a pattern match search.
     .PARAMETER Owner
-    Enter owner of GitHub's repository name.
+    Specifies the GitHub repository owner.
     .PARAMETER Repository
-    Enter GitHub repository name from owners.
+    Specifies the name of the GitHub repository.
     .PARAMETER SearchString
-    Software or code release that you want to download from GitHub.
+    String to search for in the GitHub release files.
     .PARAMETER FileNamePattern
-    Mandatory when using pattern based search type to download. 
-    .PARAMETER OutPath
-    Leave empty and or choose a path where content will be downloaded.
+    Pattern to filter files when using "Pattern" search type.
+    .PARAMETER OutputPath
+    Directory where the downloaded file will be saved. The default is the user's temporary directory.
 
     .EXAMPLE
     Get-GitHubLatestRelease -SearchType Exact -Owner "microsoft" -Repository "nubesgen" -SearchString "nubesgen-cli-windows.exe"
-    Get-GitHubLatestRelease -SearchType Pattern -Owner "microsoft" -Repository "terminal" -SearchString "terminal" -FileNamePattern *.zip -OutPath "$env:USERPROFILE\Desktop"
+    Get-GitHubLatestRelease -SearchType Pattern -Owner "microsoft" -Repository "terminal" -SearchString "terminal" -FileNamePattern *.zip -OutputPath "$env:USERPROFILE\Desktop"
 
     .NOTES
-    v0.1.1
+    v0.1.3
     #>
     [CmdletBinding()]
     param(
@@ -46,66 +46,66 @@ Function Get-GitHubLatestRelease {
         [string]$FileNamePattern,
 
         [Parameter(Mandatory = $false)]
-        [string]$OutPath = "$env:TEMP"
+        [string]$OutputPath = "$env:TEMP"
     )
     BEGIN {
         $ErrorActionPreference = "Stop"
         try {
-            if ($Response = (Invoke-WebRequest -Uri "https://api.github.com/repos/$Owner/$Repository/releases/latest" -Verbose).Content) {
-                Write-Information -MessageData $Response
-                Write-Host "INFO: Connection to GitHub established...." -ForegroundColor Green
-            }
+            $ApiUrl = "https://api.github.com/repos/$Owner/$Repository/releases/latest"
+            $ResponseContent = (Invoke-WebRequest -Uri $ApiUrl -Verbose).Content
+            Write-Information -MessageData $ResponseContent
+            Write-Host "INFO: Connection to GitHub established...." -ForegroundColor Green
         }
         catch [System.Net.WebException] {
-            $ErrorMessage = $_.Exception.Message
-            Write-Error -Message "A web exception occurred: $ErrorMessage"
+            Write-Error -Message $_.Exception.Message
         }
         catch [System.UriFormatException] {
-            $ErrorMessage = $_.Exception.Message
-            Write-Error -Message "A URI format exception occurred: $ErrorMessage"
+            Write-Error -Message $_.Exception.Message
         }
         catch {
-            $ErrorMessage = $_.Exception.Message
-            Write-Error -Message "An unknown exception occurred: $ErrorMessage"
+            Write-Error -Message $_.Exception.Message
         }
     }
     PROCESS {
-        if ($OutPath) {
-            $Release = ((Invoke-WebRequest -Uri "https://api.github.com/repos/$Owner/$Repository/releases/latest" -Verbose | ConvertFrom-Json).Assets)
-            $ReleaseSel = ($Release | Select-Object *)
-            $ReleaseSelBD = ($Release | Select-Object *).Browser_Download_Url
-            $ReleaseSelPat = ($ReleaseSelBD | Select-String -SimpleMatch $SearchString).Line
+        if ($OutputPath) {
+            $LatestRelease = (Invoke-WebRequest -Uri $ApiUrl -Verbose | ConvertFrom-Json).Assets
+            $SelectedRelease = $LatestRelease | Select-Object *
+            $DownloadUrls = $SelectedRelease.Browser_Download_Url
+            $SelectedUrl = ($DownloadUrls | Select-String -SimpleMatch $SearchString).Line
             switch ($SearchType) {
-                "Exact" {  
-                    $PatN = Split-Path -Path $ReleaseSelPat -Leaf
-                    $LatestPatUrl = (([uri]$ReleaseSelPat).OriginalString) | Sort-Object -Property published_at -Descending | Select-Object -First 1
-                    Invoke-WebRequest -Uri $LatestPatUrl -OutFile "$OutPath\$PatN" -Verbose
+                "Exact" {
+                    $FileName = Split-Path -Path $SelectedUrl -Leaf
+                    $LatestUrl = (([uri]$SelectedUrl).OriginalString) | Sort-Object -Property published_at -Descending | Select-Object -First 1
+                    Invoke-WebRequest -Uri $LatestUrl -OutFile "$OutputPath\$FileName" -Verbose
                 }
-                "Pattern" {           
-                    $PtPat = $ReleaseSel | Sort-Object -Property published_at -Descending | Where-Object { $_.Name -like $FileNamePattern } | Select-Object -First 1
-                    $PatN = $PtPat.Name
-                    $LatestPatUrl = $PtPat.Browser_Download_Url
-                    Invoke-WebRequest -Uri $LatestPatUrl -OutFile "$OutPath\$PatN" -Verbose
+                "Pattern" {
+                    $SelectedPattern = $SelectedRelease | Sort-Object -Property published_at -Descending | Where-Object { $_.Name -like $FileNamePattern } | Select-Object -First 1
+                    $FileName = $selectedPattern.Name
+                    $LatestUrl = $selectedPattern.Browser_Download_Url
+                    Invoke-WebRequest -Uri $LatestUrl -OutFile "$OutputPath\$FileName" -Verbose
                 }
-                default { Write-Host "Default" }
+                default { 
+                    Write-Warning -Message "Incorrect choice, Exact or Pattern should be picked!" 
+                }
             }
         }
     }
     END {
-        if (Test-Path -Path "$OutPath\$PatN") {
-            Write-Host "INFO: Downloaded successfully, verifying downloaded content..." -ForegroundColor DarkGreen
+        $DownloadPath = "$OutputPath\$FileName"
+        if (Test-Path -Path $DownloadPath) {
+            Write-Host "Downloaded successfully, verifying downloaded content..." -ForegroundColor DarkGreen
         }
         else {
-            Write-Host "ERROR: Downloaded failed!" -ForegroundColor DarkMagenta
+            Write-Error -Message "Download failed!"
         }
-        $LocalPath = (Get-Item "$OutPath\$PatN").Length
-        $RemotePath = (Invoke-WebRequest -Uri $LatestPatUrl -UseBasicParsing -Method Head -WarningAction SilentlyContinue).Headers.'Content-Length'
-        $LRCheck = [System.IO.File]::Exists("$OutPath\$PatN") -and $LocalPath -eq $RemotePath
-        if ($LRCheck) {
-            Write-Host "INFO: Download ended with success, local matches remote content." -ForegroundColor Green
+        $LocalSize = (Get-Item $DownloadPath).Length
+        $RemoteSize = (Invoke-WebRequest -Uri $LatestUrl -UseBasicParsing -Method Head -WarningAction SilentlyContinue).Headers.'Content-Length'
+        $SizeCheck = [System.IO.File]::Exists($DownloadPath) -and $LocalSize -eq $RemoteSize
+        if ($SizeCheck) {
+            Write-Host "Download ended with success, local matches remote content" -ForegroundColor Green
         }
         else {
-            Write-Host "ERROR: Verification of downloaded content has failed!" -ForegroundColor Magenta
+            Write-Error -Message "Verification of downloaded content has failed!"
         }
     }
 }
