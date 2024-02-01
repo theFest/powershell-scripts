@@ -1,7 +1,6 @@
 #Requires -Version 5.1
-Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
 Set-StrictMode -Version Latest -Verbose
-Function ManageFollowers {
+Function Use-GitHubFollowersManager {
     <#
     .SYNOPSIS
     Simple followers management of a your GitHub account.
@@ -10,23 +9,23 @@ Function ManageFollowers {
     This function uses GitHub CLI to add a new follower or remove an existing follower, it can also check followers of an account and output the results to the console and/or a CSV file.
 
     .PARAMETER Action
-    Mandatory - specifies the action to be performed, values are 'CheckFollowers', 'AddFollower', or 'RemoveFollower'.
+    Action to be performed, values are 'CheckFollowers', 'AddFollower', or 'RemoveFollower'.
     .PARAMETER Username
-    Mandatory - your GitHub account username whose followers are to be managed.
+    Your GitHub account username whose followers are to be managed.
     .PARAMETER Token
-    Mandatory - valid personal access token for the GitHub account.
+    Valid personal access token for the GitHub account.
     .PARAMETER FollowerUsername
-    NotMandatory - the GitHub account username to be added or removed from the follower list.
+    GitHub account username to be added or removed from the follower list.
     .PARAMETER OutputFile
-    NotMandatory - path and filename for the CSV file to which the list of followers should be output.
+    Path and filename for the CSV file to which the list of followers should be output.
 
     .EXAMPLE
-    "your_GitHub_user" | ManageFollowers -Action CheckFollowers -Token "ghp_xyz" -Verbose
-    ManageFollowers -Action AddFollower -Username "your_GitHub_user" -Token "ghp_xyz" -FollowerUsername "user_to_follow"
-    ManageFollowers -Action RemoveFollower -Username "your_GitHub_user" -Token "ghp_xyz" -FollowerUsername "user_to_unfollow"
+    "your_GitHub_user" | Use-GitHubFollowersManager -Action CheckFollowers -Token "ghp_xyz" -Verbose
+    Use-GitHubFollowersManager -Action AddFollower -Username "your_GitHub_user" -Token "ghp_xyz" -FollowerUsername "user_to_follow"
+    Use-GitHubFollowersManager -Action RemoveFollower -Username "your_GitHub_user" -Token "ghp_xyz" -FollowerUsername "user_to_unfollow"
 
     .NOTES
-    v0.0.2
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
