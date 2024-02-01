@@ -1,4 +1,4 @@
-Function GitHubRepoManager {
+Function Invoke-GitHubRepositoryOperations {
     <#
     .SYNOPSIS
     Function for managing GitHub repositories by utilizing GitHub API to interact with the repositories via Personal Access Token.
@@ -7,77 +7,77 @@ Function GitHubRepoManager {
     This function that allows you to perform various actions on GitHub repositories, such as creating, deleting, archiving, and unarchiving repositories.
 
     .PARAMETER Action
-    NotMandatory - action to perform on the GitHub repository, valid values are "Create", "Delete", "Archive", "Unarchive", and "List".
+    Action to perform on the GitHub repository, valid values are "Create", "Delete", "Archive", "Unarchive", and "List".
     .PARAMETER Visibility
-    NotMandatory - visibility of the GitHub repository, valid values are "public", "private", or "internal". Default is "public".
+    Visibility of the GitHub repository, valid values are "public", "private", or "internal". Default is "public".
     .PARAMETER AccountType
-    NotMandatory - type of GitHub account, valid values are "user", "organization", or "enterprise".
+    Type of GitHub account, valid values are "user", "organization", or "enterprise".
     .PARAMETER AccountName
-    NotMandatory - the name of the GitHub account associated with the repository.
+    Name of the GitHub account associated with the repository.
     .PARAMETER RepositoryName
-    NotMandatory - specifies the name of the GitHub repository to be created or operated on.
+    Specifies the name of the GitHub repository to be created or operated on.
     .PARAMETER AccessToken
-    NotMandatory - the GitHub access token to authenticate API requests, if not provided, the function will prompt for it.
+    The GitHub access token to authenticate API requests, if not provided, the function will prompt for it.
     .PARAMETER DefaultBranch
-    NotMandatory - default branch for the GitHub repository, valid values are "main", "master", "dev", "test", "stage", or "prod".
+    Default branch for the GitHub repository, valid values are "main", "master", "dev", "test", "stage", or "prod".
     .PARAMETER RepositoryId
-    NotMandatory - specifies the ID of the GitHub repository to be operated on.
+    Specifies the ID of the GitHub repository to be operated on.
     .PARAMETER Private
-    NotMandatory - if specified, the GitHub repository will be private, this parameter is applicable only for the "Create" action.
+    If specified, the GitHub repository will be private, this parameter is applicable only for the "Create" action.
     .PARAMETER Description
-    NotMandatory - specifies the description of the GitHub repository.
+    Specifies the description of the GitHub repository.
     .PARAMETER Homepage
-    NotMandatory - specifies the URL of the homepage for the GitHub repository.
+    Specifies the URL of the homepage for the GitHub repository.
     .PARAMETER GitIgnoreTemplate
-    NotMandatory - specifies the template for .gitignore file to be used in the GitHub repository.
+    Specifies the template for .gitignore file to be used in the GitHub repository.
     .PARAMETER LicenseTemplate
-    NotMandatory - specifies the license template to be used for the GitHub repository.
+    Specifies the license template to be used for the GitHub repository.
     .PARAMETER TeamId
-    NotMandatory - ID of the team that will be granted access to the GitHub repository, this parameter is applicable only for the "Create" action.
+    ID of the team that will be granted access to the GitHub repository, this parameter is applicable only for the "Create" action.
     .PARAMETER AutoInit
-    NotMandatory - the GitHub repository will be auto-initialized with a README file, this parameter is applicable only for the "Create" action.
+    GitHub repository will be auto-initialized with a README file, this parameter is applicable only for the "Create" action.
     .PARAMETER Issues
-    NotMandatory - the GitHub repository will have issue tracking enabled, this parameter is applicable only for the "Create" action.
+    GitHub repository will have issue tracking enabled, this parameter is applicable only for the "Create" action.
     .PARAMETER Pages
-    NotMandatory - the GitHub repository will have GitHub Pages enabled, this parameter is applicable only for the "Create" action.
+    GitHub repository will have GitHub Pages enabled, this parameter is applicable only for the "Create" action.
     .PARAMETER Projects
-    NotMandatory - the GitHub repository will have GitHub Projects enabled, this parameter is applicable only for the "Create" action.
+    GitHub repository will have GitHub Projects enabled, this parameter is applicable only for the "Create" action.
     .PARAMETER Discussions
-    NotMandatory - the GitHub repository will have GitHub Discussions enabled, this parameter is applicable only for the "Create" action.
+    GitHub repository will have GitHub Discussions enabled, this parameter is applicable only for the "Create" action.
     .PARAMETER Codespaces
-    NotMandatory - the GitHub repository will have Codespaces enabled, this parameter is applicable only for the "Create" action.
+    GitHub repository will have Codespaces enabled, this parameter is applicable only for the "Create" action.
     .PARAMETER MirrorURL
-    NotMandatory - URL of a mirror repository to be used for the GitHub repository, this parameter is applicable only for the "Create" action.
+    URL of a mirror repository to be used for the GitHub repository, this parameter is applicable only for the "Create" action.
     .PARAMETER Sponsorship
-    NotMandatory - if specified, the GitHub repository will be open for sponsorship, this parameter is applicable only for the "Create" action.
+    If specified, the GitHub repository will be open for sponsorship, this parameter is applicable only for the "Create" action.
     .PARAMETER TopicTags
-    NotMandatory - if specified, the GitHub repository will support topic tags, this parameter is applicable only for the "Create" action.
+    If specified, the GitHub repository will support topic tags, this parameter is applicable only for the "Create" action.
     .PARAMETER UpdateBranch
-    NotMandatory - default branch of the GitHub repository will be updated to the specified branch, this parameter is applicable only for the "Create" action.
+    Default branch of the GitHub repository will be updated to the specified branch, this parameter is applicable only for the "Create" action.
     .PARAMETER SquashMerge
-    NotMandatory - squash merging will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
+    Squash merging will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
     .PARAMETER MergeCommit
-    NotMandatory - merge commits will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
+    Merge commits will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
     .PARAMETER Language
-    NotMandatory - the primary programming language used in the GitHub repository.
+    The primary programming language used in the GitHub repository.
     .PARAMETER RebaseMerge
-    NotMandatory - if specified, rebase merging will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
+    If specified, rebase merging will be allowed in the GitHub repository, this parameter is applicable only for the "Create" action.
     .PARAMETER DeleteBranchOnMerge
-    NotMandatory - if specified, the source branch will be deleted after merging a pull request, this parameter is applicable only for the "Create" action.
+    The source branch will be deleted after merging a pull request, this parameter is applicable only for the "Create" action.
     .PARAMETER IsTemplate
-    NotMandatory - if specified, the GitHub repository will be marked as a template repository, this parameter is applicable only for the "Create" action.
+    GitHub repository will be marked as a template repository, this parameter is applicable only for the "Create" action.
 
     .EXAMPLE
-    GitHubRepoManager -Action Create -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Visibility public -DefaultBranch master `
+    Invoke-GitHubRepositoryOperations -Action Create -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Visibility public -DefaultBranch master `
         -Description "some_description" -Sponsorship -Homepage "https://github.com/theFest/your_homepage" -Language Java -AutoInit -Discussions -Projects -Codespaces -Issues `
         -RebaseMerge -DeleteBranchOnMerge -GitIgnoreTemplate Java -LicenseTemplate mit -TopicTags -Pages -MirrorURL "https://github.com/your_mirror_url" -UpdateBranch -IsTemplate
-    GitHubRepoManager -Action Archive -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Verbose
-    GitHubRepoManager -Action Unarchive -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Verbose
-    GitHubRepoManager -Action List -AccountType user -AccountName "your_Github_user" -AccessToken "ghp_xyz" -Verbose  
-    GitHubRepoManager -Action Delete -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz"
+    Invoke-GitHubRepositoryOperations -Action Archive -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Verbose
+    Invoke-GitHubRepositoryOperations -Action Unarchive -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz" -Verbose
+    Invoke-GitHubRepositoryOperations -Action List -AccountType user -AccountName "your_Github_user" -AccessToken "ghp_xyz" -Verbose  
+    Invoke-GitHubRepositoryOperations -Action Delete -AccountType user -AccountName "your_Github_user" -RepositoryName "your_repo" -AccessToken "ghp_xyz"
 
     .NOTES
-    v0.0.1
+    v0.0.3
     #>
     [CmdletBinding()]
     param(
