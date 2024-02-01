@@ -1,37 +1,37 @@
-Function ManageSecrets {
+Function Use-GitHubSecretsManager {
     <#
     .SYNOPSIS
     Manage secrets stored in GitHub repositories using the GitHub API. It can be used to create, retrieve, update, and delete secrets.
 
     .DESCRIPTION
-    This ManageSecrets enables you to manage secrets stored in GitHub repositories using the GitHub API, you can use it to create, retrieve, update, and delete repository secrets, requires a GitHub personal access token with appropriate permissions.
+    This function is used manage secrets stored in GitHub repositories using the GitHub API, you can use it to create, retrieve, update, and delete repository secrets, requires a GitHub personal access token with appropriate permissions.
 
     .PARAMETER Token
-    Mandatory - GitHub personal access token to use for authentication, token must have the repo scope to access repository secrets.
+    GitHub personal access token to use for authentication, token must have the repo scope to access repository secrets.
     .PARAMETER Repository
-    Mandatory - name of the repository where the secret is stored, this can be in the format owner/repo.
+    Name of the repository where the secret is stored, this can be in the format owner/repo.
     .PARAMETER Operation
-    Mandatory - operation to perform on the secret. Valid values are Create, Get, Update, and Delete.
+    Operation to perform on the secret. Valid values are Create, Get, Update, and Delete.
     .PARAMETER Name
-    NotMandatory - name of the secret that will be displayed in secrets section.
+    Name of the secret that will be displayed in secrets section.
     .PARAMETER Value
-    NotMandatory - specifies the value of the secret, for Create and Update operations, this parameter is mandatory.
+    Value of the secret, for Create and Update operations, this parameter is mandatory.
     .PARAMETER Filename
-    NotMandatory - filename for the secret, this is only required for the Create operation.
+    Filename for the secret, this is only required for the Create operation.
     .PARAMETER Force
-    NotMandatory - indicates whether to overwrite an existing secret when creating a new one.
+    Indicates whether to overwrite an existing secret when creating a new one.
     .PARAMETER PassThru
-    NotMandatory - returns the updated secret object after an Update operation.
+    Returns the updated secret object after an Update operation.
 
     .EXAMPLE
-    "https://github.com/your_user/your_repo" | ManageSecrets -Operation Get -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
-    "https://github.com/your_user/your_repo" | ManageSecrets -Operation List -Token "ghp_xyz" -Verbose
-    ManageSecrets -Operation Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_TOKEN_VALUE"
-    ManageSecrets -Operation Update -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_NEW_TOKEN_VALUE"
-    ManageSecrets -Operation Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
+    "https://github.com/your_user/your_repo" | Use-GitHubSecretsManager -Operation Get -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
+    "https://github.com/your_user/your_repo" | Use-GitHubSecretsManager -Operation List -Token "ghp_xyz" -Verbose
+    Use-GitHubSecretsManager -Operation Create -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_TOKEN_VALUE"
+    Use-GitHubSecretsManager -Operation Update -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Value "YOUR_NEW_TOKEN_VALUE"
+    Use-GitHubSecretsManager -Operation Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Name "YOUR_TOKEN_NAME" -Verbose
 
     .NOTES
-    v0.0.2
+    v0.0.4
     #>
     [CmdletBinding()]
     param (
