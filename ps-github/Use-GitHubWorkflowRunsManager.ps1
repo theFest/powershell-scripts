@@ -1,4 +1,4 @@
-Function ManageWorkflowRuns {
+Function Use-GitHubWorkflowRunsManager {
     <#
     .SYNOPSIS
     Simple function used to manage workflow runs for a repository on GitHub.
@@ -7,23 +7,23 @@ Function ManageWorkflowRuns {
     This function requires a GitHub repository name, a personal access token, and an action to perform, user can choose to view, delete, or stop the workflow runs for a given repository.
 
     .PARAMETER Action
-    Mandatory - action to be performed on the branches, accepted values are "View", "Delete", or "Stop".
+    Action to be performed on the branches, accepted values are "View", "Delete", or "Stop".
     .PARAMETER Repository
-    Mandatory - repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
+    Repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
     .PARAMETER Token
-    Mandatory - specifies the personal access token for authentication with GitHub.
+    Specifies the personal access token for authentication with GitHub.
     .PARAMETER WorkflowRunIds
-    NotMandatory - action to be performed on the branches, accepted values are "View", "Create", or "Delete".
+    Action to be performed on the branches, accepted values are "View", "Create", or "Delete".
     .PARAMETER Force
-    NotMandatory - action to be performed on the branches, accepted values are "View", "Create", or "Delete".
+    Action to be performed on the branches, accepted values are "View", "Create", or "Delete".
 
     .EXAMPLE
-    "https://github.com/your_user/your_repo" | ManageWorkflowRuns -Action View -Token "ghp_xyz" -Verbose
-    ManageWorkflowRuns -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Force
-    ManageWorkflowRuns -Action Stop -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -WorkflowRunId "12345", "67890"
+    "https://github.com/your_user/your_repo" | Use-GitHubWorkflowRunsManager -Action View -Token "ghp_xyz" -Verbose
+    Use-GitHubWorkflowRunsManager -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Force
+    Use-GitHubWorkflowRunsManager -Action Stop -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -WorkflowRunId "12345", "67890"
 
     .NOTES
-    v0.0.1
+    v0.0.3
     #>
     [CmdletBinding()]
     param(
