@@ -1,30 +1,30 @@
-Function GetLatestReleaseFromGitHub {
+Function Get-GitHubLatestRelease {
     <#
     .SYNOPSIS
     Download latest SW release from GitHub.
 
     .DESCRIPTION
-    Simple function that downloads latest software/code release from GitHub API's.
+    This simple function that downloads latest software/code release from GitHub API's.
 
     .PARAMETER SearchType
-    Mandatory - choose type of download, combine FileNamePattern with SearchString.
+    Choose type of download, combine FileNamePattern with SearchString.
     .PARAMETER Owner
-    Mandatory - enter owner of GitHub's repository name.
+    Enter owner of GitHub's repository name.
     .PARAMETER Repository
-    Mandatory - enter GitHub repository name from owners.
+    Enter GitHub repository name from owners.
     .PARAMETER SearchString
-    Mandatory - software or code release that you want to download from GitHub.
+    Software or code release that you want to download from GitHub.
     .PARAMETER FileNamePattern
-    NotMandatory - mandatory when using pattern based search type to download. 
+    Mandatory when using pattern based search type to download. 
     .PARAMETER OutPath
-    NotMandatory - leave empty and or choose a path where content will be downloaded.
+    Leave empty and or choose a path where content will be downloaded.
 
     .EXAMPLE
-    GetLatestReleaseFromGitHub -SearchType Exact -Owner "microsoft" -Repository "nubesgen" -SearchString "nubesgen-cli-windows.exe"
-    GetLatestReleaseFromGitHub -SearchType Pattern -Owner "microsoft" -Repository "terminal" -SearchString "terminal" -FileNamePattern *.zip -OutPath "$env:USERPROFILE\Desktop"
+    Get-GitHubLatestRelease -SearchType Exact -Owner "microsoft" -Repository "nubesgen" -SearchString "nubesgen-cli-windows.exe"
+    Get-GitHubLatestRelease -SearchType Pattern -Owner "microsoft" -Repository "terminal" -SearchString "terminal" -FileNamePattern *.zip -OutPath "$env:USERPROFILE\Desktop"
 
     .NOTES
-    v1
+    v0.1.1
     #>
     [CmdletBinding()]
     param(
