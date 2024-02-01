@@ -1,7 +1,6 @@
 #Requires -Version 5.1
-Write-Host "Catch certain types of errors at runtime, such as referencing undefined variables" -ForegroundColor DarkCyan
 Set-StrictMode -Version Latest -Verbose
-Function ManageWorkflows {
+Function Use-GitHubWorkflowsManager {
     <#
     .SYNOPSIS
     Simple function for managing workflows in a GitHub repository using GitHub CLI.
@@ -10,25 +9,25 @@ Function ManageWorkflows {
     This function uses GitHub CLI to manage GitHub workflows in a repository, it can list all the workflows in a repository, enable/disable a workflow, or delete all the workflow runs.
 
     .PARAMETER Action
-    Mandatory - action to be performed on the branches, accepted values are "List", "Enable", "Disable" or "Delete".
+    Action to be performed on the branches, accepted values are "List", "Enable", "Disable" or "Delete".
     .PARAMETER Repository
-    Mandatory - repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
+    Repository URL, parameter is validated to accept only URLs starting with "https://github.com/".
     .PARAMETER Token
-    Mandatory - specifies the personal access token for authentication with GitHub.
+    Specifies the personal access token for authentication with GitHub.
     .PARAMETER ExportPath
-    NotMandatory - declare the path to export the workflow runs if the operation is "Delete".
+    Declare the path to export the workflow runs if the operation is "Delete".
     .PARAMETER Force
-    NotMandatory - forces the command to run without asking for user confirmation if the operation is "Delete".
+    Forces the command to run without asking for user confirmation if the operation is "Delete".
 
     .EXAMPLE
-    "https://github.com/your_user/your_repo" | ManageWorkflows -Action List -Token "ghp_xyz" -Verbose
-    ManageWorkflows -Action Enable -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Verbose
-    ManageWorkflows -Action Disable -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Verbose
-    ManageWorkflows -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Force -Verbose
-    "https://github.com/your_user/your_repo" | ManageWorkflows -Action List -Token "ghp_xyz" -ExportPath "$env:USERPROFILE\Desktop\your_workflows_output.csv" -Verbose
+    "https://github.com/your_user/your_repo" | Use-GitHubWorkflowsManager -Action List -Token "ghp_xyz" -Verbose
+    Use-GitHubWorkflowsManager -Action Enable -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Verbose
+    Use-GitHubWorkflowsManager -Action Disable -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Verbose
+    Use-GitHubWorkflowsManager -Action Delete -Repository "https://github.com/your_user/your_repo" -Token "ghp_xyz" -Force -Verbose
+    "https://github.com/your_user/your_repo" | Use-GitHubWorkflowsManager -Action List -Token "ghp_xyz" -ExportPath "$env:USERPROFILE\Desktop\your_workflows_output.csv" -Verbose
 
     .NOTES
-    v0.0.3
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
