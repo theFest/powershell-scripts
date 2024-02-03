@@ -1,54 +1,57 @@
-function Invoke-RebootAndResumeScript {
+Function Invoke-RebootAndResumeScript {
     <#
     .SYNOPSIS
-    Initiates a computer restart and resumes script execution after restart.
-    
+    Restarts the computer and resumes the execution of a PowerShell script after the restart.
+
     .DESCRIPTION
-    This function restarts the local computer and resumes the execution of a specified PowerShell script after the restart. It can optionally create a scheduled task to run the script at different startup times.
-    
+    This function restarts the computer and, upon restart, resumes the execution of a specified PowerShell script. It also supports registering the script as a scheduled task to run after the computer restarts.
+
     .PARAMETER ScriptPath
-    Mandatory - path to the PowerShell script that will be resumed after the computer restart.
+    Path to the PowerShell script that should be executed after the computer restarts. Script path must point to an existing file.
     .PARAMETER ScheduledTaskStart
-    NotMandatory - pecifies when the scheduled task should start: 'OnStart', 'AtLogon', or 'OnIdle'.
+    Specifies when the scheduled task should start, values are "OnStart" (default), "AtLogon", or "OnIdle".
     .PARAMETER WaitTime
-    NotMandatory - amount of time to wait (in seconds) after the restart before resuming the script execution.
+    Time, in seconds, to wait after the computer restarts before resuming script execution, default value is 5 seconds.
     .PARAMETER TaskName
-    NotMandatory - name of the scheduled task to be created (if ScheduledTaskStart is specified).
+    Name of the scheduled task that will run the script after restart, default task name is "RebootAndResumeScript".
     .PARAMETER LogPath
-    NotMandatory - the path to the log file where execution details will be recorded.
+    Path to the log file where execution details are recorded, default log path is "C:\Logs\RebootAndResumeScript.log". The log path must point to an existing directory.
     .PARAMETER WriteEventLog
-    NotMandatory - type of event log entry to write after the script execution: 'Success', 'Error', or 'Warning'.
-    
+    Type of event log entry to be written after script execution, values are "Success" (default), "Error", or "Warning".
+
     .EXAMPLE
-    Invoke-RebootAndResumeScript -ScriptPath "C:\Temp\you_ps_script.ps1" -ScheduledTaskStart OnStart -Verbose
-    
+    Invoke-RebootAndResumeScript -ScriptPath "C:\Path\To\YourScript.ps1" -ScheduledTaskStart OnStart -WaitTime 10 -TaskName "MyTask" -LogPath "D:\Logs\MyScriptLog.log" -WriteEventLog Error
+
     .NOTES
-    v0.0.1
+    v0.0.8
     #>
     [CmdletBinding()]
-    Param (
-        [Parameter(Mandatory = $true)]
-        [ValidateScript({ 
-                Test-Path $_ -PathType "Leaf" 
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = "The path to the PowerShell script to be executed after reboot")]
+        [ValidateScript({
+                if (-Not (Test-Path $_ -PathType "Leaf")) {
+                    throw "The specified script path '$_' does not exist or is not a file!"
+                }
+                $true
             })]
-        [String]$ScriptPath,
+        [string]$ScriptPath,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify when the scheduled task should start")]
         [ValidateSet("OnStart", "AtLogon", "OnIdle")]
-        [String]$ScheduledTaskStart = "OnStart",
+        [string]$ScheduledTaskStart = "OnStart",
 
-        [Parameter(Mandatory = $false)]
-        [Int]$WaitTime = 5,
+        [Parameter(Mandatory = $false, HelpMessage = "The time, in seconds, to wait after the computer restarts")]
+        [int]$WaitTime = 5,
 
-        [Parameter(Mandatory = $false)]
-        [String]$TaskName = "RebootAndResumeScript",
+        [Parameter(Mandatory = $false, HelpMessage = "The name of the scheduled task")]
+        [string]$TaskName = "RebootAndResumeScript",
 
-        [Parameter(Mandatory = $false)]
-        [String]$LogPath = "C:\Logs\RebootAndResumeScript.log",
+        [Parameter(Mandatory = $false, HelpMessage = "The path to the log file")]
+        [string]$LogPath = "C:\Logs\RebootAndResumeScript.log",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the type of event log entry")]
         [ValidateSet("Success", "Error", "Warning")]
-        [String]$WriteEventLog = "Success"
+        [string]$WriteEventLog = "Success"
     )
     try {
         $ErrorActionPreference = "Stop"
@@ -57,23 +60,17 @@ function Invoke-RebootAndResumeScript {
             Write-Host "Creating the task action to run the script after restart" -ForegroundColor Yellow
             $TaskAction = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
             Write-Verbose -Message "Determine the appropriate trigger for the task start time..."
-            switch ($ScheduledTaskStart) {
-                'OnStart' { 
-                    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup 
-                }
-                'AtLogon' { 
-                    $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn 
-                }
-                'OnIdle' { 
-                    $TaskTrigger = New-ScheduledTaskTrigger -AtIdle 
-                }
+            $TaskTrigger = switch ($ScheduledTaskStart) {
+                "OnStart" { New-ScheduledTaskTrigger -AtStartup }
+                "AtLogon" { New-ScheduledTaskTrigger -AtLogOn }
+                "OnIdle" { New-ScheduledTaskTrigger -AtIdle }
             }
             Write-Verbose -Message "Registering the scheduled task..."
             Register-ScheduledTask -TaskName $TaskName -Trigger $TaskTrigger -Action $TaskAction -User "NT AUTHORITY\SYSTEM" -Force -Verbose
         }
         Add-Content -Path $LogPath -Value "Starting script execution: $(Get-Date)" -Verbose
-        Write-Verbose -Message "Initiating a restart and proceed without waiting"
-        Restart-Computer
+        Write-Verbose -Message "Initiating a restart and proceeding without waiting"
+        Restart-Computer -Force
         Write-Verbose -Message "Sleep for the specified time after restart"
         Start-Sleep -Seconds $WaitTime
         Add-Content -Path $LogPath -Value "Resuming script execution: $(Get-Date)" -Verbose
@@ -84,14 +81,10 @@ function Invoke-RebootAndResumeScript {
             $LogFileContent = Get-Content -Path $LogPath -Raw
             Write-EventLog -LogName Application -Source 'RebootAndResumeScript' -EntryType $WriteEventLog -Message $LogFileContent
         }
-        Write-Host "Reboot and resume script successful." -ForegroundColor Green
+        Write-Host "Reboot and resume script successful" -ForegroundColor Green
     }
     catch {
-        $ErrorMessage = "Error in function Invoke-RebootAndResumeScript: $($_.Exception.Message)"
-        Write-Error -Exception "$ErrorMessage"
-        Add-Content -Path $LogPath -Value "Error: $(Get-Date) - $ErrorMessage" -Verbose
-    }
-    finally {
-        $ErrorActionPreference = "Continue"
+        Write-Error -Message "Error in function Invoke-RebootAndResumeScript: $($_.Exception.Message)"
+        Add-Content -Path $LogPath -Value "Error: $(Get-Date) - $_" -Verbose
     }
 }
