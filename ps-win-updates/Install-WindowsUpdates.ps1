@@ -1,81 +1,94 @@
 Function Install-WindowsUpdates {
     <#
     .SYNOPSIS
-    Install available Windows updates on a remote computer.
-    
+    Installs Windows updates on a local or remote computer.
+
     .DESCRIPTION
-    This function connects to a remote computer and installs available Windows updates, it provides various options to control the installation process and display update details.
-    
+    This function installs Windows updates on either the local machine or a specified remote computer.
+    Provides options to include hidden updates, reinstall already installed updates, and install updates requiring a system reboot. It also initiates a reboot after updates are installed, with an optional delay. Progress and update details can be displayed.
+
     .PARAMETER ComputerName
-    NotMandatory - name of the remote computer where updates will be installed.
-    .PARAMETER Username
-    NotMandatory - username used to authenticate to the remote computer.
+    Remote computer name, defaults to the local machine.
+    .PARAMETER User
+    Username for remote authentication.
     .PARAMETER Pass
-    NotMandatory - password for the provided username used to authenticate to the remote computer.
+    Password for the specified username.
     .PARAMETER IncludeHidden
-    NotMandatory - hidden updates will also be installed.
+    Installs hidden updates in addition to regular updates.
     .PARAMETER IncludeInstalled
-    NotMandatory - already installed updates will be reinstalled.
+    Reinstalls already installed updates.
     .PARAMETER IncludeRebootRequired
-    NotMandatory - updates requiring a system reboot will also be installed.
+    Installs updates requiring a system reboot.
     .PARAMETER Reboot
-    NotMandatory - reboot the remote computer after updates are installed.
+    Initiates a reboot on the remote computer after updates are installed.
     .PARAMETER RebootDelay
-    NotMandatory - specify the delay in seconds before initiating a reboot.
+    Delay in seconds before initiating a reboot, default is 300 seconds.
     .PARAMETER Wait
-    NotMandatory - wait for the specified number of seconds before proceeding with installation.
+    Number of seconds to wait before proceeding with the installation.
     .PARAMETER ShowProgress
-    NotMandatory - show progress of update installation.
+    Displays progress of the update installation.
     .PARAMETER ShowUpdateDetails
-    NotMandatory - show details about available updates on the remote computer.
-    
+    Shows details about available updates on the remote computer.
+
     .EXAMPLE
-    Install-WindowsUpdates -ShowUpdateDetails -Verbose
-    Install-WindowsUpdates -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass" -IncludeRebootRequired -Reboot -RebootDelay 300 -Wait 60 -ShowProgress -ShowUpdateDetails
-    
+    Install-WindowsUpdates -Verbose
+    Install-WindowsUpdates -ComputerName "remote_host" -User "remote_user" -Pass "remote_pass" -IncludeHidden -Reboot -RebootDelay 600 -ShowProgress
+
     .NOTES
-    v0.0.5
+    0.5.2
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the remote computer name")]
+        [Parameter(Mandatory = $false, Position = 0, HelpMessage = "Specify the remote computer name")]
+        [Alias("c")]
         [string]$ComputerName = $env:COMPUTERNAME,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Provide the username for remote authentication")]
-        [string]$Username,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Provide the password for the specified username")]
+    
+        [Parameter(Mandatory = $false, Position = 1, HelpMessage = "Provide the username for remote authentication")]
+        [Alias("u")]
+        [string]$User,
+    
+        [Parameter(Mandatory = $false, Position = 2, HelpMessage = "Provide the password for the specified username")]
+        [Alias("p")]
         [string]$Pass,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Install hidden updates")]
+    
+        [Parameter(Mandatory = $false, Position = 3, HelpMessage = "Install hidden updates")]
+        [Alias("ih")]
         [switch]$IncludeHidden,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Reinstall already installed updates")]
+    
+        [Parameter(Mandatory = $false, Position = 4, HelpMessage = "Reinstall already installed updates")]
+        [Alias("ii")]
         [switch]$IncludeInstalled,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Install updates requiring a system reboot")]
+    
+        [Parameter(Mandatory = $false, Position = 5, HelpMessage = "Install updates requiring a system reboot")]
+        [Alias("ir")]
         [switch]$IncludeRebootRequired,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Reboot the remote computer after updates are installed")]
+    
+        [Parameter(Mandatory = $false, Position = 6, HelpMessage = "Reboot the remote computer after updates are installed")]
+        [Alias("rb")]
         [switch]$Reboot,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Delay in seconds before initiating a reboot")]
+    
+        [Parameter(Mandatory = $false, Position = 7, HelpMessage = "Delay in seconds before initiating a reboot")]
+        [Alias("d")]
         [int]$RebootDelay = 300,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Wait for the specified number of seconds before proceeding with installation")]
+    
+        [Parameter(Mandatory = $false, Position = 8, HelpMessage = "Wait for the specified number of seconds before proceeding with installation")]
+        [Alias("w")]
         [int]$Wait = 0,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Show progress of update installation")]
+    
+        [Parameter(Mandatory = $false, Position = 9, HelpMessage = "Show progress of update installation")]
+        [Alias("sp")]
         [switch]$ShowProgress,
-
-        [Parameter(Mandatory = $false, HelpMessage = "Show details about available updates on the remote computer")]
+    
+        [Parameter(Mandatory = $false, Position = 10, HelpMessage = "Show details about available updates on the remote computer")]
+        [Alias("ud")]
         [switch]$ShowUpdateDetails
     )
     try {
+        Write-Host "Checking for available updates..."
         $Credential = $null
-        if ($Username -and $Pass) {
+        if ($User -and $Pass) {
             $SecurePassword = ConvertTo-SecureString -String $Pass -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePassword
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, $SecurePassword
         }
         $InstallScriptBlock = {
             param (
@@ -115,16 +128,16 @@ Function Install-WindowsUpdates {
             }
         }
         if ($ComputerName -ne $env:COMPUTERNAME) {
-            Write-Verbose -Message "Establishing a remote session with $ComputerName..."
+            Write-Host "Establishing a remote session with $ComputerName..." -ForegroundColor DarkCyan
             $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential -ErrorAction Stop
-            Write-Verbose -Message "Installing Windows updates remotely..."
+            Write-Host "Installing Windows updates on $ComputerName remotely..." -ForegroundColor DarkGreen
             Invoke-Command -Session $Session -ScriptBlock $InstallScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired, $ShowProgress
             if ($Session) {
                 Write-Verbose -Message "Removing the remote session with $ComputerName..."
-                Remove-PSSession -Session $Session -ErrorAction SilentlyContinue
+                Remove-PSSession -Session $Session -ErrorAction SilentlyContinue -Verbose
             }
             if ($Reboot) {
-                Write-Verbose -Message "Rebooting the remote computer in $RebootDelay seconds..."
+                Write-Host "Rebooting $ComputerName in $RebootDelay seconds..."
                 Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
                     param ($Delay)
                     Start-Sleep -Seconds $Delay
@@ -133,13 +146,14 @@ Function Install-WindowsUpdates {
             }
         }
         else {
-            Write-Verbose -Message "Installing Windows updates locally..."
+            Write-Host "Installing Windows updates locally..." -ForegroundColor Cyan
             & $InstallScriptBlock -IncludeHidden $IncludeHidden -IncludeInstalled $IncludeInstalled -IncludeRebootRequired $IncludeRebootRequired -ShowProgress $ShowProgress
         }
         if ($Wait -gt 0) {
-            Write-Verbose -Message "Waiting for $Wait seconds..."
+            Write-Host "Waiting for $Wait seconds..." -ForegroundColor DarkCyan
             Start-Sleep -Seconds $Wait
         }
+        Write-Host "All updates installed successfully." -ForegroundColor Green
     }
     catch {
         Write-Error -Message "Failed to install Windows updates: $_"
