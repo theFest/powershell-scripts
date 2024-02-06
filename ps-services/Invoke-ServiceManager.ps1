@@ -1,47 +1,49 @@
-Function Manage-Service {
+Function Invoke-ServiceManager {
     <#
     .SYNOPSIS
-    Perform various operations on Windows services.
+    Manages Windows services, allowing various actions such as starting, stopping, restarting, and configuring service properties.
 
     .DESCRIPTION
-    This function allows you to perform different operations on Windows services, such as starting, stopping, restarting, pausing, continuing, enabling or disabling auto-start, setting recovery options, retrieving service description and dependencies, and more.
-    
+    This function provides a range of functionalities to manage Windows services, including starting, stopping, restarting, pausing, continuing, enabling auto-start, disabling auto-start, setting recovery options, retrieving service information, and more.
+
     .PARAMETER ServiceName
-    Mandatory - specifies the name of the Windows service to be managed.
+    Specifies the name of the service to manage.
     .PARAMETER Action
-    Mandatory - specifies the action to perform on the service.
+    Action to perform, valid actions include: Start, Stop, Restart, Status, Pause, Continue, EnableAutoStart, DisableAutoStart, SetRecovery, GetDescription, GetDependencies, GetLogOnAccount, SetLogOnAccount, GetDisplayName, SetDisplayName, GetStartupType, GetServiceAccountInfo, ListRunningServices, SetRecoveryActions.
     .PARAMETER Force
-    NotMandatory - forces the specified action, even if it may result in unintended consequences.
+    Forces the action to be performed without prompting for confirmation.
     .PARAMETER WhatIf
-    NotMandatory - simulates the action without actually performing it, providing a preview of the outcome.
+    Simulates the action without actually performing it.
     .PARAMETER RetryCount
-    NotMandatory - the number of times to retry the action in case of failure.
+    Specifies the number of times to retry the action on failure.
     .PARAMETER RetryDelay
-    NotMandatory - specifies the delay in seconds between retry attempts.
+    Specifies the delay in seconds between retry attempts.
     .PARAMETER IncludeLogs
-    NotMandatory - includes detailed action logs in the output.
+    Specifies whether to include detailed action logs.
     .PARAMETER RestartDelay
-    NotMandatory - delay in seconds before restarting a service during recovery.
+    Specifies the delay in seconds before restarting a service during recovery.
     .PARAMETER RecoveryAttempts
-    NotMandatory - the number of recovery attempts during service recovery.
+    Specifies the number of recovery attempts during service recovery.
     .PARAMETER RecoveryDelay
-    NotMandatory - the delay in seconds between recovery attempts.
+    Specifies the delay in seconds between recovery attempts.
+    .PARAMETER LogOnAccount
+    Specifies the account under which the service runs.
     .PARAMETER DisplayName
-    NotMandatory - display name of the Windows service, use this parameter to provide a user-friendly name for the service that is different from its actual name.
+    Specifies the display name of the service.
     .PARAMETER RecoveryActions
-    NotMandatory - specifies the recovery actions to be configured for the service during recovery.
+    Specifies specific recovery actions for the service.
     .PARAMETER Command
-    NotMandatory - command to be executed during recovery if the specified recovery actions are triggered.
+    Specifies the command to execute during recovery.
 
     .EXAMPLE
-    Manage-Service -ServiceName "wuauserv" -Action Start
-    Manage-Service -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
-    Manage-Service -ServiceName "wuauserv" -Action GetStartupType
-    Manage-Service -ServiceName "wuauserv" -Action GetServiceAccountInfo
-    Manage-Service -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
+    Invoke-ServiceManager -ServiceName "wuauserv" -Action Start
+    Invoke-ServiceManager -ServiceName "wuauserv" -Action SetLogOnAccount -LogOnAccount "NT AUTHORITY\LocalService"
+    Invoke-ServiceManager -ServiceName "wuauserv" -Action GetStartupType
+    Invoke-ServiceManager -ServiceName "wuauserv" -Action GetServiceAccountInfo
+    Invoke-ServiceManager -ServiceName "wuauserv" -Action SetRecoveryActions -RecoveryActions "RestartService" -Command "Restart-Service -Name 'wuauserv'"
 
     .NOTES
-    v0.0.7
+    v0.0.9
     #>
     [CmdletBinding()]
     param (
@@ -95,7 +97,7 @@ Function Manage-Service {
         switch ($Action) {
             "Start" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would start service '$ServiceName'."
+                    Write-Output "Simulating: Would start service '$ServiceName'"
                 }
                 else {
                     $Service | Start-Service -Verbose
@@ -104,7 +106,7 @@ Function Manage-Service {
             }
             "Stop" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would stop service '$ServiceName'."
+                    Write-Output "Simulating: Would stop service '$ServiceName'"
                 }
                 else {
                     $Service | Stop-Service -Verbose
@@ -113,7 +115,7 @@ Function Manage-Service {
             }
             "Restart" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would restart service '$ServiceName'."
+                    Write-Output "Simulating: Would restart service '$ServiceName'"
                 }
                 else {
                     $Service | Restart-Service -Verbose
@@ -126,7 +128,7 @@ Function Manage-Service {
             }
             "Pause" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would pause service '$ServiceName'."
+                    Write-Output "Simulating: Would pause service '$ServiceName'"
                 }
                 else {
                     $Service | Suspend-Service -Verbose
@@ -135,7 +137,7 @@ Function Manage-Service {
             }
             "Continue" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would continue service '$ServiceName'."
+                    Write-Output "Simulating: Would continue service '$ServiceName'"
                 }
                 else {
                     $Service | Resume-Service -Verbose
@@ -144,30 +146,30 @@ Function Manage-Service {
             }
             "EnableAutoStart" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would enable auto-start for service '$ServiceName'."
+                    Write-Output "Simulating: Would enable auto-start for service '$ServiceName'"
                 }
                 else {
                     Set-Service -Name $ServiceName -StartupType Automatic -Verbose
-                    Write-Output "Auto-start has been enabled for service '$ServiceName'."
+                    Write-Output "Auto-start has been enabled for service '$ServiceName'"
                 }
             }
             "DisableAutoStart" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would disable auto-start for service '$ServiceName'."
+                    Write-Output "Simulating: Would disable auto-start for service '$ServiceName'"
                 }
                 else {
                     Set-Service -Name $ServiceName -StartupType Disabled -Verbose
-                    Write-Output "Auto-start has been disabled for service '$ServiceName'."
+                    Write-Output "Auto-start has been disabled for service '$ServiceName'"
                 }
             }
             "SetRecovery" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would set recovery options for service '$ServiceName'."
+                    Write-Output "Simulating: Would set recovery options for service '$ServiceName'"
                 }
                 else {
                     $RecoveryOptions = New-ServiceRecoveryOptions -RestartService -ResetPeriod $RestartDelay -DaysToRestart $RecoveryAttempts -RestartWait $RecoveryDelay
                     Set-Service -Name $ServiceName -Recovery $RecoveryOptions -Verbose
-                    Write-Output "Recovery options have been set for service '$ServiceName'."
+                    Write-Output "Recovery options have been set for service '$ServiceName'"
                 }
             }
             "GetDescription" {
@@ -185,11 +187,11 @@ Function Manage-Service {
             }
             "SetLogOnAccount" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would set log-on account for service '$ServiceName' to '$LogOnAccount'."
+                    Write-Output "Simulating: Would set log-on account for service '$ServiceName' to '$LogOnAccount'"
                 }
                 else {
                     $Service | Set-ServiceLogOnAccount -Account $LogOnAccount -Verbose
-                    Write-Output "Log-on account for service '$ServiceName' has been set to '$LogOnAccount'."
+                    Write-Output "Log-on account for service '$ServiceName' has been set to '$LogOnAccount'"
                 }
             }
             "GetDisplayName" {
@@ -198,11 +200,11 @@ Function Manage-Service {
             }
             "SetDisplayName" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would set display name for service '$ServiceName' to '$DisplayName'."
+                    Write-Output "Simulating: Would set display name for service '$ServiceName' to '$DisplayName'"
                 }
                 else {
                     $Service | Set-Service -DisplayName $DisplayName -Verbose
-                    Write-Output "Display name for service '$ServiceName' has been set to '$DisplayName'."
+                    Write-Output "Display name for service '$ServiceName' has been set to '$DisplayName'"
                 }
             }
             "GetStartupType" {
@@ -227,7 +229,7 @@ Function Manage-Service {
             }
             "SetRecoveryActions" {
                 if ($WhatIf) {
-                    Write-Output "Simulating: Would set recovery actions for service '$ServiceName'."
+                    Write-Output "Simulating: Would set recovery actions for service '$ServiceName'"
                 }
                 else {
                     $RecoveryOptions = New-ServiceRecoveryOptions -Action $RecoveryActions -Command $Command
@@ -242,8 +244,7 @@ Function Manage-Service {
         }
     }
     catch {
-        $ErrorMessage = "An error occurred: $_"
-        Write-Error -Message $ErrorMessage
+        Write-Error -Message "An error occurred: $_"
         $ErrorMessage | Out-File -Append -FilePath $LogFilePath
     }
 }
