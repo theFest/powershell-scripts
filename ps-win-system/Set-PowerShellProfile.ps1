@@ -1,26 +1,25 @@
-Function Manage-PSProfile {
+Function Set-PowerShellProfile {
     <#
     .SYNOPSIS
-    Manages the PowerShell ISE profile.
+    Manages PowerShell profiles including showing, creating, editing, and deleting.
 
     .DESCRIPTION
-    This function has four main actions: Show, Create, Edit, and Delete for PS ISE profile management.
+    This function allows you to manage PowerShell profiles. You can show the content of a profile, create a new one, edit an existing one using various editors, and delete a profile.
 
     .PARAMETER Action
-    NotMandatory - specifies the action to perform, default is Show.
+    Action to perform on the PowerShell profile, options are 'Show', 'Create', 'Edit', or 'Delete'. Default is 'Show'.
     .PARAMETER Editor
-    NotMandatory - editor to use for editing the profile, default is Notepad.
+    Text editor to use when editing the profile, options are 'Notepad', 'Notepad++', 'Visual Studio Code', 'Sublime Text', or 'Atom'. Default is 'Notepad'.
     .PARAMETER ProfileScope
-    NotMandatory - specifies the scope of the profile file, default is CurrentUserCurrentHost.
+    Scope of the PowerShell profile, options are 'CurrentUserCurrentHost', 'CurrentUserAllHosts', or 'AllUsersAllHosts'. Default is 'CurrentUserCurrentHost'.
+    .PARAMETER Force
+    Forces the creation of a new profile even if it already exists, applicable only when Action is 'Create'.
 
     .EXAMPLE
-    Manage-PSProfile -Action Show
-    Manage-PSProfile -Action Create
-    Manage-PSProfile -Action Edit -Editor Notepad++
-    Manage-PSProfile -Action Delete -Verbose
+    Set-PowerShellProfile -Action Show
 
     .NOTES
-    0.0.2
+    v0.0.7
     #>
     [CmdletBinding()]
     param (
@@ -29,18 +28,21 @@ Function Manage-PSProfile {
         [string]$Action = "Show",
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Notepad", "Notepad++", "Visual Studio Code", "Sublime Text")]
+        [ValidateSet("Notepad", "Notepad++", "Visual Studio Code", "Sublime Text", "Atom")]
         [string]$Editor = "Notepad",
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("CurrentUserCurrentHost", "CurrentUserAllHosts", "AllUsersAllHosts")]
-        [string]$ProfileScope = "CurrentUserCurrentHost"
+        [string]$ProfileScope = "CurrentUserCurrentHost",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force = $false
     )
     switch ($Action) {
         "Show" {
             $ProfilePath = $PROFILE.$ProfileScope
-            if (Test-Path $ProfilePath -PathType Leaf) {
-                $content = Get-Content $ProfilePath
+            if (Test-Path -Path $ProfilePath -PathType Leaf) {
+                $Content = Get-Content $ProfilePath
                 Write-Host "PowerShell profile file: `n$ProfilePath"
                 Write-Output -InputObject $Content
             }
@@ -51,8 +53,11 @@ Function Manage-PSProfile {
         }
         "Create" {
             $ProfilePath = $PROFILE.$ProfileScope
-            if (!(Test-Path $ProfilePath -PathType Leaf)) {
-                New-Item $ProfilePath -ItemType File -Force -Verbose | Out-Null
+            if (!(Test-Path -Path $ProfilePath -PathType Leaf) -or $Force) {
+                New-Item -Path $ProfilePath -ItemType File -Force:$Force -Verbose | Out-Null
+            }
+            else {
+                Write-Warning -Message "PowerShell profile file already exists. Use -Force to overwrite."
             }
             break
         }
@@ -89,12 +94,22 @@ Function Manage-PSProfile {
                     }
                     break
                 }
+                "Atom" {
+                    if (!(Test-Path "$env:LOCALAPPDATA\atom\atom.exe" -PathType Leaf)) {
+                        Write-Warning -Message "Atom is not installed, using Notepad instead"
+                        $Editor = "Notepad"
+                    }
+                    else {
+                        $EditorPath = "$env:LOCALAPPDATA\atom\atom.exe"
+                    }
+                    break
+                }
                 default {
                     $EditorPath = "$env:windir\System32\notepad.exe" ; break
                 }
             }
             $ProfilePath = $PROFILE.$ProfileScope
-            if (!(Test-Path $ProfilePath -PathType Leaf)) {
+            if (!(Test-Path -Path $ProfilePath -PathType Leaf)) {
                 New-Item $ProfilePath -ItemType File -Force -Verbose
             }
             $Params = @{
@@ -118,9 +133,12 @@ Function Manage-PSProfile {
         }
         "Delete" {
             $ProfilePath = $PROFILE.$ProfileScope
-            if (Test-Path $ProfilePath -PathType Leaf) {
+            if (Test-Path -Path $ProfilePath -PathType Leaf) {
                 Write-Verbose -Message "Deleting..."
-                Remove-Item $ProfilePath -Force -Verbose
+                Remove-Item -Path $ProfilePath -Force -Verbose
+            }
+            else {
+                Write-Warning -Message "PowerShell profile file $ProfilePath does not exist"
             }
             break
         }
