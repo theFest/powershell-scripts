@@ -1,39 +1,42 @@
-Function Manage-LocalUser {
+Function Invoke-LocalUserManagement {
     <#
     .SYNOPSIS
-    Manage-LocalUser is a PowerShell function for performing various user management tasks on the local Windows machine. It supports actions such as resetting passwords, adding users, removing users, importing/exporting user data to/from CSV, checking user lockout status, and more.
+    Performs various management operations on local users.
 
     .DESCRIPTION
-    Manage-LocalUser is a versatile utility that simplifies common tasks related to local user management. It provides a range of actions for modifying and querying local user accounts on a Windows system.
+    This function allows performing actions such as resetting passwords, adding or removing users, getting user information, exporting data to CSV, and more, for local users on a system.
 
     .PARAMETER Action
-    Mandatory - Choose from a list of predefined actions such as "ResetPassword," "AddUser," "RemoveUser," "AddUsers," "RemoveUsers," "GetUsers," "GetMembers," "ExportCSV," "ImportCSV," "CheckLock," and more.
-    .PARAMETER Username
-    Mandatory - the username or usernames on which the action should be performed. This can be a single username or an array of usernames.
+    Action to perform, available include "ResetPassword", "AddUser", "RemoveUser", "AddUsers", "RemoveUsers", "GetUsers", "GetMembers", "ExportCSV", "ImportCSV", "CheckLock", "ProgressReporting", "Logging", "Comments", "Automation", "InventoryFile", "ErrorHandling", "Authentication", "InputValidation", and "Rollback".
+    .PARAMETER User
+    Specifies the user or users on which the action will be performed.
     .PARAMETER GroupName
-    NotMandatory - (For "AddUser" and "RemoveUser" actions) Specifies the name of the group to which the user should be added or removed.
-    .PARAMETER Password
-    NotMandatory - specifies the password to set for the user(s). Only used in actions that require password modification.
+    Specifies the group or groups to which the user belongs.
+    .PARAMETER Pass
+    Specifies the password to set for the user.
     .PARAMETER UserMayNotChangePassword
-    NotMandatory - indicates that the user(s) should not be allowed to change their password. Only used in actions that require password modification.
+    Indicates whether the user is allowed to change their password.
     .PARAMETER PasswordNeverExpires
-    NotMandatory - indicates that the user(s) should have passwords set to never expire. Only used in actions that require password modification.
+    Indicates whether the user's password should never expire.
     .PARAMETER AccountNeverExpires
-    NotMandatory - indicates that the user(s) should have accounts set to never expire. Only used in actions that require account modification.
+    Indicates whether the user's account should never expire.
     .PARAMETER Description
-    NotMandatory - description to associate with the user(s). Only used in actions that require user creation or modification.
+    Specifies the description for the user account.
     .PARAMETER Disabled
-    NotMandatory - (For "AddUser" and "AddUsers" actions) Indicates that the user(s) should be created as disabled accounts.
+    Indicates whether the user account is disabled.
     .PARAMETER File
-    NotMandatory - (For "ImportCSV" and "ExportCSV" actions) Specifies the path to the CSV file to import user data from or export data to.
+    Path to a file used for importing or exporting data.
     .PARAMETER LogFile
-    NotMandatory - specifies the path for the log file where operation results and error messages will be recorded.
+    Specifies the path to the log file.
+
+    .EXAMPLE
+    Invoke-LocalUserManagement -Action ResetPassword -User JohnDoe -Pass "NewPassword123"
 
     .NOTES
-    v0.0.2
+    v0.0.4
     #>
     [CmdletBinding()]
-    param(
+    param (
         [Parameter(Mandatory = $true)]
         [ValidateSet(
             "ResetPassword", "AddUser", "RemoveUser", "AddUsers", "RemoveUsers",
@@ -45,13 +48,13 @@ Function Manage-LocalUser {
         [string]$Action,
 
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [string[]]$Username,
+        [string[]]$User,
 
         [Parameter(Mandatory = $false)]
         [string[]]$GroupName,
 
         [Parameter(Mandatory = $false)]
-        [string]$Password,
+        [string]$Pass,
 
         [Parameter(Mandatory = $false)]
         [switch]$UserMayNotChangePassword,
@@ -90,10 +93,10 @@ Function Manage-LocalUser {
                 }
             }
             "ResetPassword" {
-                $Username | ForEach-Object {
-                    $params = @{
+                $User | ForEach-Object {
+                    $Params = @{
                         Name                  = $_
-                        Password              = $Password | ConvertTo-SecureString -AsPlainText -Force
+                        Password              = $Pass | ConvertTo-SecureString -AsPlainText -Force
                         UserMayChangePassword = !$UserMayNotChangePassword.IsPresent
                         PasswordNeverExpires  = $PasswordNeverExpires.IsPresent
                         AccountNeverExpires   = $AccountNeverExpires.IsPresent
@@ -102,7 +105,7 @@ Function Manage-LocalUser {
                         Verbose               = $true
                     }
                     try {
-                        Set-LocalUser @params
+                        Set-LocalUser @Params
                     }
                     catch {
                         Write-Warning -Message "Failed to reset password for user $_. Error: $_"
@@ -111,15 +114,15 @@ Function Manage-LocalUser {
                 }
             }
             "AddUser" {
-                $Username | ForEach-Object {
+                $User | ForEach-Object {
                     if (Get-LocalUser -Name $_) {
                         Write-Warning -Message "$_ already exists, skipping..."
                         $Result.Add("Exists")
                         return
                     }
-                    $params = @{
+                    $Params = @{
                         Name                     = $_
-                        Password                 = $Password | ConvertTo-SecureString -AsPlainText -Force
+                        Password                 = $Pass | ConvertTo-SecureString -AsPlainText -Force
                         UserMayNotChangePassword = $UserMayNotChangePassword.IsPresent
                         PasswordNeverExpires     = $PasswordNeverExpires.IsPresent
                         AccountNeverExpires      = $AccountNeverExpires.IsPresent
@@ -129,7 +132,7 @@ Function Manage-LocalUser {
                         Verbose                  = $true
                     }
                     try {
-                        New-LocalUser @params
+                        New-LocalUser @Params
                         if ((Get-LocalGroupMember -Group $GroupName | Select-Object Name | Where-Object { $_.Name -eq $_ }).Count -eq 0) {
                             Write-Verbose "Adding user to group $GroupName..."
                             Add-LocalGroupMember -Group $GroupName -Member $_ -ErrorAction SilentlyContinue -Verbose
@@ -147,19 +150,19 @@ Function Manage-LocalUser {
                 }
             }
             "RemoveUser" {
-                $Username | ForEach-Object {
+                $User | ForEach-Object {
                     if (!(Get-LocalUser -Name $_)) {
                         Write-Warning -Message "$_ does not exist, skipping..."
                         $Result.Add("NotExists")
                         return
                     }
-                    $params = @{
+                    $Params = @{
                         Name        = $_
                         ErrorAction = "SilentlyContinue"
                         Verbose     = $true
                     }
                     try {
-                        Remove-LocalUser @params
+                        Remove-LocalUser @Params
                         if ((Get-LocalGroupMember -Group $GroupName | Select-Object Name | Where-Object { $_.Name -eq $_ }).Count -ne 0) {
                             Write-Verbose "Removing user from group $GroupName..."
                             Remove-LocalGroupMember -Group $GroupName -Member $_ -ErrorAction SilentlyContinue -Verbose
@@ -175,9 +178,9 @@ Function Manage-LocalUser {
             "AddUsers" {
                 $Users = Get-Content -Path $File
                 foreach ($User in $Users) {
-                    $params = @{
+                    $Params = @{
                         Name                     = $User
-                        Password                 = $Password | ConvertTo-SecureString -AsPlainText -Force
+                        Password                 = $Pass | ConvertTo-SecureString -AsPlainText -Force
                         UserMayNotChangePassword = $UserMayNotChangePassword.IsPresent
                         PasswordNeverExpires     = $PasswordNeverExpires.IsPresent
                         AccountNeverExpires      = $AccountNeverExpires.IsPresent
@@ -187,7 +190,7 @@ Function Manage-LocalUser {
                         Verbose                  = $true
                     }
                     try {
-                        New-LocalUser @params
+                        New-LocalUser @Params
                         if ((Get-LocalGroupMember -Group $GroupName | Select-Object Name | Where-Object { $_.Name -eq $User }).Count -eq 0) {
                             Write-Verbose "Adding user $User to group $GroupName..."
                             Add-LocalGroupMember -Group $GroupName -Member $User -ErrorAction SilentlyContinue -Verbose
@@ -207,13 +210,13 @@ Function Manage-LocalUser {
             "RemoveUsers" {
                 $Users = Get-Content -Path $File
                 foreach ($User in $Users) {
-                    $params = @{
+                    $Params = @{
                         Name        = $User
                         ErrorAction = "SilentlyContinue"
                         Verbose     = $true
                     }
                     try {
-                        Remove-LocalUser @params
+                        Remove-LocalUser @Params
                         if ((Get-LocalGroupMember -Group $GroupName | Select-Object Name | Where-Object { $_.Name -eq $User }).Count -ne 0) {
                             Write-Verbose "Removing user $User from group $GroupName..."
                             Remove-LocalGroupMember -Group $GroupName -Member $User -ErrorAction SilentlyContinue -Verbose
@@ -248,13 +251,13 @@ Function Manage-LocalUser {
                 }
             }
             "CheckLock" {
-                $Username | ForEach-Object {
-                    $params = @{
+                $User | ForEach-Object {
+                    $Params = @{
                         Name        = $_
                         ErrorAction = "SilentlyContinue"
                         Verbose     = $true
                     }
-                    $User = Get-LocalUser @params
+                    $User = Get-LocalUser @Params
                     if ($User) {
                         if ($User.LockoutEnabled) {
                             $Result.Add("$User.Name is locked out")
