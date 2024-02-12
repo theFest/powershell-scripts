@@ -1,73 +1,78 @@
 Function Install-OpenSSH {
     <#
     .SYNOPSIS
-    Install OpenSSH function installs OpenSSH on a local or remote computer.
+    Installs OpenSSH on a local or remote computer.
 
     .DESCRIPTION
-    This function is used to install OpenSSH on a local computer or a remote computer. It provides the option to specify various parameters for the installation.
+    This function is used to install OpenSSH on a local computer or a remote computer, it provides the option to specify various parameters for the installation.
 
     .PARAMETER ComputerName
-    NotMandatory - name of the target computer where OpenSSH will be installed. Defaults to the local computer.
-    .PARAMETER Username
-    NotMandatory - username used for remote installation on the target computer.
+    Name of the target computer where OpenSSH will be installed, defaults to the local computer.
+    .PARAMETER User
+    Username used for remote installation on the target computer.
     .PARAMETER Pass
-    NotMandatory - password associated with the provided username for remote installation.
+    Password associated with the provided username for remote installation.
     .PARAMETER InstallerPath
-    NotMandatory - path where the OpenSSH installer MSI will be downloaded and stored. Defaults to the temporary directory.
+    Path where the OpenSSH installer MSI will be downloaded and stored, defaults to the temporary directory.
     .PARAMETER OpenSSHMsiUrl
-    NotMandatory - URL of the OpenSSH installer MSI. You can provide "latest" to always download the latest version.
+    URL of the OpenSSH installer MSI, you can provide "latest" to always download the latest version.
+
     .EXAMPLE
-    
-    Install-OpenSSH
+    Install-OpenSSH -Verbose
     Install-OpenSSH -computerName "remote_host" -username "remote_user" -pass "remote_pass"
 
     .NOTES
-    v0.0.2
+    v0.1.8
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName = $env:COMPUTERNAME,
-
+    
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [string]$Username,
-
+        [string]$User,
+    
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [string]$Pass,
-
+    
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [string]$InstallerPath = "$env:TEMP\OpenSSHInstaller.msi",
-
+        [string]$InstallerPath = "$env:TEMP\OpenSSH-Win64-v9.5.0.0.msi",
+    
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [string]$OpenSSHMsiUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64-v9.2.2.0.msi"
+        [string]$OpenSSHMsiUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.5.0.0p1-Beta/OpenSSH-Win64-v9.5.0.0.msi"
     )
     try {
+        $OSSHName = [System.IO.Path]::GetFileName($OpenSSHMsiUrl)
+        Write-Verbose -Message "Installer Path: $InstallerPath"
+        Write-Verbose -Message "OpenSSH MSI URL: $OpenSSHMsiUrl"
+            
         if ($ComputerName -eq $env:COMPUTERNAME) {
             Write-Host "Installing OpenSSH locally..." -ForegroundColor Cyan
-            Start-Process -Wait -FilePath msiexec.exe -ArgumentList "/i `"$InstallerPath`" /qn"
+            Invoke-WebRequest -Uri $OpenSSHMsiUrl -OutFile $InstallerPath -ErrorAction Stop -Verbose
+            Start-Process -FilePath $InstallerPath -ArgumentList "/passive" -Wait -ErrorAction Stop
         }
         else {
-            if (-not $Username -or -not $Pass) {
-                Write-Error "For remote installation, both username and password are required."
+            if (-not $User -or -not $Pass) {
+                Write-Error "For remote installation, both username and password are required!"
                 return
             }
-            $SecurePassword = ConvertTo-SecureString $Pass -AsPlainText -Force
-            $Credential = New-Object System.Management.Automation.PSCredential($Username, $SecurePassword)
-            Invoke-WebRequest -Uri $OpenSSHMsiUrl -OutFile $InstallerPath
+            $SecPass = ConvertTo-SecureString $Pass -AsPlainText -Force
+            $Credential = New-Object System.Management.Automation.PSCredential($User, $SecPass)
+            Invoke-WebRequest -Uri $OpenSSHMsiUrl -OutFile $InstallerPath -Verbose
             Write-Host "Copying OpenSSH installer to $ComputerName..." -ForegroundColor Cyan
             $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential
-            Copy-Item -Path $InstallerPath -Destination "C:\Users\$Username\AppData\Local\Temp\OpenSSHInstaller.msi" -ToSession $Session
+            Copy-Item -Path $InstallerPath -Destination "C:\Users\$User\AppData\Local\Temp\$OSSHName" -ToSession $Session
             Write-Host "Installing OpenSSH on $ComputerName..." -ForegroundColor Cyan
             $InstallScript = {
                 param ($Path)
                 Start-Process -Wait -FilePath msiexec.exe -ArgumentList "/i `"$Path`" /qn"
             }
-            Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $InstallScript -ArgumentList ("C:\Users\$Username\AppData\Local\Temp\OpenSSHInstaller.msi")
+            Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $InstallScript -ArgumentList ("C:\Users\$User\AppData\Local\Temp\$OSSHName")
         }
         Write-Host "OpenSSH installed successfully" -ForegroundColor Green
     }
@@ -81,4 +86,3 @@ Function Install-OpenSSH {
         Remove-Item -Path $InstallerPath -Force -Verbose -ErrorAction SilentlyContinue
     }
 }
-    
