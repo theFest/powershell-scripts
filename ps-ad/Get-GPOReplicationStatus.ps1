@@ -1,25 +1,26 @@
 Function Get-GPOReplicationStatus {
     <#
     .SYNOPSIS
-    Retrieves replication status of Group Policy Objects (GPOs) in the specified domain.
+    Retrieves the replication status of Group Policy Objects (GPOs) across domain controllers.
 
     .DESCRIPTION
-    This function retrieves replication status information of Group Policy Objects (GPOs) within a domain. It can retrieve the replication status for a specific GPO or for all GPOs in the domain. This information includes the version numbers of the GPOs in both the Active Directory and the SYSVOL share for both user and computer configurations.
+    This function retrieves the replication status of specified GPOs or all GPOs across domain controllers in the Active Directory environment. It checks both the Domain System (DS) version and the Sysvol version for both user and computer settings of the GPOs.
 
     .PARAMETER GPOName
-    Name of the GPO for which replication status is to be retrieved.
+    Name(s) of the Group Policy Object(s) to check for replication status.
     .PARAMETER All
-    Indicates whether to retrieve replication status for all GPOs in the domain.
+    Use to check replication status for all GPOs.
 
     .EXAMPLE
     Get-GPOReplicationStatus -All
+    Get-GPOReplicationStatus -GPOName "GPO1", "GPO2"
 
     .NOTES
-    v0.0.1
+    v0.0.3
     #>
     [CmdletBinding(DefaultParameterSetName = "All", ConfirmImpact = "None")]
     param (
-        [Parameter(Mandatory = $true, ParameterSetName = "One", HelpMessage = "Enter the name of the Group Policy Object")]
+        [Parameter(Mandatory = $false, ParameterSetName = "One", HelpMessage = "Enter the name of the Group Policy Object")]
         [ValidateNotNullOrEmpty()]
         [Alias("n")]
         [string[]]$GPOName,
@@ -44,11 +45,12 @@ Function Get-GPOReplicationStatus {
         foreach ($DomainController in (Get-ADDomainController -Filter * -ErrorAction Stop)) {
             Write-Host "Domain Controller found: $($DomainController.Hostname)" -ForegroundColor Cyan
             try {
+                Write-Verbose -Message "Checking replication for specified GPO(s)..."
                 if ($GPOName) {
-                    Write-Verbose -Message "Checking replication for GPO '$GPOItem' on Domain Controller '$($DomainController.Hostname)'"
                     foreach ($GPOItem in $GPOName) {
+                        Write-Verbose -Message "Checking replication for GPO '$GPOItem' on Domain Controller '$($DomainController.Hostname)'"
                         $GPO = Get-GPO -Name $GPOItem -Server $DomainController.Hostname -ErrorAction Stop
-                        [PSCustomObject]@{
+                        $ReplicationStatus = [PSCustomObject]@{
                             GroupPolicyName       = $GPOItem
                             DomainController      = $DomainController.Hostname
                             UserVersion           = $GPO.User.DSVersion
@@ -56,19 +58,32 @@ Function Get-GPOReplicationStatus {
                             ComputerVersion       = $GPO.Computer.DSVersion
                             ComputerSysVolVersion = $GPO.Computer.SysvolVersion
                         }
+                        if ($null -eq $ReplicationStatus.UserVersion -or $null -eq $ReplicationStatus.ComputerVersion) {
+                            Write-Warning -Message "Replication issue detected for GPO '$GPOItem' on Domain Controller '$($DomainController.Hostname)'. Please investigate."
+                        }
+                        else {
+                            Write-Output -InputObject $ReplicationStatus
+                        }
                     }
                 }
+                Write-Verbose -Message "Checking replication for all GPOs..."
                 if ($All) {
                     Write-Verbose -Message "Checking replication for all GPOs on Domain Controller '$($DomainController.Hostname)'"
                     $GPOList = Get-GPO -All -Server $DomainController.Hostname -ErrorAction Stop
                     foreach ($GPO in $GPOList) {
-                        [PSCustomObject]@{
+                        $ReplicationStatus = [PSCustomObject]@{
                             GroupPolicyName       = $GPO.DisplayName
                             DomainController      = $DomainController.Hostname
                             UserVersion           = $GPO.User.DSVersion
                             UserSysVolVersion     = $GPO.User.SysvolVersion
                             ComputerVersion       = $GPO.Computer.DSVersion
                             ComputerSysVolVersion = $GPO.Computer.SysvolVersion
+                        }
+                        if ($null -eq $ReplicationStatus.UserVersion -or $null -eq $ReplicationStatus.ComputerVersion) {
+                            Write-Warning -Message "Replication issue detected for GPO '$($GPO.DisplayName)' on Domain Controller '$($DomainController.Hostname)'. Please investigate."
+                        }
+                        else {
+                            Write-Output -InputObject $ReplicationStatus
                         }
                     }
                 }
@@ -79,6 +94,7 @@ Function Get-GPOReplicationStatus {
         }
     }
     END {
+        Write-Verbose -Message "Checking Calculate and display total GPOs checked"
         $TotalGPOsChecked = @()
         foreach ($GPO in $PSBoundParameters['GPOName']) {
             $TotalGPOsChecked += $GPO
