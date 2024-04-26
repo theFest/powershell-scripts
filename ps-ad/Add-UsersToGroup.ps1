@@ -1,84 +1,87 @@
-#requires -version 5.1
+#Requires -Version 5.1
 Function Add-UsersToGroup {
     <#
     .SYNOPSIS
-    Adds users to an Active Directory group.
-    
+    Adds users to a specified Active Directory group.
+
     .DESCRIPTION
-	This function allows you to add users to an Active Directory group either by specifying a list of users directly or by providing a CSV file containing user names. It checks if each user exists in Active Directory before adding them to the group.
-    
+    This function adds users to a specified Active Directory group. Users can be provided directly as an array of usernames or through a CSV file containing usernames. Users are added based on a specified attribute (e.g., SamAccountName, DisplayName) and the name of the target group.
+
     .PARAMETER Users
-    Mandatory - an array of user names to add to the group.
+    The usernames to add to the group, can be provided as an array of strings.
     .PARAMETER FromCSV
-    NotMandatory - the path to a CSV file containing user names, will read user names from this file and add them to the group.
+    Path to a CSV file containing usernames to add to the group, each row in the CSV file should contain a single username.
     .PARAMETER Filter
-    NotMandatory - filter to use when searching for users in Active Directory. Possible values are "SamAccountName" (default), "DisplayName," "Email," and "UserPrincipalName."
+    Attribute to filter users when searching in Active Directory, supported attributes include SamAccountName, DisplayName, Email, and UserPrincipalName. Default is SamAccountName.
     .PARAMETER GroupName
-    Mandatory - the name of the Active Directory group to which users will be added.
+    The name of the group to which users will be added.
     .PARAMETER Delimiter
-    NotMandatory - delimiter used in the CSV file when reading user names.
-    
+    Delimiter used in the CSV file, default delimiter is a comma (,).
+
     .EXAMPLE
-    "your_AD_group" | Add-UsersToGroup -Users "first_user", "second_user" -Verbose
-    Add-UsersToGroup -FromCSV "$env:USERPROFILE\Desktop\your_csv_with_users.csv" -GroupName 'your_AD_group' -Verbose
-    
+    Add-UsersToGroup -Users "your_user1", "your_user2" -GroupName "your_group" -Verbose
+
     .NOTES
-    v0.0.4
+    v0.2.0
     #>
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromRemainingArguments = $true)]
+    param (
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromRemainingArguments = $true, HelpMessage = "Usernames to add to the group")]
+        [Alias("u")]
         [string[]]$Users,
- 
-        [Parameter(Mandatory = $false)]
-        $FromCSV,
 
-        [Parameter(ValueFromPipeline = $false, Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 4, HelpMessage = "Path to a CSV file containing usernames to add to the group")]
+        [ValidateScript({ 
+                Test-Path -Path $_ -PathType Leaf
+            })]
+        [Alias("c")]
+        [string]$FromCSV,
+
+        [Parameter(Mandatory = $false, Position = 2, ValueFromPipeline = $false, HelpMessage = "Attribute to filter users when searching in Active Directory")]
         [ValidateSet("SamAccountName", "DisplayName", "Email", "UserPrincipalName")]
+        [Alias("f")]
         [string]$Filter = "SamAccountName",
 
-        [Parameter(ValueFromPipeline = $true, Mandatory = $false)]
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, HelpMessage = "Name of the group to which users will be added")]
+        [Alias("g")]
         [string]$GroupName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, Position = 3, HelpMessage = "Delimiter used in the CSV file")]
+        [Alias("d")]
         [string]$Delimiter = ","
     )
     BEGIN {
-        if (!(Get-Module -Name ActiveDirectory -ListAvailable -Verbose)) {
-            Write-Output "Active Directory is missing, installing..."
+        if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
+            Write-Output "Active Directory module is missing, attempting to install..."
+            Install-Module -Name ActiveDirectory -Force -Verbose
             Import-Module -Name ActiveDirectory -Force -Verbose
         }
-        Write-Verbose -Message "Selected group details: $(Get-ADGroup -Filter { Name -like $GroupName })"     
+        Write-Verbose -Message "Selected group details: $(Get-ADGroup -Filter { Name -eq $GroupName })"
     }
     PROCESS {
         if ($FromCSV) {
-            Write-Verbose -Message "Importing users from csv file..."
+            Write-Verbose -Message "Importing users from CSV file: $FromCSV..."
             $Users = (Import-Csv -Path $FromCSV -Delimiter $Delimiter -Header "Name").Name
         }
-        $Users | ForEach-Object {
+        foreach ($UserName in $Users) {
             try {
-                $User = (Get-ADuser -Filter "$Filter -eq '$_'").ObjectGUID
-                if ($User) {
-                    Write-Host "AD user: $_ found in the Active Directory, continuing..." -ForegroundColor Green
+                $ADUser = Get-ADUser -Filter "$Filter -eq '$UserName'"
+                if ($ADUser) {
+                    Write-Host "AD user: $UserName found in Active Directory, continuing..." -ForegroundColor Green
+                    Add-ADGroupMember -Identity $GroupName -Members $ADUser -ErrorAction SilentlyContinue -Verbose
+                }
+                else {
+                    Write-Warning -Message "AD user: $UserName does not exist in Active Directory, please check the username!"
                 }
             }
             catch {
-                Write-Error -Exception $_.Exception.Message
-            }
-        }
-        foreach ($U in $Users) {
-            try {
-                Add-ADGroupMember -Identity $GroupName -Members $U -ErrorAction SilentlyContinue -Verbose
-            }
-            catch {
-                Write-Host "AD user: $U does not exists in Active Directory, check username!" -ForegroundColor Red
+                Write-Error -Message "Error occurred while processing user: $UserName ~ $_"
             }
         }
     }
     END {
         Write-Verbose -Message "Finished, cleaning up and exiting. Time: $(Get-Date -Format "dddd | MM/dd/yyyy | HH:mm")"
         Clear-Variable -Name Users, GroupName -Force -Verbose -ErrorAction SilentlyContinue
-        Clear-History -Verbose
-        exit
+        Clear-History
     }
 }
