@@ -1,76 +1,66 @@
 Function Invoke-SpeechSynthesizer {
     <#
     .SYNOPSIS
-    Simple function for text to speech.
-    
+    Generates speech from text using the System.Speech.Synthesis module.
+
     .DESCRIPTION
-    TTS speaker that has ability to speak on both local and remote computer. 
-    
+    This function generates speech from text using the System.Speech.Synthesis module in PowerShell.
+    It allows for various modes of operation including Once, ForLoop, and TimeLoop, each with its own behavior for speech synthesis. Additionally, it provides options for adjusting volume, rate, pitch, specifying the voice, language, and more.
+
     .PARAMETER Mode
-    Mandatory - choose between speaking once, in 'for' or 'do while' loop.   
-    .PARAMETER FilePath
-    NotMandatory - load your local file that contains text content. 
-    .PARAMETER HostEnteredText
-    NotMandatory - add phrases by entering your text. 
-    .PARAMETER WebPhrases
-    NotMandatory - add phrases from web, use $url with this option. 
-    .PARAMETER Computer
-    NotMandatory - define hostname of remote computer, WinRM must be enabled. 
-    .PARAMETER User
-    NotMandatory - define username of remote computer. 
-    .PARAMETER Password
-    NotMandatory - define password of remote computer. 
+    Mode of operation for speech synthesis, values are Once, ForLoop, and TimeLoop.
+    .PARAMETER InputText
+    Text to be synthesized into speech.
+    .PARAMETER ReadFromFile
+    Whether the input text should be read from a file. If this switch is used, the InputText parameter must specify the file path.
+    .PARAMETER ReadFromWeb
+    Indicates whether the input text should be read from a web URL.
     .PARAMETER Url
-    NotMandatory - define url(modify line 111 for your url), use WebPhrases with it.
+    URL from which to read the input text when using the ReadFromWeb switch.
     .PARAMETER Volume
-    NotMandatory - adjust volume of a speaker, default is already set to 3/4.
+    Volume of the synthesized speech (0-100).
     .PARAMETER Rate
-    NotMandatory - adjust rate of a speaker, default is already set as it should be.
-    .PARAMETER Seconds
-    NotMandatory - declare time for 'Do while' TimeLoop.
-    .PARAMETER IterationsCount
-    NotMandatory - declare number of iterations when using 'for' loop.
+    Rate of speech synthesis (-10 to 10).
+    .PARAMETER Duration
+    Duration (in seconds) for the TimeLoop mode.
+    .PARAMETER Iterations
+    Number of iterations for the ForLoop mode.
     .PARAMETER Interval
-    NotMandatory - declare interval between iterations when using loops.
-    .PARAMETER SelectVoice
-    NotMandatory - choose voice of a speaker, additional language packs are needed for your region.
+    Interval (in seconds) between each iteration in the ForLoop mode.
+    .PARAMETER Voice
+    Voice to be used for speech synthesis.
+    .PARAMETER Language
+    Language for speech synthesis.
+    .PARAMETER Pitch
+    Pitch of the synthesized speech.
+    .PARAMETER Pause
+    Pauses the speech synthesis if this switch is used.
+    .PARAMETER Progress
+    Displays progress information during speech synthesis.
+    .PARAMETER Callback
+    Callback function to be executed after speech synthesis completes.
     
     .EXAMPLE
-    Invoke-SpeechSynthesizer -Mode Once -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
-    Invoke-SpeechSynthesizer -Mode ForLoop -WebPhrases -Url "your_website" -IterationsCount 10 -Interval 2
-    Invoke-SpeechSynthesizer -Mode TimeLoop -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt" -Seconds 60
-    Invoke-SpeechSynthesizer -Mode Once -Computer "remote_computer" -User "user_of_remote_computer" -Password "pass_of_remote_computer" -FilePath "$env:USERPROFILE\Desktop\SpeechFile.txt"
-    
+    Invoke-SpeechSynthesizer -InputText "Hello, how are you?" -Mode ForLoop -Iterations 2
+    Invoke-SpeechSynthesizer -Mode Once -ReadFromFile -InputText "$env:USERPROFILE\Desktop\SpeechFile.txt"
+
     .NOTES
-    V0.1.1 
-    *currently supporting en-US language ; Enables psremoting on destination computer
-    *use alternative GUI app ("https://jztkft.dl.sourceforge.net/project/espeak/espeak/espeak-1.48/setup_espeak-1.48.04.exe")
-    *for other languages, first install languange pack then if needed modify registry (https://winaero.com/unlock-extra-voices-windows-10/)
-    *when using WebPhrases, you'll need to modify code because every web location is different. 
+    v0.1.6
     #>
     [CmdletBinding()]
-    param(
+    param (
         [Parameter(Mandatory = $false)]
         [ValidateSet("Once", "ForLoop", "TimeLoop")]
         [string]$Mode = "Once",
 
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [string]$FilePath,
-
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [switch]$HostEnteredText,
+        [string]$InputText,
 
         [Parameter(Mandatory = $false)]
-        [switch]$WebPhrases,
+        [switch]$ReadFromFile,
 
         [Parameter(Mandatory = $false)]
-        [string]$Computer,
-
-        [Parameter(Mandatory = $false)]
-        [string]$User,
-
-        [Parameter(Mandatory = $false)]
-        [string]$Password,
+        [switch]$ReadFromWeb,
 
         [Parameter(Mandatory = $false)]
         [string]$Url,
@@ -84,78 +74,112 @@ Function Invoke-SpeechSynthesizer {
         [int]$Rate = 0,
 
         [Parameter(Mandatory = $false)]
-        [int]$Seconds = 30,
+        [int]$Duration = 30,
 
         [Parameter(Mandatory = $false)]
-        [int]$IterationsCount = 2,
+        [int]$Iterations = 1,
 
         [Parameter(Mandatory = $false)]
         [int]$Interval = 1,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Matej")]
-        [string]$SelectVoice = "Microsoft David Desktop"
+        [string]$Voice = "Microsoft David Desktop",
+
+        [Parameter(Mandatory = $false)]
+        [string]$Language = "en-US",
+
+        [Parameter(Mandatory = $false)]
+        [int]$Pitch = 0,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Pause,
+
+        [Parameter(Mandatory = $false)]
+        [string]$OutputFile,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Progress,
+
+        [Parameter(Mandatory = $false)]
+        [scriptblock]$Callback
     )
     BEGIN {
         $StartTime = Get-Date
         Add-Type -AssemblyName System.Speech
-        $SObject = New-Object -TypeName "System.Speech.Synthesis.SpeechSynthesizer"
-        $SObject.Rate = $Rate
-        $SObject.Volume = $Volume
-        $SObject.SelectVoice($SelectVoice)   
-        switch ($Phrases) {
-            { $FilePath } { $SpeechPhrases = (Get-Content $FilePath) }
-            { $HostEnteredText } { $SpeechPhrases = Read-Host 'Enter or paste text' }
-            { $WebPhrases } { $SpeechPhrases = Invoke-WebRequest -Uri $Url ; $WP = ($WebPhrases.AllElements | Where-Object -Property tagname -EQ 'P').Innertext ; $WP }
-            default { Write-Host "other speech method has been used" -ForegroundColor Yellow }
-        }    
+        $SpeechSynthesizer = New-Object -TypeName "System.Speech.Synthesis.SpeechSynthesizer"
+        try {
+            $SpeechSynthesizer.SelectVoice($Voice)
+        }
+        catch {
+            Write-Warning -Message "Voice '$Voice' not available or installed. Using default voice"
+        }
+        $SpeechSynthesizer.Rate = $Rate
+        $SpeechSynthesizer.Volume = $Volume
+        $SpeechSynthesizer.SetOutputToDefaultAudioDevice()
+        if ($ReadFromFile) {
+            if (-not $InputText) {
+                Write-Warning -Message "InputText parameter is required when using ReadFromFile switch"
+                return
+            }
+            elseif (-not (Test-Path -Path $InputText)) {
+                Write-Warning -Message "File '$InputText' does not exist."
+                return
+            }
+            $InputText = Get-Content -Path $InputText -Raw
+        }
+        elseif ($ReadFromWeb) {
+            $InputText = (Invoke-WebRequest -Uri $Url).Content
+        }
     }
     PROCESS {
-        $Speech = {
-            if (!$Computer) {
-                $SObject.Speak($SpeechPhrases)               
-            }   
-            else {
-                $Pass = ConvertTo-SecureString -AsPlainText $Password -Force
-                $SecureCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, $Pass  
-                if (!(Test-WSMan -ComputerName $Computer -Credential $SecureCredentials -Authentication Default -ErrorAction SilentlyContinue)) {
-                    Write-Output "Enabling WINRM on remote computer..."
-                    Invoke-WmiMethod -ComputerName $Computer -Credential $SecureCredentials -Namespace root\cimv2 -Class Win32_Process -Name Create -ArgumentList "winrm quickconfig -quiet" | Out-Null #-AsJob
-                    Invoke-WmiMethod -ComputerName $Computer -Credential $SecureCredentials -Namespace root\cimv2 -Class Win32_Process -Name Create -ArgumentList "PowerShell -ExecutionPolicy Bypass -Command Enable-PSRemoting -Force -SkipNetworkProfileCheck" | Out-Null #-AsJob
-                }
-                $PSSession = New-PSSession -ComputerName $Computer -Credential $SecureCredentials
-                Invoke-Command -Session $PSSession {
-                    [Reflection.Assembly]::LoadWithPartialName('System.Speech') | Out-Null
-                    $SObject = New-Object System.Speech.Synthesis.SpeechSynthesizer
-                    $SObject.Speak($Using:SpeechPhrases)
-                }
-            }
+        $SpeakAction = {
+            param ($Text)
+            $SpeechSynthesizer.Speak($Text)
+        }
+        if ($Pause) {
+            $SpeechSynthesizer.Pause()
         }
         switch ($Mode) {
             "Once" {
-                Invoke-Command -ScriptBlock $Speech
-            } 
+                Invoke-Command -ScriptBlock $SpeakAction -ArgumentList $InputText
+            }
             "ForLoop" {
-                for ($Iterations = 0; $Iterations -lt $IterationsCount; $Iterations++) {
-                    Invoke-Command -ScriptBlock $Speech
-                    Start-Sleep -Seconds $Interval
-                } 
+                $Iterations * ($Interval + 1)
+                for ($i = 1; $i -le $Iterations; $i++) {
+                    Invoke-Command -ScriptBlock $SpeakAction -ArgumentList $InputText
+                    if ($Progress) {
+                        Write-Progress -Activity "Speaking" -Status "Iteration $i/$Iterations" -PercentComplete (($i / $Iterations) * 100)
+                    }
+                    if ($i -lt $Iterations) {
+                        Start-Sleep -Seconds $Interval
+                    }
+                }
             }
             "TimeLoop" {
-                $TimeOut = New-TimeSpan -Seconds:$Seconds #-Minutes:$Minutes -Hours:$Hours -Days:$Days
-                $EndTime = (Get-Date).Add($TimeOut)
+                $EndTime = (Get-Date).AddSeconds($Duration)
                 do {
-                    Invoke-Command -ScriptBlock $Speech
+                    Invoke-Command -ScriptBlock $SpeakAction -ArgumentList $InputText
+                    if ($Progress) {
+                        $TimeLeft = [math]::Round(($EndTime - (Get-Date)).TotalSeconds)
+                        Write-Progress -Activity "Speaking" -Status "Time left: $TimeLeft seconds" -PercentComplete ((($EndTime - (Get-Date)).TotalSeconds / $Duration) * 100)
+                    }
                     Start-Sleep -Seconds $Interval
                 } until ((Get-Date) -gt $EndTime)
             }
             default {
-                "additional switch has not been defined"
-            }              
+                Write-Warning -Message "Invalid mode. Please use 'Once', 'ForLoop', or 'TimeLoop'!"
+            }
+        }
+        if ($Pause) {
+            $SpeechSynthesizer.Resume()
+        }
+        if ($Callback) {
+            & $Callback
         }
     }
     END {
-        $SObject.Dispose()
-        Write-Host "Total speech duration: $((Get-Date).Subtract($StartTime).Duration() -replace ".{4}$")" -ForegroundColor Cyan 
-    }          
+        $SpeechSynthesizer.Dispose()
+        Write-Verbose -Message "Total speech duration: $((Get-Date).Subtract($StartTime).Duration())"
+    }
 }
