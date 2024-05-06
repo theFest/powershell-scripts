@@ -7,50 +7,50 @@ Function Export-RegistryKey {
     This function exports a specified registry key from a remote or local computer and saves it to a specified local path.
 
     .PARAMETER RegPath
-    Specifies the registry path to export, either local or remote.
+    Registry path to export, either local or remote.
     .PARAMETER LocalExportPath
-    Specifies the local path where the exported registry file will be saved.
+    Local path where the exported registry file will be saved.
     .PARAMETER RemoteExportPath
-    Specifies the remote path where the exported registry file will be temporarily saved on the remote computer, if not provided a default path will be used.
+    Remote path where the exported registry file will be temporarily saved on the remote computer, if not provided a default path will be used.
     .PARAMETER ComputerName
-    Specifies the name of the remote computer from which to export the registry key, if not provided, the export will be performed on the local computer.
+    Name of the remote computer from which to export the registry key, if not provided, the export will be performed on the local computer.
     .PARAMETER User
-    Specifies the username to use for the remote connection, required when exporting from a remote computer.
+    Username to use for the remote connection, required when exporting from a remote computer.
     .PARAMETER Pass
-    Specifies the password to use for the remote connection, required when exporting from a remote computer.
+    Password to use for the remote connection, required when exporting from a remote computer.
 
     .EXAMPLE
     Export-RegistryKey -RegPath "HKCU\AppEvents" -LocalExportPath "$env:USERPROFILE\Desktop\local_reg_export.reg" -Verbose
     "HKLM\SOFTWARE" | Export-RegistryKey -LocalExportPath "$env:USERPROFILE\Desktop\remote_reg_export.reg" -ComputerName "remote_hostname" -User "remote_user" -Pass "remote_pass"
 
     .NOTES
-    Version: 0.0.4
+    Version: 0.1.2
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [Alias("p")]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Specifies the registry path to export, either local or remote")]
         [ValidateNotNullOrEmpty()]
+        [Alias("r")]
         [string]$RegPath,
 
-        [Parameter(Mandatory = $true)]
-        [Alias("l")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specifies the local path where the exported registry file will be saved")]
         [ValidateNotNullOrEmpty()]
+        [Alias("l")]
         [string]$LocalExportPath,
 
-        [Parameter(Mandatory = $false)]
-        [Alias("r")]
+        [Parameter(Mandatory = $false, HelpMessage = "Specifies the remote path where the exported registry file will be temporarily saved on the remote computer, if not provided a default path will be used")]
+        [Alias("e")]
         [string]$RemoteExportPath = "C:\Users\Default\AppData\Local\Temp\exported.reg",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specifies the name of the remote computer from which to export the registry key, if not provided, the export will be performed on the local computer")]
         [Alias("c")]
         [string]$ComputerName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specifies the username to use for the remote connection, required when exporting from a remote computer")]
         [Alias("u")]
         [string]$User,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specifies the password to use for the remote connection, required when exporting from a remote computer")]
         [Alias("p")]
         [string]$Pass
     )
