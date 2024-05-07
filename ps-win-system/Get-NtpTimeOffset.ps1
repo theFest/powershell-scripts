@@ -1,41 +1,45 @@
 Function Get-NtpTimeOffset {
     <#
     .SYNOPSIS
-    Query time offset.
-    
+    Queries an NTP server for time synchronization and returns the offset.
+
     .DESCRIPTION
-    Query time drift using 'w32tm', the Windows native way. Error check and timeout features are included.
-    
+    This function queries an NTP server to obtain time synchronization information, calculates the time offset between the local system time and the NTP server time.
+
     .PARAMETER NtpServer
-    Mandatory - declare NTP to queired, modify set to your needs.
+    NTP server to query for time synchronization, available options are 'time.nist.gov', 'time.windows.com', '0.us.pool.ntp.org', '1.us.pool.ntp.org', '2.us.pool.ntp.org', and '3.us.pool.ntp.org'.
     .PARAMETER Samples
-    NotMandatory - count samples, then stop. Up to 720 samples is declared, default is 3.
+    Number of time samples to collect for time synchronization, default value is 3. Valid range: 1-720.
     .PARAMETER Period
-    NotMandatory - time between samples, in seconds. The default value is set to 2 seconds.
+    Time interval (in seconds) between samples, default value is 2 seconds. Valid range: 1-3600.
     .PARAMETER ExportResults
-    NotMandatory - you can export offset results to csv file, define path like "$env:TEMP\NtpTimeOffset.csv".
-    
+    Specifies the path to export the results to a CSV file.
+
     .EXAMPLE
-    Get-NtpTimeOffset -NtpServer 0.us.pool.ntp.org
-    
+    Get-NtpTimeOffset -NtpServer '0.us.pool.ntp.org' -ExportResults "$env:USERPROFILE\Desktop\NtpResults.csv"
+
     .NOTES
-    v0.2.1 -->https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/ff799054(v=ws.11)
+    v0.3.8
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [ValidateSet('time.nist.gov', 'time.windows.com', '0.us.pool.ntp.org', '1.us.pool.ntp.org', '2.us.pool.ntp.org', '3.us.pool.ntp.org')]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "NTP server to query for time synchronization")]
+        [ValidateSet("time.nist.gov", "time.windows.com", "0.us.pool.ntp.org", "1.us.pool.ntp.org", "2.us.pool.ntp.org", "3.us.pool.ntp.org")]
+        [Alias("n")]
         [string]$NtpServer,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Number of time samples to collect for time synchronization")]
         [ValidateRange(1, 720)]
+        [Alias("s")]
         [int]$Samples = 3,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Time interval (in seconds) between samples")]
         [ValidateRange(1, 3600)]
+        [Alias("p")]
         [int]$Period = 2,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Path to export results to a CSV file")]
+        [Alias("e")]
         [string]$ExportResults
     )
     BEGIN {
@@ -81,6 +85,7 @@ Function Get-NtpTimeOffset {
             $QueryObject | Export-Csv -Path $ExportResults -NoTypeInformation
         }
         $QueryObject
-        Write-Host "Total time duration $NtpServer NTP server: $((Get-Date).Subtract($StartTime).Duration() -replace ".{8}$")" -ForegroundColor Cyan
+        $TotalTime = (Get-Date).Subtract($StartTime).Duration() -replace ".{8}$"
+        Write-Host "Total time duration querying $NtpServer NTP server: $TotalTime" -ForegroundColor Cyan
     }
 }
