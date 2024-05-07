@@ -1,75 +1,92 @@
 Function Write-EnhancedLog {
     <#
     .SYNOPSIS
-    Enhanced function for writing logs.
+    Writes log messages with enhanced features such as custom severity levels, custom fields, and various output formats.
 
     .DESCRIPTION
-    This function writes, appends, and exports logs in various formats (CSV, JSON, or plain text). It supports custom fields and allows you to specify the log timestamp format.
+    This function allows users to write log messages with customizable severity levels, additional custom fields, and choose from different output formats including CSV, JSON, and plain text.
 
     .PARAMETER LogMessage
-    Mandatory - your log message.
+    Specifies the message to log.
+
     .PARAMETER LogSeverity
-    Mandatory - severity of your message.
+    Severity level of the log, options include "Information", "Trace", "Alert", "Debug", "Warning", "Error", "Critical", "Fatal", "Verbose", "Emergency", "Notice", "Severe", "Info", "Important", and "Success".
     .PARAMETER LogPath
-    Not mandatory - path to the location where you want the file to be saved.
+    Directory path where logs will be stored. Defaults to $env:TEMP if not provided.
     .PARAMETER LogFileName
-    Not mandatory - name of the log file.
+    Name of the log file, defaults to $env:COMPUTERNAME if not provided.
     .PARAMETER CustomFields
-    Not mandatory - custom fields to include in the log entry.
+    Additional custom fields to include in the log entry.
     .PARAMETER LogFormat
-    Not mandatory - log format (CSV, JSON, or PlainText). Default is CSV.
+    Format in which logs will be stored, options are "CSV", "JSON", or "PlainText". Defaults to "CSV" if not provided.
     .PARAMETER TimestampFormat
-    Not mandatory - timestamp format for log entries. Default is "yyyy-MM-dd-HH:mm".
+    Timestamp format, defaults to "yyyy-MM-dd-HH:mm" if not provided.
 
     .EXAMPLE
-    Write-EnhancedLog -LogSeverity Alert -LogMessage "Your log message"
-    "Your log message" | Write-EnhancedLog -LogSeverity Alert -LogPath "$env:USERPROFILE\Desktop\YourLogPath" -LogFileName "YourLogName"
+    "Your log message" | Write-EnhancedLog -LogSeverity Alert -LogPath "$env:USERPROFILE\Desktop" -LogFileName "YourLogName"
 
     .NOTES
-    v0.2.1
+    v0.5.4
     #>
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Specify the message to log")]
         [ValidateNotNullOrEmpty()]
         [string]$LogMessage,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the severity level of the log")]
+        [ValidateSet(
+            "Information", 
+            "Trace", 
+            "Alert", 
+            "Debug", 
+            "Warning", 
+            "Error", 
+            "Critical", 
+            "Fatal", 
+            "Verbose",
+            "Emergency",
+            "Notice",
+            "Severe",
+            "Info",
+            "Important",
+            "Success"
+        )]
         [ValidateNotNullOrEmpty()]
-        [ValidateSet("Information", "Trace", "Alert", "Debug", "Warning", "Error", "Critical", "Fatal")]
         [string]$LogSeverity,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Directory path where logs will be stored")]
         [string]$LogPath = "$env:TEMP",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the name of the log file")]
         [string]$LogFileName = "$env:COMPUTERNAME",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Additional custom fields to include in the log entry")]
         [hashtable]$CustomFields,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Format in which logs will be stored")]
         [ValidateSet("CSV", "JSON", "PlainText")]
         [string]$LogFormat = "CSV",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the timestamp format")]
+        [ValidateSet("yyyy-MM-dd-HH:mm", "yyyy-MM-dd-HH:mm:ss", "yyyyMMddHHmmss", "yyyy/MM/dd HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd-MM-yyyy HH:mm:ss")]
         [string]$TimestampFormat = "yyyy-MM-dd-HH:mm"
     )
     BEGIN {
         if (!(Test-Path -Path $LogPath)) {
             try {
-                New-Item -Path $LogPath -ItemType Directory -ErrorAction Stop
+                New-Item -Path $LogPath -ItemType Directory -ErrorAction Stop | Out-Null
             }
             catch {
-                Write-Error "Unable to create log path '$LogPath'. Error was: $_"
+                Write-Error -Message "Unable to create log path '$LogPath'. Error was: $_"
                 return
             }
         }
-        if ($LogFormat -eq "CSV" -or $LogFormat -eq "JSON") {
-            $LogFileExtension = ".$LogFormat"
+        $LogFileExtension = if ($LogFormat -eq "CSV" -or $LogFormat -eq "JSON") {
+            ".$LogFormat"
         }
         else {
-            $LogFileExtension = ".log"
+            ".log"
         }
         $LogFileName = [System.IO.Path]::Combine($LogPath, "$LogFileName$LogFileExtension")
     }
@@ -84,17 +101,22 @@ Function Write-EnhancedLog {
                 $LogEntry[$Key] = $CustomFields[$Key]
             }
         }
-        if ($LogFormat -eq "CSV") {
-            $LogEntryObject = [PSCustomObject]$LogEntry
-            $LogEntryObject | Export-Csv -Path $LogFileName -Append -NoTypeInformation -Force
-        }
-        elseif ($LogFormat -eq "JSON") {
-            $LogEntryJson = $LogEntry | ConvertTo-Json
-            Add-Content -Path $LogFileName -Value $LogEntryJson -Encoding UTF8
-        }
-        else {
-            $LogEntryText = "[$($LogEntry["TimeAppended"])][$($LogEntry["LogSeverity"])] $($LogEntry["LogMessage"])"
-            Add-Content -Path $LogFileName -Value $LogEntryText -Encoding UTF8
+        switch ($LogFormat) {
+            "CSV" {
+                $LogEntryObject = [PSCustomObject]$LogEntry
+                $LogEntryObject | Export-Csv -Path $LogFileName -Append -NoTypeInformation -Force
+            }
+            "JSON" {
+                $LogEntryJson = $LogEntry | ConvertTo-Json
+                Add-Content -Path $LogFileName -Value $LogEntryJson -Encoding UTF8
+            }
+            "PlainText" {
+                $LogEntryText = "[$($LogEntry["TimeAppended"])][$($LogEntry["LogSeverity"])] $($LogEntry["LogMessage"])"
+                Add-Content -Path $LogFileName -Value $LogEntryText -Encoding UTF8
+            }
+            default {
+                Write-Warning "Unsupported log format: $LogFormat"
+            }
         }
     }
 }
