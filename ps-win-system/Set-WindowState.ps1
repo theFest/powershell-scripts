@@ -1,56 +1,49 @@
-Function Set-WindowState {
+function Set-WindowState {
     <#
     .SYNOPSIS
-    Set window to wanted state.
-    
+    Sets the window state of specified processes.
+
     .DESCRIPTION
-    This function sets the state of a window associated with a given process.
-    
-    .PARAMETER InputObject
-    Mandatory - an array of objects representing processes
-    .PARAMETER State
-    NotMandatory - the state of the window (e.g. 'MINIMIZE', 'MAXIMIZE', etc.).
-    .PARAMETER SuppressErrors
-    NotMandatory - choose whether or not to suppress error messages.
-    .PARAMETER SetForegroundWindow
-    NotMandatory - switch to determine whether or not to set the foreground window.
-    
+    This function sets the window state of specified processes, it can change the visibility or appearance of windows associated with the specified processes.
+
     .EXAMPLE
-    Set-WindowState -InputObject (Get-Process -Name "notepad") -State "MAXIMIZE" -SetForegroundWindow
+    Set-WindowState -InputObject (Get-Process -Name "notepad") -State Minimize
 
     .NOTES
-    v0.1.1
+    v0.2.0
     #>
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Processes whose window state needs to be manipulated")]
         [System.Diagnostics.Process[]]$InputObject,
 
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [ValidateSet("FORCEMINIMIZE", "HIDE", "MAXIMIZE", "MINIMIZE", "RESTORE",
-            "SHOW", "SHOWDEFAULT", "SHOWMAXIMIZED", "SHOWMINIMIZED",
-            "SHOWMINNOACTIVE", "SHOWNA", "SHOWNOACTIVATE", "SHOWNORMAL")]
-        [string]$State = "SHOW",
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the desired window state")]
+        [ValidateSet(
+            "Hide", "ShowNormal", "ShowMinimized", "Maximize", "ShowNoActivate", 
+            "Show", "Minimize", "ShowMinNoActive", "ShowNA", "Restore", 
+            "ShowDefault", "ForceMinimize"
+        )]
+        [string]$State = "Show",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Suppress errors if the main window handle is not found")]
         [switch]$SuppressErrors = $false,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Bring the window to the foreground after changing its state")]
         [switch]$SetForegroundWindow = $false
     )
     $WindowStates = @{
-        "HIDE"            = 0
-        "SHOWNORMAL"      = 1
-        "SHOWMINIMIZED"   = 2
-        "MAXIMIZE"        = 3
-        "SHOWNOACTIVATE"  = 4
-        "SHOW"            = 5
-        "MINIMIZE"        = 6
-        "SHOWMINNOACTIVE" = 7
-        "SHOWNA"          = 8
-        "RESTORE"         = 9
-        "SHOWDEFAULT"     = 10
-        "FORCEMINIMIZE"   = 11       
+        "Hide"            = 0
+        "ShowNormal"      = 1
+        "ShowMinimized"   = 2
+        "Maximize"        = 3
+        "ShowNoActivate"  = 4
+        "Show"            = 5
+        "Minimize"        = 6
+        "ShowMinNoActive" = 7
+        "ShowNA"          = 8
+        "Restore"         = 9
+        "ShowDefault"     = 10
+        "ForceMinimize"   = 11       
     }
     $Win32ShowWindowAsync = Add-Type -MemberDefinition @'
 [DllImport("user32.dll")]
@@ -66,7 +59,7 @@ public static extern bool SetForegroundWindow(IntPtr hWnd);
         }
         if ($Handle -eq 0) {
             if (-not $SuppressErrors) {
-                Write-Error -Message "Main Window handle is '0'"
+                Write-Error -Message "Main Window handle is '0' for process '$($Process.ProcessName)'"
             }
             continue
         }
@@ -75,6 +68,6 @@ public static extern bool SetForegroundWindow(IntPtr hWnd);
         if ($SetForegroundWindow) {
             $Win32ShowWindowAsync::SetForegroundWindow($Handle) | Out-Null
         }
-        Write-Verbose -Message "Set Window State '$State' on '$Handle'"
+        Write-Verbose -Message "Set Window State '$State' on process '$($Process.ProcessName)' (ID: $($Process.Id))"
     }
 }
