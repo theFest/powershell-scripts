@@ -1,29 +1,17 @@
-Function Wait-ProcessWindow {
+function Wait-ProcessWindow {
     <#
     .SYNOPSIS
     Waits for the main window of a specified process to open within a specified timeout period.
 
     .DESCRIPTION
-    This function waits for the main window of a specified process to open within a specified timeout period. It continuously checks whether the process is running and if its main window is open. Optionally, it can terminate the process if the main window does not open within the specified timeout.
-
-    .PARAMETER ProcessName
-    Name of the process to monitor for its main window. You can specify multiple process names.
-    .PARAMETER Timeout
-    Maximum time, in seconds, to wait for the process main window to open.
-    .PARAMETER CheckInterval
-    Interval, in seconds, between each check for the process main window. Default is 1 second.
-    .PARAMETER WaitForWindow
-    Wait for the process main window to open. If not specified, the function waits for the process to start but does not wait for its main window to open.
-    .PARAMETER KillOnTimeout
-    Terminate the process if its main window does not open within the specified timeout period.
-    .PARAMETER LogFile
-    Path to a log file where execution details will be logged.
+    This function monitors the specified process(es) and waits for their main window to open. It allows setting a maximum timeout period and an interval between checks for the window. 
+    Optionally, it can terminate the process if its main window does not open within the specified timeout. Execution details can be logged to a specified log file.
 
     .EXAMPLE
-    Wait-ProcessWindow -ProcessName "notepad" -Timeout 60 -WaitForWindow
+    Wait-ProcessWindow -ProcessName "notepad" -Timeout 30 -WaitForWindow
 
     .NOTES
-    v0.2.3
+    v0.4.2
     #>
     [CmdletBinding()]
     param (
@@ -36,11 +24,11 @@ Function Wait-ProcessWindow {
         [ValidateRange(1, [int]::MaxValue)]
         [int]$Timeout,
     
-        [Parameter(Mandatory = $false, HelpMessage = "Interval, in seconds, between each check for the process main window. Default is 1 second")]
+        [Parameter(Mandatory = $false, HelpMessage = "Interval, in seconds, between each check for the process main window, default is 1 second")]
         [ValidateRange(1, [int]::MaxValue)]
         [int]$CheckInterval = 1,
     
-        [Parameter(Mandatory = $false, HelpMessage = "Wait for the process main window to open. If not specified, the function waits for the process to start but does not wait for its main window to open")]
+        [Parameter(Mandatory = $false, HelpMessage = "Wait for the process main window to open")]
         [switch]$WaitForWindow,
     
         [Parameter(Mandatory = $false, HelpMessage = "Terminate the process if its main window does not open within the specified timeout period")]
@@ -52,46 +40,75 @@ Function Wait-ProcessWindow {
     )
     BEGIN {
         if ($LogFile) {
-            $script:LogStream = [System.IO.StreamWriter]::new($LogFile, $true)
+            try {
+                $script:LogStream = [System.IO.StreamWriter]::new($LogFile, $true)
+            }
+            catch {
+                Write-Error "Failed to open log file: $_"
+                return
+            }
+        }
+        $script:Log = {
+            param ($message)
+            if ($LogFile) {
+                $script:LogStream.WriteLine("[{0}] {1}" -f (Get-Date), $message)
+                $script:LogStream.Flush()
+            }
         }
     }
     PROCESS {
         foreach ($Name in $ProcessName) {
-            $Process = Get-Process -Name $Name -ErrorAction SilentlyContinue
-            if (!$Process) {
-                Write-Warning -Message "Process '$Name' is not currently running"
-                continue
-            }
             $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            do {
-                if ($Process.HasExited) {
-                    Write-Output "Process '$Name' has exited"
+            $WindowOpened = $false
+            while ($Stopwatch.Elapsed.TotalSeconds -lt $Timeout) {
+                try {
+                    $Process = Get-Process -Name $Name -ErrorAction SilentlyContinue
+                    if (!$Process) {
+                        Write-Verbose "Waiting for process '$Name' to start..."
+                        & $script:Log "Waiting for process '$Name' to start..."
+                    }
+                    elseif ($Process.HasExited) {
+                        Write-Output "Process '$Name' has exited"
+                        & $script:Log "Process '$Name' has exited"
+                        break
+                    }
+                    elseif ($WaitForWindow -and $Process.MainWindowHandle -ne 0) {
+                        $ElapsedTime = [math]::Round($Stopwatch.Elapsed.TotalSeconds, 2)
+                        $Message = "Process '$Name' main window is now open after $ElapsedTime seconds."
+                        Write-Output $Message
+                        & $script:Log $Message
+                        Write-Output -InputObject $Process
+                        $WindowOpened = $true
+                        break
+                    }
+                    elseif (-not $WaitForWindow) {
+                        break
+                    }
+                    Start-Sleep -Seconds $CheckInterval
+                }
+                catch {
+                    Write-Error "Error while monitoring process '$Name': $_"
+                    & $script:Log "Error while monitoring process '$Name': $_"
                     break
                 }
-                if ($WaitForWindow -and !$Process.MainWindowHandle) {
-                    Write-Verbose "Waiting for main window of process '$Name' to open..."
-                }
-                Start-Sleep -Seconds $CheckInterval
             }
-            while (($WaitForWindow -and !$Process.MainWindowHandle) -and ($Stopwatch.Elapsed.TotalSeconds -lt $Timeout))
-            $Stopwatch.Stop()
-            if ($Process.MainWindowHandle) {
-                Write-Output "Process '$Name' main window is now open."
-                if ($LogFile) {
-                    $script:LogStream.WriteLine("[{0}] Process '{1}' main window is now open." -f (Get-Date), $Name)
-                }
-                Write-Output -InputObject $Process
+            if ($WindowOpened) {
+                break
             }
-            else {
-                $Message = "Process '$Name' did not open its main window within the specified timeout of $Timeout seconds"
+            if (-not $WindowOpened -and $Process -and !$Process.HasExited) {
+                $ElapsedTime = [math]::Round($Stopwatch.Elapsed.TotalSeconds, 2)
+                $Message = "Process '$Name' did not open its main window within the specified timeout of $Timeout seconds. Waited for $ElapsedTime seconds."
                 if ($KillOnTimeout) {
-                    $Process.Kill()
-                    $Message += " Process terminated."
+                    try {
+                        $Process.Kill()
+                        $Message += " Process terminated."
+                    }
+                    catch {
+                        $Message += " Failed to terminate process: $_"
+                    }
                 }
-                Write-Output -InputObject $Message
-                if ($LogFile) {
-                    $script:LogStream.WriteLine("[{0}] {1}" -f (Get-Date), $Message)
-                }
+                Write-Output $Message
+                & $script:Log $Message
             }
         }
     }
