@@ -1,21 +1,11 @@
-Function Update-TrustedHosts {
+function Update-TrustedHosts {
     <#
     .SYNOPSIS
-    Updates the Trusted Hosts list on the local or remote machine.
+    Updates the WSMan Trusted Hosts list on a local or remote computer.
 
     .DESCRIPTION
-    This function allows adding, removing, or listing Trusted Hosts on the local machine or a remote machine.  Trusted Hosts are required for remote PowerShell sessions to work without requiring explicit authentication.
-
-    .PARAMETER Hostname
-    One or more hostnames or IP addresses to add or remove from the Trusted Hosts list.
-    .PARAMETER Action
-    Action to perform, accepted values are "Add", "Remove", or "List".
-    .PARAMETER ComputerName
-    Name of the remote computer on which to perform the operation, if not specified, the operation is performed on the local computer.
-    .PARAMETER User
-    Specifies the user account to use for the remote session.
-    .PARAMETER Pass
-    Specifies the password for the user account.
+    This cmdlet allows you to add, remove, list, or clear entries in the WSMan Trusted Hosts list.
+    This can be done on the local computer or on a specified remote computer. The cmdlet supports providing credentials for remote sessions and includes safety checks to ensure required parameters are provided for each action.
 
     .EXAMPLE
     Update-TrustedHosts -Action List
@@ -26,25 +16,28 @@ Function Update-TrustedHosts {
     Update-TrustedHosts -Action Remove -Hostname "host1", "host2" -ComputerName "remote_host" -User "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.1
+    v0.3.8
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Hostnames to be added to or removed from the trusted hosts list")]
         [string[]]$Hostname,
 
-        [Parameter(Mandatory = $true, Position = 1)]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the action to perform: 'Add', 'Remove', or 'List'")]
         [ValidateSet("Add", "Remove", "List")]
         [string]$Action,
 
-        [Parameter(Mandatory = $false, Position = 2)]
+        [Parameter(Mandatory = $false, HelpMessage = "Remote computer name, if omitted, the action is performed on the local computer")]
         [string]$ComputerName,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false, HelpMessage = "Username for remote session credentials")]
         [string]$User,
 
-        [Parameter(Mandatory = $false, Position = 4)]
-        [string]$Pass
+        [Parameter(Mandatory = $false, HelpMessage = "Password for remote session credentials")]
+        [string]$Pass,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Clear all trusted hosts entries")]
+        [switch]$ClearAll
     )
     BEGIN {
         if ($Action -eq "List" -and -not $ComputerName) {
@@ -149,6 +142,17 @@ Function Update-TrustedHosts {
                         }
                     }
                 }
+            }
+            if ($ClearAll) {
+                if ($Session) {
+                    Invoke-Command -Session $Session -ScriptBlock {
+                        Clear-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction Stop
+                    } -ErrorAction Stop
+                }
+                else {
+                    Clear-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction Stop
+                }
+                Write-Host "Cleared all entries from Trusted Hosts" -ForegroundColor Green
             }
         }
         catch {
