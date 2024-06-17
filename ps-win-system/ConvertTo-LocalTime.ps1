@@ -1,32 +1,27 @@
-Function ConvertTo-LocalTime {
+function ConvertTo-LocalTime {
     <#
     .SYNOPSIS
-    Converts a specified date and time from another time zone to the local time.
-    
+    Converts a given date and time from a specified time zone to the local time zone.
+
     .DESCRIPTION
-    This function converts a provided date and time from a specified time zone to the corresponding local time.
-    
-    .PARAMETER Time
-    Specifies the date and time from the other time zone.
-    .PARAMETER TimeZone
-    Selects the corresponding time zone for the conversion.
-    
+    This function takes a date and time string along with a time zone identifier and converts the given time to the local system time zone. It ensures the provided time format is valid and verifies the time zone before performing the conversion.
+
     .EXAMPLE
     ConvertTo-LocalTime -Time "12/30/20 10:00AM" -TimeZone UTC -Verbose
-    
+
     .NOTES
-    v0.0.1
+    v0.2.2
     #>
     [CmdletBinding()]
     [Alias("Convert-TimeZone")]
     [OutputType([System.DateTime])]
     param (
-        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Date and time from the other time zone")]
+        [Parameter(Mandatory = $true, HelpMessage = "Date and time in 'MM/dd/yy hh:mmtt' format from the other time zone")]
         [ValidateNotNullorEmpty()]
         [Alias("t")]
         [string]$Time,
 
-        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Select the corresponding time zone")]
+        [Parameter(Mandatory = $true, HelpMessage = "Time zone from which to convert the date and time")]
         [Alias("z")]
         [ValidateSet(
             "UTC", 
@@ -133,6 +128,19 @@ Function ConvertTo-LocalTime {
     )
     BEGIN {
         Write-Verbose -Message "Starting the conversion process..."
+        try {
+            $null = [DateTime]::ParseExact($Time, "MM/dd/yy hh:mmtt", [System.Globalization.CultureInfo]::InvariantCulture)
+            Write-Verbose -Message "Time format is valid."
+        }
+        catch {
+            Write-Error -Message "The time format is invalid. Please provide time in 'MM/dd/yy hh:mmtt' format"
+            throw $_
+        }
+        if (-not (Get-TimeZone -Id $TimeZone -ErrorAction SilentlyContinue)) {
+            Write-Error -Message "The specified time zone is not recognized: $TimeZone"
+            throw "Invalid TimeZone: $TimeZone"
+        }
+        Write-Host "Initialized with Time: $Time and TimeZone: $TimeZone"
     }
     PROCESS {
         try {
@@ -148,6 +156,6 @@ Function ConvertTo-LocalTime {
         }
     }
     END {
-        Write-Verbose -Message "Conversion process completed"
+        Write-Host "Conversion from $Time in $TimeZone has been completed successfully"
     }
 }
