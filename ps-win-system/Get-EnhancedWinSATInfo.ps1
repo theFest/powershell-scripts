@@ -1,70 +1,73 @@
-Function Get-EnhancedWinSATInfo {
+function Get-EnhancedWinSATInfo {
     <#
     .SYNOPSIS
-    Retrieve and analyze Windows System Assessment Tool (WinSAT) scores with enhanced features.
+    Retrieves and displays the Windows System Assessment Tool (WinSAT) scores for a specified computer.
 
     .DESCRIPTION
-    This function retrieves and analyzes WinSAT scores for various components of a computer's performance.
-    It provides the option to export the data to a CSV file, and it can display detailed information if needed.
-
-    .PARAMETER ComputerName
-    Specifies the name of the remote computer to analyze. Default is localhost.
-    .PARAMETER Username
-    Specifies the username for authentication on the remote computer.
-    .PARAMETER Password
-    Specifies the password for authentication on the remote computer.
-    .PARAMETER ExportPath
-    Path to export WinSAT scores as a CSV file. Default is "$env:USERPROFILE\Desktop\WinSAT_Scores.csv".
-    .PARAMETER Detailed
-    Display detailed WinSAT information.
+    This function connects to a specified computer, retrieves the WinSAT scores, and displays them. It can be used on the local machine or a remote machine with provided credentials. Optionally, the results can be exported to a CSV file.
 
     .EXAMPLE
-    Get-EnhancedWinSATInfo -ComputerName "remote_computer" -Username "remote_user" -Password "remote_pass" -ExportPath "C:\Temp\WinSAT_Scores.csv" -Detailed
+    Get-EnhancedWinSATInfo -IncludeTimestamp -Detailed -Verbose
+    "remote_host" | Get-EnhancedWinSATInfo -User "remote_user" -Pass "remote_pass" -IncludeTimestamp
 
     .NOTES
-    v0.0.2
+    v0.3.2
     #>
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+    param (
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, HelpMessage = "Name of the computer to retrieve the WinSAT scores from, defaults to the local computer")]
         [string]$ComputerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $true)]
-        [string]$Username,
+        [Parameter(Mandatory = $false, HelpMessage = "Username to use for remote authentication, required for remote execution")]
+        [string]$User,
 
-        [Parameter(Mandatory = $true)]
-        [string]$Password,
+        [Parameter(Mandatory = $false, HelpMessage = "Password to use for remote authentication, required for remote execution")]
+        [string]$Pass,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "File path to export the WinSAT scores to, defaults to the desktop of the current user")]
         [string]$ExportPath = "$env:USERPROFILE\Desktop\WinSAT_Scores.csv",
 
-        [Parameter(Mandatory = $false)]
-        [switch]$Detailed
+        [Parameter(Mandatory = $false, HelpMessage = "Include detailed WinSAT information in the output")]
+        [switch]$Detailed,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Include a timestamp in the output and export data")]
+        [switch]$IncludeTimestamp
     )
     try {
-        $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
-        $Cred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-        $Options = New-CimSessionOption -Protocol Dcom
-        $Session = New-CimSession -ComputerName $ComputerName -Credential $Cred -SessionOption $Options -ErrorAction Stop
-        $WinSAT = Get-CimInstance -ClassName Win32_WinSAT -CimSession $Session
-        $WinSATData = @{
-            ComputerName    = $ComputerName
-            CPUScore        = $WinSAT.CPUScore
-            D3DScore        = $WinSAT.D3DScore
-            DiskScore       = $WinSAT.DiskScore
-            GraphicsScore   = $WinSAT.GraphicsScore
-            MemoryScore     = $WinSAT.MemoryScore
-            TotalScore      = $WinSAT.WinSPRLevel
+        if ($ComputerName -eq $env:COMPUTERNAME -and -not $User) {
+            $WinSAT = Get-CimInstance -ClassName Win32_WinSAT
         }
-        Write-Host "WinSAT Scores for $ComputerName :"
+        else {
+            if (-not $User -or -not $Pass) {
+                throw "User and Pass parameters are required for remote execution!"
+            }
+            $SecurePassword = ConvertTo-SecureString $Pass -AsPlainText -Force
+            $Cred = New-Object System.Management.Automation.PSCredential ($User, $SecurePassword)
+            $Options = New-CimSessionOption -Protocol Dcom
+            $Session = New-CimSession -ComputerName $ComputerName -Credential $Cred -SessionOption $Options -ErrorAction Stop
+            $WinSAT = Get-CimInstance -ClassName Win32_WinSAT -CimSession $Session
+        }
+        $WinSATData = [PSCustomObject]@{
+            ComputerName  = $ComputerName
+            CPUScore      = $WinSAT.CPUScore
+            D3DScore      = $WinSAT.D3DScore
+            DiskScore     = $WinSAT.DiskScore
+            GraphicsScore = $WinSAT.GraphicsScore
+            MemoryScore   = $WinSAT.MemoryScore
+            TotalScore    = $WinSAT.WinSPRLevel
+        }
+        if ($IncludeTimestamp) {
+            $WinSATData | Add-Member -MemberType NoteProperty -Name Timestamp -Value (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        }
+        Write-Host "WinSAT Scores for $ComputerName :" -ForegroundColor Cyan
         $WinSATData | Format-Table -AutoSize
         if ($Detailed) {
             Write-Host "Detailed WinSAT Information:" -ForegroundColor Yellow
             Write-Output -InputObject $WinSAT
         }
         if ($ExportPath) {
-            $WinSATData | Export-Csv -Path $ExportPath -NoTypeInformation -Verbose
-            Write-Host "WinSAT scores exported to $ExportPath"
+            $WinSATData | Export-Csv -Path $ExportPath -NoTypeInformation -Force -Verbose
+            Write-Host "WinSAT scores exported to $ExportPath" -ForegroundColor Green
         }
     }
     catch {
