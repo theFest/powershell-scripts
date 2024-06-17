@@ -1,30 +1,44 @@
-Function Get-NtpTimeOffset {
+function Get-NtpTimeOffset {
     <#
     .SYNOPSIS
-    Queries an NTP server for time synchronization and returns the offset.
+    Queries an NTP server for time synchronization information and exports results to CSV.
 
     .DESCRIPTION
-    This function queries an NTP server to obtain time synchronization information, calculates the time offset between the local system time and the NTP server time.
-
-    .PARAMETER NtpServer
-    NTP server to query for time synchronization, available options are 'time.nist.gov', 'time.windows.com', '0.us.pool.ntp.org', '1.us.pool.ntp.org', '2.us.pool.ntp.org', and '3.us.pool.ntp.org'.
-    .PARAMETER Samples
-    Number of time samples to collect for time synchronization, default value is 3. Valid range: 1-720.
-    .PARAMETER Period
-    Time interval (in seconds) between samples, default value is 2 seconds. Valid range: 1-3600.
-    .PARAMETER ExportResults
-    Specifies the path to export the results to a CSV file.
+    This function queries a specified NTP server to retrieve time synchronization information. It optionally exports the results to a CSV file. It uses w32tm utility for querying and expects valid connectivity to the NTP server.
 
     .EXAMPLE
     Get-NtpTimeOffset -NtpServer '0.us.pool.ntp.org' -ExportResults "$env:USERPROFILE\Desktop\NtpResults.csv"
 
     .NOTES
-    v0.3.8
+    v0.5.4
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "NTP server to query for time synchronization")]
-        [ValidateSet("time.nist.gov", "time.windows.com", "0.us.pool.ntp.org", "1.us.pool.ntp.org", "2.us.pool.ntp.org", "3.us.pool.ntp.org")]
+        [ValidateSet(
+            "time.nist.gov",
+            "time.windows.com",
+            "0.us.pool.ntp.org",
+            "1.us.pool.ntp.org",
+            "2.us.pool.ntp.org",
+            "3.us.pool.ntp.org",
+            "time.google.com",
+            "pool.ntp.org",
+            "ntp.ubuntu.com",
+            "ntp1.inrim.it",
+            "time.apple.com",
+            "time.cloudflare.com",
+            "time.facebook.com",
+            "time.amazon.com",
+            "time.akamai.com",
+            "time.intel.com",
+            "time.microsoft.com",
+            "time.oracle.com",
+            "time.samsung.com",
+            "time.twitter.com",
+            "time.yahoo.com",
+            "time.netflix.com"
+        )]
         [Alias("n")]
         [string]$NtpServer,
 
@@ -45,6 +59,20 @@ Function Get-NtpTimeOffset {
     BEGIN {
         $StartTime = Get-Date
         Write-Host "Querying NTP server: $NtpServer" -ForegroundColor Yellow
+        $QueryStatus = $null
+        $QueryOffset = $null
+        try {
+            Write-Verbose -Message "Validating connectivity to NTP server..."
+            $PingResult = Test-Connection -ComputerName $NtpServer -Count 1 -ErrorAction Stop
+            if (-not $PingResult) {
+                throw "Failed to connect to $NtpServer. Ping test returned no response."
+            }
+        }
+        catch {
+            $errorMessage = "Failed to connect to $NtpServer. $_"
+            Write-Error $errorMessage
+            return
+        }
     }
     PROCESS {
         $W32Query = w32tm /StripChart /Computer:$NtpServer /DataOnly /Samples:$Samples /Period:$Period /ipprotocol:4
