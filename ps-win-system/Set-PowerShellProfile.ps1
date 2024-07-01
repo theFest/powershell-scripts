@@ -1,149 +1,119 @@
-Function Set-PowerShellProfile {
+function Set-PowerShellProfile {
     <#
     .SYNOPSIS
-    Manages PowerShell profiles including showing, creating, editing, and deleting.
+    Manages PowerShell profile files for the current or all users and hosts.
 
     .DESCRIPTION
-    This function allows you to manage PowerShell profiles. You can show the content of a profile, create a new one, edit an existing one using various editors, and delete a profile.
-
-    .PARAMETER Action
-    Action to perform on the PowerShell profile, options are 'Show', 'Create', 'Edit', or 'Delete'. Default is 'Show'.
-    .PARAMETER Editor
-    Text editor to use when editing the profile, options are 'Notepad', 'Notepad++', 'Visual Studio Code', 'Sublime Text', or 'Atom'. Default is 'Notepad'.
-    .PARAMETER ProfileScope
-    Scope of the PowerShell profile, options are 'CurrentUserCurrentHost', 'CurrentUserAllHosts', or 'AllUsersAllHosts'. Default is 'CurrentUserCurrentHost'.
-    .PARAMETER Force
-    Forces the creation of a new profile even if it already exists, applicable only when Action is 'Create'.
+    This function allows you to manage PowerShell profile files by performing actions such as showing, creating, editing, or deleting the profile files. You can specify the scope of the profile file and the text editor to use when editing the profile.
 
     .EXAMPLE
     Set-PowerShellProfile -Action Show
 
     .NOTES
-    v0.0.7
+    v0.4.0
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the action to perform on the PowerShell profile")]
         [ValidateSet("Show", "Create", "Edit", "Delete")]
+        [Alias("a")]
         [string]$Action = "Show",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the editor to use when editing the PowerShell profile")]
         [ValidateSet("Notepad", "Notepad++", "Visual Studio Code", "Sublime Text", "Atom")]
+        [Alias("e")]
         [string]$Editor = "Notepad",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the scope of the PowerShell profile")]
         [ValidateSet("CurrentUserCurrentHost", "CurrentUserAllHosts", "AllUsersAllHosts")]
+        [Alias("p")]
         [string]$ProfileScope = "CurrentUserCurrentHost",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Force the action, such as overwriting an existing profile file")]
+        [Alias("f")]
         [switch]$Force = $false
     )
-    switch ($Action) {
-        "Show" {
-            $ProfilePath = $PROFILE.$ProfileScope
-            if (Test-Path -Path $ProfilePath -PathType Leaf) {
-                $Content = Get-Content $ProfilePath
-                Write-Host "PowerShell profile file: `n$ProfilePath"
-                Write-Output -InputObject $Content
-            }
-            else {
-                Write-Warning -Message "PowerShell profile file $ProfilePath does not exist"
+    $ProfilePath = $PROFILE.$ProfileScope
+    switch ($Editor) {
+        "Notepad++" {
+            $EditorPath = "$env:ProgramFiles\Notepad++\notepad++.exe"
+            if (-not (Test-Path $EditorPath -PathType Leaf)) {
+                Write-Warning -Message "Notepad++ is not installed, using Notepad instead"
+                $EditorPath = "$env:windir\System32\notepad.exe"
             }
             break
         }
-        "Create" {
-            $ProfilePath = $PROFILE.$ProfileScope
-            if (!(Test-Path -Path $ProfilePath -PathType Leaf) -or $Force) {
-                New-Item -Path $ProfilePath -ItemType File -Force:$Force -Verbose | Out-Null
-            }
-            else {
-                Write-Warning -Message "PowerShell profile file already exists. Use -Force to overwrite."
+        "Visual Studio Code" {
+            $EditorPath = "$env:ProgramFiles\Microsoft VS Code\code.exe"
+            if (-not (Test-Path $EditorPath -PathType Leaf)) {
+                $EditorPath = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\code.exe"
+                if (-not (Test-Path $EditorPath -PathType Leaf)) {
+                    Write-Warning -Message "VS Code is not installed, using Notepad instead"
+                    $EditorPath = "$env:windir\System32\notepad.exe"
+                }
             }
             break
         }
-        "Edit" {
-            switch ($Editor) {
-                "Notepad++" {
-                    if (!(Test-Path "$env:ProgramFiles\Notepad++\notepad++.exe" -PathType Leaf)) {
-                        Write-Warning -Message "Notepad++ is not installed, using Notepad instead"
-                        $Editor = "Notepad"
-                    }
-                    else {
-                        $EditorPath = "$env:ProgramFiles\Notepad++\notepad++.exe"
-                    }
-                    break
-                }
-                "Visual Studio Code" {
-                    if (!(Test-Path "$env:ProgramFiles\Microsoft VS Code\code.exe" -PathType Leaf)) {
-                        Write-Warning -Message "VS Code is not installed system wide, checking user..."
-                    }
-                    elseif (!(Test-Path "$env:LOCALAPPDATA\Programs\Microsoft VS Code\code.exe" -PathType Leaf)) {
-                        Write-Warning -Message "VS Code(User) is not installed, using Notepad instead"
-                    }
-                    else {
-                        $Editor = "Notepad"
-                    }
-                    break
-                }
-                "Sublime Text" {
-                    if (!(Test-Path "$env:ProgramFiles\Sublime Text 3\sublime_text.exe" -PathType "Leaf")) {
-                        Write-Warning -Message "Sublime Text is not installed, using Notepad instead"
-                    }
-                    else {
-                        $Editor = "Notepad"
-                    }
-                    break
-                }
-                "Atom" {
-                    if (!(Test-Path "$env:LOCALAPPDATA\atom\atom.exe" -PathType Leaf)) {
-                        Write-Warning -Message "Atom is not installed, using Notepad instead"
-                        $Editor = "Notepad"
-                    }
-                    else {
-                        $EditorPath = "$env:LOCALAPPDATA\atom\atom.exe"
-                    }
-                    break
-                }
-                default {
-                    $EditorPath = "$env:windir\System32\notepad.exe" ; break
-                }
+        "Sublime Text" {
+            $EditorPath = "$env:ProgramFiles\Sublime Text 3\sublime_text.exe"
+            if (-not (Test-Path $EditorPath -PathType Leaf)) {
+                Write-Warning -Message "Sublime Text is not installed, using Notepad instead"
+                $EditorPath = "$env:windir\System32\notepad.exe"
             }
-            $ProfilePath = $PROFILE.$ProfileScope
-            if (!(Test-Path -Path $ProfilePath -PathType Leaf)) {
-                New-Item $ProfilePath -ItemType File -Force -Verbose
-            }
-            $Params = @{
-                FilePath     = $EditorPath
-                ArgumentList = @(
-                    $ProfilePath
-                    "-NoProfile"
-                    "-NoExit"
-                    "-Command"
-                    "& { $host.UI.RawUI.WindowTitle = 'PowerShell ISE'; Set-Location $pwd; Set-PSReadlineOption -EditMode Emacs }"
-                )
-            }
-            if ($ProfileScope -eq "CurrentUserAllHosts") {
-                $Params["ArgumentList"] += "-Scope", "CurrentUserAllHosts"
-            }
-            elseif ($ProfileScope -eq 'AllUsersAllHosts') {
-                $Params["ArgumentList"] += "-Scope", "AllUsersAllHosts"
-            }
-            Write-Verbose -Message "Editing profile..."
-            Start-Process @Params -Wait ; break
+            break
         }
-        "Delete" {
-            $ProfilePath = $PROFILE.$ProfileScope
-            if (Test-Path -Path $ProfilePath -PathType Leaf) {
-                Write-Verbose -Message "Deleting..."
-                Remove-Item -Path $ProfilePath -Force -Verbose
-            }
-            else {
-                Write-Warning -Message "PowerShell profile file $ProfilePath does not exist"
+        "Atom" {
+            $EditorPath = "$env:LOCALAPPDATA\atom\atom.exe"
+            if (-not (Test-Path $EditorPath -PathType Leaf)) {
+                Write-Warning -Message "Atom is not installed, using Notepad instead"
+                $EditorPath = "$env:windir\System32\notepad.exe"
             }
             break
         }
         default {
-            Write-Warning -Message "Invalid action specified. Valid options are 'Create', 'Edit', 'Delete', and 'Show'"
+            $EditorPath = "$env:windir\System32\notepad.exe"
+            break
+        }
+    }
+    switch ($Action) {
+        "Show" {
+            if (Test-Path -Path $ProfilePath -PathType Leaf) {
+                $Content = Get-Content $ProfilePath
+                Write-Host "PowerShell profile file: `n$ProfilePath" -ForegroundColor DarkCyan
+                Write-Output -InputObject $Content
+            }
+            else {
+                Write-Warning -Message "PowerShell profile file $ProfilePath does not exist!"
+            }
+            break
+        }
+        "Create" {
+            if (-not (Test-Path -Path $ProfilePath -PathType Leaf) -or $Force) {
+                New-Item -Path $ProfilePath -ItemType File -Force:$Force -Verbose | Out-Null
+            }
+            else {
+                Write-Warning -Message "PowerShell profile file already exists. Use -Force to overwrite"
+            }
+            break
+        }
+        "Edit" {
+            if (-not (Test-Path -Path $ProfilePath -PathType Leaf)) {
+                New-Item -Path $ProfilePath -ItemType File -Force -Verbose | Out-Null
+            }
+            Start-Process -FilePath $EditorPath -ArgumentList $ProfilePath
+            break
+        }
+        "Delete" {
+            if (Test-Path -Path $ProfilePath -PathType Leaf) {
+                Remove-Item -Path $ProfilePath -Force -Verbose
+            }
+            else {
+                Write-Warning -Message "PowerShell profile file $ProfilePath does not exist!"
+            }
+            break
+        }
+        default {
+            Write-Warning -Message "Invalid action specified!"
             break
         }
     }
