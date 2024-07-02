@@ -1,57 +1,49 @@
-Function Get-MemoryPerProcess {
+function Get-MemoryPerProcess {
     <#
     .SYNOPSIS
-    Retrieves memory information for specified processes.
-
+    Retrieves memory usage statistics for specified processes on local or remote computers.
+    
     .DESCRIPTION
-    This function gets memory information (sum and average) for the specified processes running on the local or remote computer.
-
-    .PARAMETER Name
-    Specifies the name(s) of the process(es) to query.
-    .PARAMETER ComputerName
-    The target computer(s) to query, default is the local computer.
-    .PARAMETER Unit
-    Memory unit for the output, valid values: "KB", "MB", "GB", default is "MB".
-    .PARAMETER Username
-    Username for authentication to access remote computers.
-    .PARAMETER Pass
-    Password for authentication to access remote computers.
-    .PARAMETER OutputPerProcess
-    Provides memory information for each instance of a process.
+    This function retrieves memory usage statistics (WorkingSet) for processes specified by Name parameter. It supports querying both local and remote computers, optionally using credentials for remote authentication.
 
     .EXAMPLE
     "brave" | Get-MemoryPerProcess -OutputPerProcess -Verbose
     Get-MemoryPerProcess -Name "brave" -ComputerName "remote_host" -Username "remote_user" -Pass "remote_pass"
 
     .NOTES
-    v0.0.1
+    v0.3.9
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Name of the process(es) to query")]
+        [Alias("n")]
         [string[]]$Name,
         
-        [Parameter(Mandatory = $false, Position = 1)]
+        [Parameter(Mandatory = $false, HelpMessage = "Name(s) of the remote computer(s) to query")]
+        [Alias("c")]
         [string[]]$ComputerName = $env:COMPUTERNAME,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Unit of memory to display: KB, MB, or GB")]
         [ValidateSet("KB", "MB", "GB")]
+        [Alias("t")]
         [string]$Unit = "MB",
         
-        [Parameter(Mandatory = $false)]
-        [string]$Username,
+        [Parameter(Mandatory = $false, HelpMessage = "Username to authenticate for querying remote computers")]
+        [Alias("u")]
+        [string]$User,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Password to authenticate for querying remote computers")]
+        [Alias("p")]
         [string]$Pass,
-
-        [Parameter(Mandatory = $false)]
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Output memory usage per process")]
+        [Alias("op")]
         [switch]$OutputPerProcess
     )
     BEGIN {
-        Write-Verbose -Message "Starting $($MyInvocation.MyCommand)"
-        if ($Username -or $Pass) {
+        if ($User -or $Pass) {
             $SecurePass = ConvertTo-SecureString -String $Pass -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $Username, $SecurePass
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $User, $SecurePass
         }
     }
     PROCESS {
@@ -114,7 +106,8 @@ Function Get-MemoryPerProcess {
         }
     }
     END {
-        Clear-Variable -Name Pass -Force -Verbose
-        Write-Verbose -Message "Ending $($MyInvocation.MyCommand)"
+        if ($Pass) {
+            Clear-Variable -Name Pass -Force -Verbose
+        }
     }
 }
