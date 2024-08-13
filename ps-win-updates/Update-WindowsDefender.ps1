@@ -1,68 +1,86 @@
-Function Update-WindowsDefender {
+function Update-WindowsDefender {
     <#
     .SYNOPSIS
-    Updates Windows Defender on a local or remote computer.
+    Updates Windows Defender definitions on a local or remote computer using Windows Update.
 
     .DESCRIPTION
-    This function checks for and installs Windows Defender updates on a specified computer, if remote credentials are provided, it will attempt to execute the update remotely.
-
-    .PARAMETER ComputerName
-    Target computer for updating Windows Defender, defaults to the local machine.
-    .PARAMETER User
-    Username for remote authentication, if not provided, the function runs locally without remote credentials.
-    .PARAMETER Pass
-    Password for remote authentication, if not provided, the function runs locally without remote credentials.
+    This function checks for and installs Windows Defender definition updates through Windows Update on the specified computer.
+    If remote credentials are provided, it will attempt to execute the update on a remote machine. The function will prompt for confirmation before initiating a restart if required.
 
     .EXAMPLE
-    Update-WindowsDefender
-    Update-WindowsDefender -ComputerName "fwvmhv" -User "fwv" -Pass "1234"
+    Update-WindowsDefender -Verbose
+    Update-WindowsDefender -ComputerName "remote_host" -User "remote_user" -Pass "remote_pass" -ConfirmRestart
 
     .NOTES
-    v0.0.1
+    v1.1.0
     #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $false)]
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param (
+        [Parameter(Mandatory = $false, HelpMessage = "Target computer name for updating Windows Defender definitions, defaults to the local computer if not specified")]
+        [Alias("c")]
         [string]$ComputerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Provide the username for remote authentication, required if updating a remote computer")]
+        [Alias("u")]
         [string]$User,
 
-        [Parameter(Mandatory = $false)]
-        [string]$Pass
+        [Parameter(Mandatory = $false, HelpMessage = "Provide the password for remote authentication, required if updating a remote computer")]
+        [Alias("p")]
+        [string]$Pass,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Prompt for confirmation before restarting the computer if required")]
+        [Alias("r")]
+        [switch]$ConfirmRestart
     )
     try {
-        if (-not $User -or -not $Pass) {
-            Write-Host "Running locally without remote credentials" -ForegroundColor DarkCyan
-            $DefenderUpdates = $null
+        $IsRemote = $User -and $Pass
+        if ($IsRemote) {
+            Write-Verbose -Message "Establishing remote session to $ComputerName..."
+            $SessionOption = New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck
+            $Credential = New-Object PSCredential -ArgumentList $User, (ConvertTo-SecureString $Pass -AsPlainText -Force)
+            $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential -SessionOption $SessionOption
+            Write-Verbose -Message "Updating Windows Defender definitions on remote computer $ComputerName..."
+            Invoke-Command -Session $Session -ScriptBlock {
+                Import-Module PSWindowsUpdate -Verbose      
+                Get-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot | Out-Null
+                Write-Host "Update process initiated on $env:COMPUTERNAME" -ForegroundColor DarkCyan
+            }
+            Write-Host "Windows Defender updates initiated successfully on $ComputerName" -ForegroundColor Green
+            Write-Verbose -Message "Removing remote session..."
+            Remove-PSSession -Session $Session
         }
         else {
-            $SessionOption = New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck
-            $Credential = New-Object PSCredential $User, (ConvertTo-SecureString $Pass -AsPlainText -Force)
-            $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential -SessionOption $SessionOption
-            $DefenderUpdates = Invoke-Command -Session $Session -ScriptBlock {
-                $UpdateSession = New-Object -ComObject Microsoft.Update.Session
-                $UpdateSearcher = $UpdateSession.CreateUpdateSearcher()
-                $SearchResult = $UpdateSearcher.Search("IsInstalled=0 And Type='Software'")
-                $SearchResult.Updates
+            Write-Verbose -Message "Running locally on $ComputerName..."
+            if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
+                Write-Verbose -Message "PSWindowsUpdate module not found. Installing..."
+                Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser
             }
+            Import-Module PSWindowsUpdate -Verbose
+            Get-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot | Out-Null
+            Write-Host "Windows Defender updates initiated successfully on $ComputerName" -ForegroundColor Green
         }
-        if ($DefenderUpdates -and $DefenderUpdates.Count -gt 0) {
-            if ($Session) {
-                Invoke-Command -Session $Session -ArgumentList $DefenderUpdates -ScriptBlock {
-                    param($Updates)
-                    $UpdateInstaller = (New-Object -ComObject Microsoft.Update.UpdateInstaller)
-                    $UpdateInstaller.Updates = $Updates
-                    $UpdateInstaller.Install()
+        $RestartNeeded = (Get-WindowsUpdateLog | Select-String -Pattern "requires restart")
+        if ($RestartNeeded) {
+            Write-Verbose -Message "A restart is required after updating Windows Defender."
+            if ($ConfirmRestart) {
+                $Confirmation = Read-Host "A restart is required. Do you want to restart now? (Y/N)"
+                if ($Confirmation -match "^[yY]") {
+                    Write-Verbose -Message "Restarting computer $ComputerName..."
+                    Restart-Computer -ComputerName $ComputerName -Force
+                }
+                else {
+                    Write-Warning -Message "Restart canceled. Please restart the computer manually to complete the update."
                 }
             }
-            Write-Host "Windows Defender updates installed successfully on $ComputerName" -ForegroundColor Green
+            else {
+                Write-Host "A restart is required. Please restart the computer manually to complete the update." -ForegroundColor Yellow
+            }
         }
         else {
-            return "No Windows Defender updates found on $ComputerName."
+            Write-Verbose -Message "No restart is required."
         }
     }
     catch {
-        return "Error updating Windows Defender on ${ComputerName}: $_"
+        Write-Error -Message "Error updating Windows Defender on ${ComputerName}: $_"
     }
 }
