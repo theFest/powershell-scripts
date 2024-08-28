@@ -1,33 +1,31 @@
-Function Export-SiteAndSubnetInfo {
+function Export-SiteAndSubnetInfo {
     <#
     .SYNOPSIS
-    Retrieves information about Active Directory sites and their associated subnets.
+    Export Active Directory site and subnet information to a CSV file.
 
     .DESCRIPTION
-    This function retrieves information about Active Directory sites and their associated subnets. It queries the current forest for site and subnet details and provides an option to export the information to a CSV file.
-
-    .PARAMETER ForestPath
-    The LDAP path to the forest. By default, it uses the LDAP path of the RootDSE.
-    .PARAMETER ExportPath
-    Export the output to a CSV file. If this switch is provided, the function exports the output to the specified file path.
+    This function retrieves information about Active Directory sites and their associated subnets. It exports this information to a CSV file if the `ExportPath` parameter is provided.
+    Function can optionally include additional descriptions of subnets if the `IncludeDescriptions` switch is used. This script is useful for auditing or reporting on the AD site and subnet configuration.
 
     .EXAMPLE
-    Export-SiteAndSubnetInfo -ExportToCsv "C:\ADSiteInventory.csv"
+    Export-SiteAndSubnetInfo -ExportPath "$env:USERPROFILE\Desktop\ADSiteInventory.csv" -IncludeDescriptions
 
     .NOTES
-    v0.0.1
+    v0.1.1
     #>
-    [CmdletBinding()] #ConfirmImpact = "None"
+    [CmdletBinding(ConfirmImpact = "None")]
     [OutputType([PSObject])]
     param (
-        [Parameter(Mandatory = $false, Position = 1)]
+        [Parameter(Mandatory = $false, Position = 1, HelpMessage = "Specifies the LDAP path to the Active Directory forest, default is 'LDAP://RootDSE'")]
         [string]$ForestPath = "LDAP://RootDSE",
-
-        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true)]
-        [string]$ExportPath
+    
+        [Parameter(Mandatory = $false, Position = 0, ValueFromPipeline = $true, HelpMessage = "Path to which the CSV file should be exported. If not specified, data will not be exported to a file")]
+        [string]$ExportPath,
+    
+        [Parameter(Mandatory = $false, HelpMessage = "Include this switch to add descriptions of subnets to the output. If not used, only site and subnet names will be included")]
+        [switch]$IncludeDescriptions
     )
     BEGIN {
-        Write-Verbose -Message "Starting Script..."
         $OutputData = @()
     }
     PROCESS {
@@ -35,34 +33,48 @@ Function Export-SiteAndSubnetInfo {
             $Forest = [System.DirectoryServices.ActiveDirectory.Forest]::GetCurrentForest()
             $SiteInfo = $Forest.Sites
             $Configuration = ([ADSI]$ForestPath).configurationNamingContext
-            $SubnetsContainer = [ADSI]('LDAP://CN=Subnets,CN=Sites,{0}' -f $Configuration)
-            $SubnetsContainerchildren = $SubnetsContainer.Children
-            foreach ($Item in $SiteInfo) {
-                Write-Verbose -Message ('Site: {0}' -f $Item.Name)
-                foreach ($I in $Item.Subnets.Name) {
-                    Write-Verbose -Message ('Subnet: {0}' -f $I)
+            $SubnetsContainer = [ADSI]("LDAP://CN=Subnets,CN=Sites,$Configuration")
+            $SubnetsContainerChildren = $SubnetsContainer.Children
+            foreach ($Site in $SiteInfo) {
+                Write-Verbose -Message ("Processing Site: {0}" -f $Site.Name)
+                foreach ($SubnetName in $Site.Subnets.Name) {
+                    Write-Verbose -Message ("Processing Subnet: {0}" -f $SubnetName)
                     $Output = [PSCustomObject]@{
-                        SiteName = $Item.Name
-                        Subnet   = $I
+                        SiteName = $Site.Name
+                        Subnet   = $SubnetName
                     }
-                    $SubnetAdditionalInfo = $SubnetsContainerchildren | Where-Object { $_.Name -match $I }
-                    if ($SubnetAdditionalInfo) {
-                        Write-Verbose -Message ("Subnet: {0} - Description: {1}" -f $I, $SubnetAdditionalInfo.Description)
-                        $Output | Add-Member -MemberType NoteProperty -Name Description -Value $SubnetAdditionalInfo.Description
+                    if ($IncludeDescriptions) {
+                        $SubnetInfo = $SubnetsContainerChildren | Where-Object { $_.Name -eq $SubnetName }
+                        if ($SubnetInfo) {
+                            Write-Verbose -Message ("Adding Description for Subnet: {0}" -f $SubnetName)
+                            $Output | Add-Member -MemberType NoteProperty -Name Description -Value $SubnetInfo.Description -Force
+                        }
+                        else {
+                            Write-Warning -Message ("No additional information found for Subnet: {0}" -f $SubnetName)
+                        }
                     }
                     $OutputData += $Output
                 }
             }
         }
         catch {
-            Write-Warning -Message $Error[0]
+            Write-Warning -Message ("Error encountered: {0}" -f $_.Exception.Message)
         }
     }
     END {
-        Write-Verbose -Message "Script Completed"
         if ($ExportPath) {
-            $OutputData | Export-Csv -Path $ExportPath -NoTypeInformation
-            Write-Verbose -Message "Output exported to $ExportPath"
+            try {
+                if ($OutputData.Count -gt 0) {
+                    $OutputData | Export-Csv -Path $ExportPath -NoTypeInformation -Force
+                    Write-Verbose -Message ("Output successfully exported to {0}" -f $ExportPath)
+                }
+                else {
+                    Write-Warning -Message ("No data to export. The output file will not be created.")
+                }
+            }
+            catch {
+                Write-Warning -Message ("Failed to export data to $ExportPath : {0}" -f $_.Exception.Message)
+            }
         }
         return $OutputData
     }
