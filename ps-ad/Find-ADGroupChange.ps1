@@ -1,39 +1,43 @@
-Function Find-ADGroupChange {
+function Find-ADGroupChange {
     <#
     .SYNOPSIS
-    Retrieves information about Active Directory groups and their changes.
+    Detects and reports changes to Active Directory groups over a specified period.
 
     .DESCRIPTION
-    This function retrieves information about Active Directory groups and their changes, such as the distinguished name and name of the group, and filters the changes based on the last originating change time.
-
-    .PARAMETER Server
-    Active Directory server to query for group information. If not specified, the function will automatically discover an appropriate domain controller.
-    .PARAMETER MonitorGroup
-    Array of group GUIDs to monitor for changes. If not specified, groups with AdminCount equal to 1 will be monitored.
-    .PARAMETER Hour
-    Specifies the time window, in hours, to filter the changes. Only changes within the specified time window will be included. Default is 24 hours.
+    This function checks for changes in specified Active Directory (AD) groups. It retrieves metadata about these changes, such as the time of the change, the user who made the change, and the attribute that was modified.
+    Allows filtering by specific users and can produce detailed output with additional information like version and originating server. Can be customized to monitor specific groups, a set of users, and can report changes within a specified number of hours. Additionally, it supports detailed output for more granular information.
 
     .EXAMPLE
-    Find-ADGroupChange -Verbose
+    Find-ADGroupChange -DetailedOutput -Verbose
+    Find-ADGroupChange -Server "DC01" -MonitorGroup "group1-guid", "group2-guid" -Hour 48
+    Find-ADGroupChange -Users "User1", "User2" -DetailedOutput -Verbose
 
     .NOTES
-    v0.0.1
+    v0.4.8
     #>
-    [CmdletBinding(ConfirmImpact = "None")]
+    [CmdletBinding(ConfirmImpact = "None", SupportsShouldProcess = $true)]
     param (
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Specify the domain controller to connect to. If not provided, the nearest available DC will be used")]
         [ValidateNotNullOrEmpty()]
         [Alias("s")]
         [string]$Server = (Get-ADDomainController -Discover | Select-Object -ExpandProperty HostName),
-
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Provide the GUIDs of AD groups to monitor. By default, groups with AdminCount = 1 are monitored")]
         [ValidateNotNullOrEmpty()]
         [Alias("m")]
         [string[]]$MonitorGroup = (Get-ADGroup -Filter 'AdminCount -eq 1' -Server $Server).ObjectGUID,
-
-        [Parameter(Mandatory = $false)]
+    
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the number of hours to look back for changes, default is 24 hours")]
         [Alias("h")]
-        [int]$Hour = 24
+        [int]$Hour = 24,
+    
+        [Parameter(Mandatory = $false, HelpMessage = "Provide a list of users to filter changes by. If not provided, changes by all users are included")]
+        [Alias("u")]
+        [string[]]$Users = @(),
+    
+        [Parameter(Mandatory = $false, HelpMessage = "Enable this switch to include detailed output such as attribute versions and originating server")]
+        [Alias("d")]
+        [switch]$DetailedOutput = $false
     )
     BEGIN {
         if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
@@ -45,25 +49,44 @@ Function Find-ADGroupChange {
     }
     PROCESS {
         foreach ($SingleGroup in $MonitorGroup) {
-            Write-Verbose -Message "Processing group $SingleGroup"
-            try {
-                $Members += Get-ADReplicationAttributeMetadata -Server $Server -Object $SingleGroup -ShowAllLinkedValues | 
-                Where-Object { $_.IsLinkValue } | 
-                Select-Object @{
-                    Name       = 'GroupDN'
-                    Expression = { (Get-ADGroup -Identity $SingleGroup).DistinguishedName }
-                }, @{
-                    Name       = 'GroupName'
-                    Expression = { (Get-ADGroup -Identity $SingleGroup).Name }
-                }, *
-            }
-            catch {
-                Write-Error -ErrorRecord $_ -ErrorAction Stop
+            if ($PSCmdlet.ShouldProcess("Group $SingleGroup", "Retrieve metadata")) {
+                Write-Verbose -Message "Processing group $SingleGroup"
+                try {
+                    $GroupMetadata = Get-ADReplicationAttributeMetadata -Server $Server -Object $SingleGroup -ShowAllLinkedValues |
+                    Where-Object { $_.IsLinkValue -and ($_.LastOriginatingChangeTime -gt (Get-Date).AddHours(-$Hour)) }
+                    if ($Users) {
+                        $GroupMetadata = $GroupMetadata | Where-Object { $Users -contains $_.OriginatingChangeDirectoryUser }
+                    }
+                    foreach ($Metadata in $GroupMetadata) {
+                        $GroupInfo = @{
+                            GroupDN        = (Get-ADGroup -Identity $SingleGroup).DistinguishedName
+                            GroupName      = (Get-ADGroup -Identity $SingleGroup).Name
+                            LastChangedBy  = $Metadata.OriginatingChangeDirectoryUser
+                            LastChangeTime = $Metadata.LastOriginatingChangeTime
+                            Attribute      = $Metadata.AttributeName
+                        }
+                        if ($DetailedOutput) {
+                            $GroupInfo += @{
+                                Version           = $Metadata.Version
+                                OriginatingServer = $Metadata.OriginatingServer
+                            }
+                        }
+                        $Members += [PSCustomObject]$GroupInfo
+                    }
+                }
+                catch {
+                    Write-Error -Message "Failed to process group $SingleGroup on server $Server. Error: $_" -ErrorAction Continue
+                }
             }
         }
     }
     END {
-        $Members | Where-Object { $_.LastOriginatingChangeTime -gt (Get-Date).AddHours(-$Hour) }
+        if ($Members.Count -eq 0) {
+            Write-Verbose -Message "No changes detected within the last $Hour hours!"
+        }
+        else {
+            $Members | Sort-Object LastChangeTime -Descending | Format-Table -AutoSize
+        }
         $null = $Members
     }
 }
