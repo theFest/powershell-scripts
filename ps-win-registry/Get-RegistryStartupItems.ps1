@@ -1,33 +1,26 @@
-Function Get-RegistryStartupItems {
+function Get-RegistryStartupItems {
     <#
     .SYNOPSIS
-    Retrieves information about Windows startup items in the Windows Registry.
+    Retrieves startup items from the Windows Registry.
 
     .DESCRIPTION
-    This function retrieves information about startup items from the Windows Registry. It allows you to specify the registry hive, path, scope (current user or all users), and filter the results based on a name substring.
-
-    .PARAMETER Hive
-    Specifies the registry hive (HKLM for Local Machine or HKCU for Current User), default is HKLM.
-    .PARAMETER Path
-    Specifies the registry path for startup items, default is "Software\Microsoft\Windows\CurrentVersion\Run".
-    .PARAMETER Scope
-    Specifies the scope of the startup items (CurrentUserOnly or AllUsers), default is AllUsers.
-    .PARAMETER Filter
-    Specifies a substring to filter the results based on the name of the startup items.
+    This function retrieves startup items from the Windows Registry under the `Run` and `RunOnce` keys. It allows querying both `HKLM` and `HKCU` hives and supports filtering by scope (CurrentUser or AllUsers). The function can also be filtered by item name.
 
     .EXAMPLE
-    Get-RegistryStartupItems
+    Get-RegistryStartupItems -Scope "AllUsers" -Verbose
+    Get-RegistryStartupItems -Hive "HKCU" -Scope "CurrentUserOnly"
+    Get-RegistryStartupItems -Hive "HKLM" -Path "Software\Microsoft\Windows\CurrentVersion\RunOnce" -Filter "MyApp"
 
     .NOTES
-    v0.0.1
+    v0.2.8
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the registry hive (HKLM or HKCU)")]
         [ValidateSet("HKLM", "HKCU")]
         [string]$Hive = "HKLM",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Specific registry path to search under. If not provided, the default paths for startup items in both `Run` and `RunOnce` will be used")]
         [ValidateSet(
             "Software\Microsoft\Windows\CurrentVersion\Run",
             "Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run",
@@ -36,48 +29,62 @@ Function Get-RegistryStartupItems {
         )]
         [string]$Path = $null,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Defines whether to search startup items for the current user only (`CurrentUserOnly`) or for all users (`AllUsers`)")]
         [ValidateSet("CurrentUserOnly", "AllUsers")]
         [string]$Scope = "AllUsers",
 
-        [Parameter(Mandatory = $false)]
-        [string]$Filter
+        [Parameter(Mandatory = $false, HelpMessage = "Filters the startup items by name. If provided, only items that match the filter will be returned")]
+        [string]$Filter = $null
     )
-    if (-not $Path) {
-        $Paths = @(
-            "Software\Microsoft\Windows\CurrentVersion\Run",
-            "Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run",
-            "Software\Microsoft\Windows\CurrentVersion\RunOnce",
-            "Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce"
-        )
-    }
-    else {
-        $Paths = $Path
-    }
-    foreach ($CurrentPath in $Paths) {
-        $RegistryPath = "Registry::$Hive\$CurrentPath"
-        if ($Scope -eq "CurrentUserOnly") {
-            $RegistryPath = "Registry::${Hive}CU\$CurrentPath"
+    BEGIN {
+        Write-Verbose -Message "Starting to retrieve registry startup items from $Hive with scope $Scope"
+        if (-not $Path) {
+            $Paths = @(
+                "Software\Microsoft\Windows\CurrentVersion\Run",
+                "Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run",
+                "Software\Microsoft\Windows\CurrentVersion\RunOnce",
+                "Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce"
+            )
         }
-        try {
-            $Items = Get-ItemProperty -Path $RegistryPath -ErrorAction Stop
-            $Items.PSObject.Properties | ForEach-Object {
-                $Name = $_.Name
-                $Value = $_.Value
-                if (-not $Filter -or $Name -like "*$Filter*") {
-                    [PSCustomObject]@{
-                        Hive         = $Hive
-                        Path         = $CurrentPath
-                        RegistryPath = $RegistryPath
-                        Scope        = $Scope
-                        Name         = $Name
-                        Value        = $Value
+        else {
+            $Paths = @($Path)
+        }
+        if ($Scope -eq "CurrentUserOnly") {
+            $Hive = "HKCU"
+        }
+    }
+    PROCESS {
+        foreach ($CurrentPath in $Paths) {
+            $RegistryPath = "Registry::$Hive\$CurrentPath"
+            Write-Verbose -Message "Checking registry path: $RegistryPath"
+            try {
+                if (Test-Path $RegistryPath) {
+                    $Items = Get-ItemProperty -Path $RegistryPath -ErrorAction Stop
+                    foreach ($Property in $Items.PSObject.Properties) {
+                        $Name = $Property.Name
+                        $Value = $Property.Value
+                        if (-not $Filter -or $Name -like "*$Filter*") {
+                            [PSCustomObject]@{
+                                Hive         = $Hive
+                                Path         = $CurrentPath
+                                RegistryPath = $RegistryPath
+                                Scope        = $Scope
+                                Name         = $Name
+                                Value        = $Value
+                            }
+                        }
                     }
                 }
+                else {
+                    Write-Verbose -Message "Registry path does not exist: $RegistryPath"
+                }
+            }
+            catch {
+                Write-Error -Message "Error retrieving items from registry path: $RegistryPath - $_.Exception.Message"
             }
         }
-        catch {
-            Write-Error -Message "Error accessing registry path: $RegistryPath!"
-        }
+    }
+    END {
+        Write-Verbose -Message "Completed retrieval of registry startup items"
     }
 }
