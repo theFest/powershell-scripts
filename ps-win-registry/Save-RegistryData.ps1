@@ -1,107 +1,133 @@
-Function Save-RegistryData {
+function Save-RegistryData {
     <#
     .SYNOPSIS
-    Export registry data to CSV, Excel, or XML formats.
+    Exports data from the Windows registry to a specified file format.
 
     .DESCRIPTION
-    This function retrieves registry data from a specified path, processes it, and exports the results to a file in either CSV, Excel, or XML format.
-
-    .PARAMETER Path
-    Specifies the registry path from which to retrieve data.
-    .PARAMETER Extension
-    Desired output file format, valid values are '.csv', '.xlsx', or '.xml'.
-    .PARAMETER Outfile
-    Path and base name for the output file, the appropriate file extension is added based on the chosen format.
-    .PARAMETER Force
-    Force the creation of the output file, overwriting it if it already exists.
-    .PARAMETER AutoFilter
-    Indicates whether to apply autofilter when exporting to Excel.
+    This function exports registry keys and their properties from a specified path into a CSV, XLSX, or XML file.
+    Allows recursive searching through the registry and handles different file formats, also includes the option to overwrite existing files, apply AutoFilter for Excel exports and more.
 
     .EXAMPLE
-    Save-RegistryData -Path "HKLM:\SOFTWARE\Adobe" -Extension '.csv' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry"
-    Save-RegistryData -Path "HKLM:\SOFTWARE\Adobe" -Extension '.xlsx' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry"
-    Save-RegistryData -Path "HKLM:\SOFTWARE\Adobe" -Extension '.xml' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry"
+    Save-RegistryData -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\ProfileList" -Extension '.csv' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry" -Verbose
+    Save-RegistryData -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\ProfileList" -Extension '.xlsx' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry" -AutoFilter -Force
+    Save-RegistryData -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\ProfileList" -Extension '.xml' -Outfile "$env:USERPROFILE\Desktop\ExportedRegistry" -Verbose
 
     .NOTES
-    v0.0.1
+    v0.2.8
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true, HelpMessage = "Full registry path from which to export data (e.g., 'HKLM:\SOFTWARE\Adobe')")]
         [ValidateScript({
                 if (-not (Test-Path -Path $_ -ErrorAction SilentlyContinue)) {
-                    throw "Path $_ does not exist."
+                    throw "The registry path '$($_)' does not exist!"
                 }
                 $true
             })]
+        [Alias("p")]
         [string]$Path,
 
-        [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateSet(".csv", ".xlsx", ".xml")]
+        [Parameter(Mandatory = $true, HelpMessage = "Choose the output file format: '.csv', '.xlsx', or '.xml'")]
+        [ValidateSet(".csv", ".xlsx", ".xml", IgnoreCase = $true)]
+        [Alias("e")]
         [string]$Extension,
 
-        [Parameter(Mandatory = $true, Position = 2)]
+        [Parameter(Mandatory = $true, HelpMessage = "Name of the output file (without the extension)")]
         [ValidateNotNullOrEmpty()]
+        [Alias("o")]
         [string]$Outfile,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false, HelpMessage = "Overwrite the output file if it already exists")]
+        [Alias("fo")]
         [switch]$Force,
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false, HelpMessage = "Enable AutoFilter in the XLSX export (only applicable for '.xlsx' format)")]
+        [Alias("af")]
         [switch]$AutoFilter
     )
     BEGIN {
+        Write-Verbose -Message "Starting Save-RegistryData with the following parameters:"
+        Write-Verbose -Message "`tRegistry Path: $Path"
+        Write-Verbose -Message "`tOutput Extension: $Extension"
+        Write-Verbose -Message "`tOutput File (without extension): $Outfile"
+        Write-Verbose -Message "`tForce overwrite: $Force"
+        Write-Verbose -Message "`tEnable AutoFilter (for .xlsx): $AutoFilter"
         if ($Extension -eq ".xlsx" -and -not (Get-Module -ListAvailable | Where-Object Name -eq "ImportExcel")) {
-            Write-Warning -Message "ImportExcel module not found. Installing..."
-            Install-Module ImportExcel -Scope CurrentUser -Force:$true -Verbose
-            Import-Module ImportExcel -Force -Verbose
+            Write-Verbose -Message "ImportExcel module not found. Attempting to install..."
+            try {
+                Install-Module -Name ImportExcel -Scope CurrentUser -Force -Verbose
+                Import-Module -Name ImportExcel -Force -Verbose
+                Write-Verbose -Message "ImportExcel module successfully installed and loaded."
+            }
+            catch {
+                throw "Failed to install or import the ImportExcel module. Please install it manually."
+            }
         }
-        $Keys = Get-ChildItem -Path $Path -Recurse -ErrorAction SilentlyContinue
         $Results = @()
+        Write-Verbose -Message "Attempting to retrieve registry keys from path: $Path"
+        try {
+            $Keys = Get-ChildItem -Path $Path -Recurse -ErrorAction Stop
+            Write-Verbose -Message "Successfully retrieved registry keys."
+        }
+        catch {
+            throw "Error retrieving registry keys from path: '$Path'."
+        }
     }
     PROCESS {
         foreach ($Key in $Keys) {
+            Write-Verbose -Message "Processing key: $($Key.PSPath)"
             foreach ($Property in $Key.PSObject.Properties) {
-                Write-Host "Processing $($Property.Name)" -ForegroundColor Green
                 foreach ($Name in $Key.Property) {
                     try {
                         $Value = Get-ItemPropertyValue -Path $Key.PSPath -Name $Name
                         $Type = $Key.GetValueKind($Name)
-                        $Result = [PSCustomObject]@{
+                        Write-Verbose -Message "`tProcessing property: $Name, Value: $Value, Type: $Type"
+                        $Results += [PSCustomObject]@{
+                            Key      = $Key.PSPath
                             Name     = $Property.Name
                             Property = $Name
                             Value    = $Value
                             Type     = $Type
                         }
-                        $Results += $Result
                     }
                     catch {
-                        Write-Warning -Message "Error processing $Property in $($Key.Name)"
+                        Write-Warning -Message "Error processing property '$Name' in key '$($Key.PSPath)': $_"
                     }
                 }
             }
         }
     }
     END {
-        $OutfilePath = $Outfile
-        switch -exact ($Extension) {
-            ".csv" {
-                $OutfilePath += ".csv"
-                $Results | Sort-Object Name, Property | Export-Csv -Path $OutfilePath -Encoding UTF8 -Delimiter ';' -NoTypeInformation
+        $OutfilePath = "$Outfile$Extension"
+        if (Test-Path -Path $OutfilePath -ErrorAction SilentlyContinue) {
+            if (-not $Force) {
+                throw "The file '$OutfilePath' already exists. Use the -Force parameter to overwrite."
             }
-            ".xlsx" {
-                $OutfilePath += ".xlsx"
-                $Results | Sort-Object Name, Property | Export-Excel -AutoSize -BoldTopRow -FreezeTopRow -AutoFilter:$AutoFilter -Path $OutfilePath
-            }
-            ".xml" {
-                $OutfilePath += ".xml"
-                $Results | Export-Clixml -Path $OutfilePath
-            }
-            default {
-                Write-Warning -Message "Invalid extension: $Extension!"
-                return
-            }
+            Write-Verbose -Message "Overwriting existing file: $OutfilePath"
         }
-        Write-Host "`nExported results to $OutfilePath" -ForegroundColor Green
+        Write-Verbose -Message "Exporting registry data to '$OutfilePath' using extension '$Extension'."
+        try {
+            switch ($Extension.ToLower()) {
+                ".csv" {
+                    Write-Verbose -Message "Exporting to CSV format..."
+                    $Results | Sort-Object Key, Name, Property | Export-Csv -Path $OutfilePath -Encoding UTF8 -Delimiter ';' -NoTypeInformation
+                }
+                ".xlsx" {
+                    Write-Verbose -Message "Exporting to XLSX format..."
+                    $Results | Sort-Object Key, Name, Property | Export-Excel -Path $OutfilePath -AutoSize -BoldTopRow -FreezeTopRow -AutoFilter:$AutoFilter
+                }
+                ".xml" {
+                    Write-Verbose -Message "Exporting to XML format..."
+                    $Results | Sort-Object Key, Name, Property | Export-Clixml -Path $OutfilePath
+                }
+                default {
+                    throw "Unsupported file extension: '$Extension'."
+                }
+            }
+            Write-Host "`nSuccessfully exported registry data to '$OutfilePath'." -ForegroundColor Green
+        }
+        catch {
+            throw "Failed to export data to '$OutfilePath': $_"
+        }
     }
 }
