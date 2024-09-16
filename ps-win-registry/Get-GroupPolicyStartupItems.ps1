@@ -1,41 +1,33 @@
-Function Get-GroupPolicyStartupItems {
+function Get-GroupPolicyStartupItems {
     <#
     .SYNOPSIS
-    Retrieves Group Policy startup items from specified registry hives and keys.
+    Retrieves startup items from specified registry hives and keys, including Group Policy and Local Policy settings.
 
     .DESCRIPTION
-    This function retrieves Group Policy startup items from the Windows registry based on the specified registry hive, key, and scope.
-
-    .PARAMETER RegistryHive
-    Registry hive(s) to search for Group Policy startup items, valid values are HKLM, HKCU, HKU, HKCR, HKCC, or AllHives.
-    .PARAMETER RegistryKey
-    Registry key(s) to search for Group Policy startup items, values are SOFTWARE\Microsoft\Windows\CurrentVersion\Run, SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run, or AllKeys.
-    .PARAMETER Scope
-    Scope(s) to search for Group Policy startup items, values are LocalMachine, CurrentUser, Users, ClassesRoot, CurrentConfig, or AllScopes.
-    .PARAMETER IncludeLocalPolicy
-    Indicating whether to include local policy items in the results.
+    This function searches for startup items in specified registry hives and keys, which are often used to manage applications that start with the system.
+    Allows filtering by registry hive, key, and scope, and optionally includes startup items defined in Local Policy. Supports multiple registry hives and keys, including common locations for startup entries, such as `HKLM` and `HKCU`, as well as the `Run` keys under `SOFTWARE\Microsoft\Windows\CurrentVersion`.
 
     .EXAMPLE
-    Get-GroupPolicyStartupItems -RegistryHive AllHives -RegistryKey AllKeys -Scope AllScopes -IncludeLocalPolicy
+    Get-GroupPolicyStartupItems
 
     .NOTES
-    v0.0.1
+    v0.3.4
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Registry hive to search for startup items")]
         [ValidateSet("HKLM", "HKCU", "HKU", "HKCR", "HKCC", "AllHives")]
         [string]$RegistryHive = "HKLM",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Registry key to search for startup items")]
         [ValidateSet("SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run", "AllKeys")]
         [string]$RegistryKey = "SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Scope for the registry search")]
         [ValidateSet("LocalMachine", "CurrentUser", "Users", "ClassesRoot", "CurrentConfig", "AllScopes")]
         [string]$Scope = "LocalMachine",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Include Local Policy settings in the search for startup items")]
         [switch]$IncludeLocalPolicy
     )
     $ValidHives = @("HKLM", "HKCU", "HKU", "HKCR", "HKCC")
@@ -46,7 +38,7 @@ Function Get-GroupPolicyStartupItems {
         $HivesToUse = @($RegistryHive)
     }
     else {
-        Write-Error "Invalid registry hive: $RegistryHive"
+        Write-Error -Message "Invalid registry hive: $RegistryHive"
         return
     }
     $Keys = @('SOFTWARE\Microsoft\Windows\CurrentVersion\Run', 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run')
@@ -60,6 +52,7 @@ Function Get-GroupPolicyStartupItems {
         Write-Error -Message "Invalid registry key: $RegistryKey"
         return
     }
+    $Results = @()
     foreach ($Hive in $HivesToUse) {
         foreach ($Key in $KeysToUse) {
             $FullRegistryPath = Join-Path -Path $Hive -ChildPath $Key
@@ -67,7 +60,7 @@ Function Get-GroupPolicyStartupItems {
                 try {
                     $PolicyItems = Get-Item -LiteralPath "Registry::$FullRegistryPath" -ErrorAction Stop | Get-ItemProperty
                     foreach ($Item in $PolicyItems.PSObject.Properties) {
-                        [PSCustomObject]@{
+                        $Results += [PSCustomObject]@{
                             Path  = $FullRegistryPath
                             Name  = $Item.Name
                             Value = $Item.Value
@@ -90,7 +83,7 @@ Function Get-GroupPolicyStartupItems {
         if (Test-Path -Path "Registry::$LocalPoliciesPath") {
             $LocalPolicies = Get-Item -LiteralPath "Registry::$LocalPoliciesPath" -ErrorAction SilentlyContinue | Get-ItemProperty
             foreach ($LocalPolicy in $LocalPolicies.PSObject.Properties) {
-                [PSCustomObject]@{
+                $Results += [PSCustomObject]@{
                     Path  = $LocalPoliciesPath
                     Name  = $LocalPolicy.Name
                     Value = $LocalPolicy.Value
@@ -103,4 +96,5 @@ Function Get-GroupPolicyStartupItems {
             Write-Warning -Message "Local policies registry path not found: $LocalPoliciesPath!"
         }
     }
+    $Results | Sort-Object Name | Format-Table -AutoSize
 }
