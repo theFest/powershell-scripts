@@ -1,25 +1,16 @@
-Function Compare-RegistryItemValues {
+function Compare-RegistryItemValues {
     <#
     .SYNOPSIS
-    Checks if a registry key exists and compares its value against a provided target value.
+    Compares the value of a specified registry property with an optional target value.
 
     .DESCRIPTION
-    This function checks if a specified registry key exists and, optionally, compares its value against a provided target value.
-
-    .PARAMETER Path
-    Path of the registry key in the PSDrive format.
-    .PARAMETER Property
-    Specifies the name of the registry key.
-    .PARAMETER TargetValue
-    The target value to compare with the registry key's value.
-    .PARAMETER UseTransaction
-    Indicates whether to use a transaction while accessing the registry.
+    This function compares the value of a specified registry property at a given registry path. It checks whether the property exists and, if a target value is provided, compares the actual value of the property with the target value.
 
     .EXAMPLE
-    Compare-RegistryItemValues -Path 'HKLM:\SOFTWARE\Example' -Property 'KeyName' -TargetValue 'ExpectedValue' -UseTransaction
+    Compare-RegistryItemValues -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Property 'ProductName' -TargetValue 'Windows 10 Pro' -Verbose
 
     .NOTES
-    v0.0.1
+    v0.3.3
     #>
     [CmdletBinding()]
     param (
@@ -46,58 +37,54 @@ Function Compare-RegistryItemValues {
         $PropertyMatch = $false
         $ActualValue = $null
         $StartTime = Get-Date
-        Write-Verbose -Message "Script started at $StartTime"
+        Write-Verbose -Message "Starting registry comparison at $StartTime"
     }
     PROCESS {
-        Write-Verbose -Message ("Looking for {0} in {1}" -f $Property, $Path)
-        if (Test-Path -Path $Path) {
-            if ($UseTransaction) {
-                $Item = Get-ItemProperty -Path $Path -Name $Property -ErrorAction "SilentlyContinue" -UseTransaction
-            }
-            else {
-                $Item = Get-ItemProperty -Path $Path -Name $Property -ErrorAction "SilentlyContinue" 
-            }
-            if ($Item) {
-                Write-Verbose -Message ($Item | Select-Object * | Out-String)
-                $Exists = $true
-                if ($TargetValue) {
+        Write-Verbose -Message "Checking registry path: $Path and property: $Property"  
+        try {
+            if (Test-Path -Path $Path) {
+                Write-Verbose -Message "Registry path exists. Retrieving property: $Property"
+                if ($UseTransaction) {
+                    $Item = Get-ItemProperty -Path $Path -Name $Property -ErrorAction "SilentlyContinue" -UseTransaction
+                }
+                else {
+                    $Item = Get-ItemProperty -Path $Path -Name $Property -ErrorAction "SilentlyContinue"
+                }
+                if ($Item) {
+                    $Exists = $true
                     $ActualValue = $Item.$Property
-                    Write-Verbose -Message "Retrieving value for $Property"
-                    if ($ActualValue -eq $TargetValue) {
-                        $PropertyMatch = $true
+                    Write-Verbose -Message "Found property $Property with value: $ActualValue"
+                    if ($TargetValue) {
+                        Write-Verbose -Message "Comparing actual value with target value: $TargetValue"
+                        $PropertyMatch = ($ActualValue -eq $TargetValue)
                     }
-                    else {
-                        $PropertyMatch = $false
-                    }
+                }
+                else {
+                    Write-Warning "Property '$Property' not found at path: $Path"
                 }
             }
             else {
-                Write-Host "Not found!" -ForegroundColor Yellow
-                $Exists = $false
-                $PropertyMatch = $false
+                Write-Warning "Registry path '$Path' not found!"
             }
         }
-        else {
-            Write-Warning -Message "Failed to find $Path!"
-            $Exists = $false
+        catch {
+            Write-Error "An error occurred while accessing the registry path '$Path'. Details: $_"
         }
-        $Obj = New-Object -TypeName PSObject -Property @{
+        $Obj = [PSCustomObject]@{
             "Path"     = $Path
             "Property" = $Property
             "Exists"   = $Exists
         }
         if ($TargetValue) {
-            Write-Verbose -Message "Adding TargetValue Properties"
-            $Obj | Add-Member -MemberType NoteProperty -Name "PropertyMatch" -Value $PropertyMatch
             $Obj | Add-Member -MemberType NoteProperty -Name "TargetValue" -Value $TargetValue
             $Obj | Add-Member -MemberType NoteProperty -Name "ActualValue" -Value $ActualValue
+            $Obj | Add-Member -MemberType NoteProperty -Name "PropertyMatch" -Value $PropertyMatch
         }
-        Write-Output -InputObject $Obj
+        Write-Output $Obj
     }
     END {
         $EndTime = Get-Date
         $ExecutionTime = New-TimeSpan -Start $StartTime -End $EndTime
-        Write-Host "Script completed at $EndTime" -ForegroundColor DarkCyan
         Write-Verbose -Message "Total execution time: $($ExecutionTime.TotalSeconds) seconds"
     }
 }
