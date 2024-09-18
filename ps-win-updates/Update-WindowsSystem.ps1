@@ -1,52 +1,65 @@
-Function Update-WindowsSystem {
+function Update-WindowsSystem {
     <#
     .SYNOPSIS
-    Updates the Windows system by installing available drivers and updates using Windows Update Module.
+    Updates the Windows system by installing drivers and updates using Windows Update Module.
 
     .DESCRIPTION
-    This function updates the Windows system by installing available drivers and updates, excluding Silverlight. First ensures that the required PowerShell Windows Update Module is installed and imports it, then it proceeds to install all available drivers and updates, except Silverlight. 
-    It uses/requires the PSWindowsUpdate module from the PowerShell Gallery. Installs the NuGet Package Provider if not already installed and sets the PSGallery repository to Trusted, then installs or imports the PSWindowsUpdate module as needed. If you need native PS method, use another function within this repository folder. 
-
-    .PARAMETER PSWindowsUpdateVersion
-    Specifies the version of the PowerShell Windows Update Module to use. Default value is "2.2.1.4".
+    This function installs Windows drivers and updates using the PSWindowsUpdate module, with parameters to skip drivers, force updates, suppress user interaction, and reboot automatically if needed.
 
     .EXAMPLE
     Update-WindowsSystem -Verbose
 
     .NOTES
-    v0.0.1
+    v0.1.2
     #>
     [CmdletBinding(ConfirmImpact = "Low")]
     param (
         [Parameter(Mandatory = $false, HelpMessage = "Version of PowerShell Windows Update Module")]
         [ValidateNotNullOrEmpty()]
-        [string]$PSWindowsUpdateVersion = "2.2.1.4"
+        [string]$PSWindowsUpdateVersion = "2.2.1.5",
+
+        [Parameter(Mandatory = $false, HelpMessage = "Skip driver updates during the update process")]
+        [switch]$SkipDrivers,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Force system reboot after updates without user confirmation")]
+        [switch]$ForceReboot,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Run the update process without any user interaction or prompts")]
+        [switch]$Silent,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Skip all non-driver updates")]
+        [switch]$SkipUpdates,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Automatically accept all EULAs during the update process")]
+        [switch]$AcceptEULA,
+
+        [Parameter(Mandatory = $false, HelpMessage = "Force the installation of all updates, ignoring download status")]
+        [switch]$ForceUpdates
     )
     BEGIN {
         $StartTime = Get-Date
         try {
             if ($env:PROCESSOR_ARCHITEW6432 -ne "ARM64") {
-                if (Test-Path -Path ('{0}\SysNative\WindowsPowerShell\v1.0\powershell.exe' -f $env:WINDIR) -ErrorAction SilentlyContinue -WarningAction SilentlyContinue) {
+                if (Test-Path -Path ("$env:WINDIR\SysNative\WindowsPowerShell\v1.0\powershell.exe") -ErrorAction SilentlyContinue) {
                     Write-Verbose -Message "Executing 64-bit PowerShell..."
-                    & "$env:WINDIR\SysNative\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy bypass -NoProfile -File $PSCommandPath
+                    & "$env:WINDIR\SysNative\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -NoProfile -File $PSCommandPath
                     exit $LastExitCode
                 }
             }
-            if (-not (Get-PackageProvider -Name "NuGet" -ErrorAction SilentlyContinue -WarningAction SilentlyContinue)) {
+            if (-not (Get-PackageProvider -Name "NuGet" -ErrorAction SilentlyContinue)) {
                 Write-Verbose -Message "Installing NuGet Package Provider..."
-                Install-PackageProvider -Name "NuGet" -RequiredVersion "2.8.5.201" -Scope AllUsers -Force -ErrorAction SilentlyContinue -Verbose
+                Install-PackageProvider -Name "NuGet" -RequiredVersion "2.8.5.201" -Scope AllUsers -Force -Verbose
             }
-            if (Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue | Where-Object -FilterScript { $PSItem.InstallationPolicy -ne "Trusted" }) {
+            if ((Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue).InstallationPolicy -ne "Trusted") {
                 Write-Verbose -Message "Setting PSGallery repository to Trusted..."
-                Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Verbose
+                Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted -Verbose
             }
-            if (-not (Get-Module -Name "PSWindowsUpdate" -ListAvailable -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Sort-Object -Descending -Property Version `
-                    | Select-Object -First 1 | Where-Object -FilterScript { $PSItem.Version -cge $PSWindowsUpdateVersion })) {
+            if (-not (Get-Module -Name "PSWindowsUpdate" -ListAvailable | Sort-Object -Property Version -Descending | Where-Object { $_.Version -ge $PSWindowsUpdateVersion })) {
                 Write-Verbose -Message "Installing PSWindowsUpdate module..."
                 Install-Module -Name "PSWindowsUpdate" -MinimumVersion $PSWindowsUpdateVersion -Repository PSGallery -AllowClobber -Force -Verbose
             }
             Write-Verbose -Message "Importing PSWindowsUpdate module..."
-            Import-Module -Name "PSWindowsUpdate" -MinimumVersion $PSWindowsUpdateVersion -DisableNameChecking -NoClobber -Force -Verbose
+            Import-Module -Name "PSWindowsUpdate" -MinimumVersion $PSWindowsUpdateVersion -DisableNameChecking -Force -Verbose
         }
         catch {
             Write-Error -Message "An unknown error occurred in the BEGIN block: $_"
@@ -57,54 +70,71 @@ Function Update-WindowsSystem {
             Install         = $true
             MicrosoftUpdate = $true
             UpdateType      = "Driver"
-            IgnoreUserInput = $true
-            AcceptAll       = $true
+            IgnoreUserInput = $Silent
+            AcceptAll       = $AcceptEULA
             IgnoreReboot    = $true
-            ForceInstall    = $true
+            ForceInstall    = $ForceUpdates
             ComputerName    = $env:COMPUTERNAME
             Confirm         = $false
         }
-        $UpdateExceptSilverlightParams = $DriverUpdateParams + @{
-            NotKBArticleID = "KB4481252"
-            ForceDownload  = $true
+        $UpdateParams = @{
+            Install         = $true
+            MicrosoftUpdate = $true
+            IgnoreUserInput = $Silent
+            AcceptAll       = $AcceptEULA
+            IgnoreReboot    = $true
+            ForceInstall    = $ForceUpdates
+            ComputerName    = $env:COMPUTERNAME
+            Confirm         = $false
         }
-        try {
-            Write-Host "Install all available drivers..." -ForegroundColor Cyan
-            Get-WindowsUpdate @DriverUpdateParams -Verbose
+        if (-not $SkipDrivers) {
+            try {
+                Write-Host "Installing all available drivers..." -ForegroundColor Cyan
+                Get-WindowsUpdate @DriverUpdateParams -Verbose
+            }
+            catch {
+                Write-Error "Error while installing drivers: $_"
+            }
         }
-        catch {
-            Write-Verbose -Message "Error while installing all available drivers!"
-            Write-Error -Message $_.Exception.Message
-        }
-        try {
-            Write-Host "Install all available updates, except SilverLight..." -ForegroundColor Cyan
-            Get-WindowsUpdate @UpdateExceptSilverlightParams -Verbose
-        }
-        catch {
-            Write-Verbose -Message "Error while installing all available updates!"
-            Write-Error -Message $_.Exception.Message
+        if (-not $SkipUpdates) {
+            try {
+                Write-Host "Installing all available updates..." -ForegroundColor Cyan
+                Get-WindowsUpdate @UpdateParams -Verbose
+            }
+            catch {
+                Write-Error -Message "Error while installing updates: $_"
+            }
         }
     }
     END {
-        $NeedReboot = (Get-WURebootStatus -ComputerName $env:COMPUTERNAME -Verbose).RebootRequired
-        if ($NeedReboot) {
-            Write-Verbose -Message "If needed, set return code 3010('exit 3010') - as long as this happens during device ESP, the computer will automatically reboot at the end of device ESP"
-            $RebootChoice = Read-Host -Prompt "Reboot required! Do you want to reboot now? (Y/N)"
-            if ($RebootChoice -eq 'Y' -or $RebootChoice -eq 'y') {
-                Write-Host "Rebooting now..." -ForegroundColor DarkCyan
-                Restart-Computer -Force
+        try {
+            $NeedReboot = (Get-WURebootStatus -ComputerName $env:COMPUTERNAME -Verbose).RebootRequired
+            if ($NeedReboot) {
+                if ($ForceReboot -or $Silent) {
+                    Write-Host "Rebooting now..." -ForegroundColor DarkCyan
+                    Restart-Computer -Force
+                }
+                else {
+                    $RebootChoice = Read-Host -Prompt "Reboot required! Do you want to reboot now? (Y/N)"
+                    if ($RebootChoice -match "^[Yy]$") {
+                        Write-Host "Rebooting now..." -ForegroundColor DarkCyan
+                        Restart-Computer -Force
+                    }
+                    else {
+                        Write-Host "Reboot postponed, exiting script..." -ForegroundColor Gray
+                        exit 0
+                    }
+                }
             }
             else {
-                Write-Host "Reboot postponed, exiting script..." -ForegroundColor Gray
-                exit 0
+                Write-Host "No reboot required, operations completed successfully." -ForegroundColor DarkGreen
             }
         }
-        else {
-            Write-Host "No reboot required, operations completed...exiting!" -ForegroundColor DarkGreen
-            exit 0
+        catch {
+            Write-Error -Message "Error during reboot status check: $_"
         }
         $EndTime = Get-Date
         $ElapsedTime = New-TimeSpan -Start $StartTime -End $EndTime
-        Write-Verbose -Message "Time taken: $($ElapsedTime.TotalSeconds) seconds"
+        Write-Verbose -Message "Total time taken: $($ElapsedTime.TotalSeconds) seconds"
     }
 }
