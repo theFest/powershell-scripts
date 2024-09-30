@@ -4,18 +4,17 @@ function New-Windows7EmbeddedVM {
     Creates a new Windows 7 Embedded virtual machine (VM) using Hyper-V.
 
     .DESCRIPTION
-    This function downloads a Windows 7 Embedded virtual hard disk (VHD) image in ISO format, creates a new virtual machine with Hyper-V, attaches the downloaded ISO to the VM, and provides the option to turn on the VM upon completion.
+    This function downloads a Windows 7 Embedded ISO image (32-bit or 64-bit), creates a new virtual machine with Hyper-V, attaches the downloaded ISO to the VM, and provides the option to turn on the VM upon completion. If the ISO is already fully downloaded, the function skips the download process.
 
     .EXAMPLE
-    New-Windows7EmbeddedVM -VMName "Win7EmbeddedVM" -VMPath "C:\VMs" -VRAM 4GB -VCores 2 -ISOPath "C:\ISOs\Win7Embedded.iso" -Verbose
+    New-Windows7EmbeddedVM -VMName "Win7EmbeddedVM" -VMPath "C:\VMs" -VRAM 4GB -VCores 2 -ISOPath "C:\ISOs\Win7Embedded.iso" -Architecture 64bit -Verbose
 
     .NOTES
-    - Windows 7 Embedded is part of the Windows Embedded Standard 7 series, and this script uses an ISO image for the VM setup.
-    v0.0.3
+    v0.0.5
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, HelpMessage = "SSpecifies the name of the virtual machine to be created")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specifies the name of the virtual machine to be created")]
         [ValidateNotNullOrEmpty()]
         [string]$VMName,
 
@@ -36,32 +35,52 @@ function New-Windows7EmbeddedVM {
 
         [Parameter(Mandatory = $false, HelpMessage = "Generation of the virtual machine, default is 1")]
         [ValidateSet("1", "2")]
-        [string]$Generation = "1"
+        [string]$Generation = "1",
+
+        [Parameter(Mandatory = $true, HelpMessage = "Download 32-bit or 64-bit ISO of Windows 7 Embedded")]
+        [ValidateSet("32bit", "64bit")]
+        [string]$Architecture
     )
     BEGIN {
-        Write-Verbose -Message "Starting the VM creation process..."
+        $StartTime = Get-Date
+        Write-Verbose -Message "Initiating ISO download, VM creation process, etc."
     }
     PROCESS {
-        $URL = 'https://archive.org/download/standard-7-sp-1-32bit-ibw_202211/Standard%207%20SP1%2064bit%20IBW.iso'
-        Write-Verbose -Message "Creating temporary directory if it doesn't exist"
-        $TempDir = Split-Path -Path $ISOPath
-        if (-not (Test-Path -Path $TempDir)) {
-            New-Item -ItemType Directory -Path $TempDir | Out-Null
+        $URL = if ($Architecture -eq "32bit") {
+            'https://archive.org/download/standard-7-sp-1-32bit-ibw_202211/Standard%207%20SP1%2032bit%20IBW.iso'
         }
-        try {
-            Write-Verbose -Message "Downloading ISO for Windows 7 Embedded..."
+        else {
+            'https://archive.org/download/standard-7-sp-1-32bit-ibw_202211/Standard%207%20SP1%2064bit%20IBW.iso'
+        }
+        $IsoSizes = @{
+            "32bit" = 2992934912; # 32bit ISO (~2.8 GB)
+            "64bit" = 3625994240; # 64bit ISO (~3.4 GB)
+        }
+        if (Test-Path -Path $ISOPath) {
+            $ExistingFileSize = (Get-Item $ISOPath).Length
+            if ($ExistingFileSize -eq $IsoSizes[$Architecture]) {
+                Write-Verbose -Message "ISO file already exists and is fully downloaded. Skipping download."
+            }
+            else {
+                Write-Verbose -Message "Partial or corrupted ISO detected. Redownloading..."
+                Remove-Item -Path $ISOPath -Force
+                Invoke-WebRequest -Uri $URL -OutFile $ISOPath -UseBasicParsing -Verbose
+            }
+        }
+        else {
+            Write-Verbose -Message "Downloading $Architecture ISO for Windows 7 Embedded..."
             Invoke-WebRequest -Uri $URL -OutFile $ISOPath -UseBasicParsing -Verbose
-            Write-Host "Creating VM..." -ForegroundColor Yellow
-            New-VM -Name $VMName -MemoryStartupBytes $VRAM -Path $VMPath -Generation $Generation -Verbose
-            Write-Verbose -Message "Attaching ISO to VM..."
-            Add-VMDvdDrive -VMName $VMName -Path $ISOPath -Verbose
         }
-        catch {
-            Write-Error -Message "Failed to create VM: $_"
-        }
+        Write-Host "Creating VM..." -ForegroundColor Yellow
+        New-VM -Name $VMName -MemoryStartupBytes $VRAM -Path $VMPath -Generation $Generation -Verbose
+        Write-Verbose -Message "Attaching ISO to VM..."
+        Add-VMDvdDrive -VMName $VMName -Path $ISOPath -Verbose
     }
     END {
         Write-Host "VM creation completed. VM name: $VMName" -ForegroundColor DarkGreen
+        $EndTime = Get-Date
+        $ElapsedTime = New-TimeSpan -Start $StartTime -End $EndTime
+        Write-Verbose -Message "Total time taken: $($ElapsedTime.TotalMinutes) minutes"
         $StartVM = Read-Host "Do you want to start the VM now? (Y/N)"
         if ($StartVM -eq 'Y' -or $StartVM -eq 'y') {
             try {
