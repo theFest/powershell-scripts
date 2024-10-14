@@ -1,86 +1,103 @@
-Function Get-PendingRebootStatus {
+function Get-PendingRebootStatus {
     <#
     .SYNOPSIS
-    Checks whether a system or remote computer requires a reboot due to pending updates or file rename operations.
+    Checks whether a local or remote system requires a reboot due to pending updates, file rename operations, or other conditions.
 
     .DESCRIPTION
-    This function checks for pending reboots on the local system or a remote computer. It examines the Windows registry keys associated with Windows Update and pending file rename operations.
-
-    .PARAMETER Computername
-    Name of the remote computer to check, if not provided, the function checks the local system.
-    .PARAMETER User
-    Username for authenticating to the remote computer, required for remote checks.
-    .PARAMETER Pass
-    Password for authenticating to the remote computer, required for remote checks.
+    This function checks for pending reboots on the local or a remote system by examining various Windows registry keys that indicate if a reboot is required.
+    These keys include pending file rename operations, Windows Update reboot requirements, Component-Based Servicing (CBS), and others. It can be run on a remote computer by specifying a username and password for authentication.
 
     .EXAMPLE
     Get-PendingRebootStatus
-    Get-PendingRebootStatus -Computername "RemoteComputer" -User "Username" -Pass "Password"
+    Get-PendingRebootStatus -ComputerName "RemotePC" -User "AdminUser" -Pass "password123"
 
     .NOTES
-    v0.0.1
+    v0.1.0
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
-        [string]$Computername,
+        [Parameter(Mandatory = $false, HelpMessage = "Name of the remote computer to check, if not provided, the function checks the local system")]
+        [string]$ComputerName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Username for authenticating to the remote computer, required for remote checks")]
         [string]$User,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Password for authenticating to the remote computer, required for remote checks")]
         [string]$Pass
     )
-    $PendingRebootRegistryKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
-    $PendingFileRenameRegistryKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations"
-    if (-not $Computername) {
-        $IsPendingReboot = Test-Path -Path $PendingRebootRegistryKey
-        $IsPendingFileRename = Test-Path -Path $PendingFileRenameRegistryKey
+    $PendingRebootKeys = @{
+        "WindowsUpdate"        = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
+        "FileRenameOperations" = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations"
+        "CBSReboot"            = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"
+        "ComputerRename"       = "HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName"
     }
-    else {
-        $IsPendingReboot = Invoke-Command -ComputerName $Computername -Credential (New-Object PSCredential -ArgumentList $User, (ConvertTo-SecureString $Pass -AsPlainText -Force)) -ScriptBlock {
-            Test-Path -Path $using:PendingRebootRegistryKey
+    $Cred = $null
+    if ($ComputerName) {
+        if (-not $User -or -not $Pass) {
+            Write-Error -Message "Username and password are required for remote checks!"
+            return
         }
-        $IsPendingFileRename = Invoke-Command -ComputerName $Computername -Credential (New-Object PSCredential -ArgumentList $User, (ConvertTo-SecureString $Pass -AsPlainText -Force)) -ScriptBlock {
-            Test-Path -Path $using:PendingFileRenameRegistryKey
-        }
+        $SecPass = ConvertTo-SecureString $Pass -AsPlainText -Force
+        $Cred = New-Object System.Management.Automation.PSCredential ($User, $SecPass)
+    }
+    $CheckKey = {
+        param($Key)
+        Test-Path -Path $Key
     }
     $RebootStatus = @{
-        "IsPendingReboot"     = $IsPendingReboot
-        "IsPendingFileRename" = $IsPendingFileRename
-        "PendingRebootReason" = $null
+        IsPendingReboot         = $false
+        IsPendingFileRename     = $false
+        IsPendingCBS            = $false
+        IsPendingComputerRename = $false
+        RebootReasons           = @()
     }
-    if ($IsPendingReboot) {
-        if (-not $Computername) {
-            $RebootReason = (Get-ItemProperty -LiteralPath $PendingRebootRegistryKey -Name "RebootRequired").RebootRequiredReason
+    foreach ($Key in $PendingRebootKeys.GetEnumerator()) {
+        $KeyName = $Key.Key
+        $RegPath = $Key.Value
+        $Result = if ($ComputerName) {
+            Invoke-Command -ComputerName $ComputerName -Credential $Cred -ScriptBlock $CheckKey -ArgumentList $RegPath -ErrorAction SilentlyContinue
         }
         else {
-            $RebootReason = Invoke-Command -ComputerName $Computername -Credential (New-Object PSCredential -ArgumentList $User, (ConvertTo-SecureString $Pass -AsPlainText -Force)) -ScriptBlock {
-                (Get-ItemProperty -LiteralPath $using:PendingRebootRegistryKey -Name "RebootRequired").RebootRequiredReason
+            & $CheckKey $RegPath
+        }
+        if ($Result) {
+            switch ($KeyName) {
+                "WindowsUpdate" {
+                    $RebootStatus.IsPendingReboot = $true
+                    $RebootStatus.RebootReasons += "Windows Update requires reboot"
+                }
+                "FileRenameOperations" {
+                    $RebootStatus.IsPendingFileRename = $true
+                    $RebootStatus.RebootReasons += "Pending file rename operations"
+                }
+                "CBSReboot" {
+                    $RebootStatus.IsPendingCBS = $true
+                    $RebootStatus.RebootReasons += "Component-Based Servicing (CBS) requires reboot"
+                }
+                "ComputerRename" {
+                    $RebootStatus.IsPendingComputerRename = $true
+                    $RebootStatus.RebootReasons += "Computer name change requires reboot"
+                }
             }
         }
-        $RebootStatus["PendingRebootReason"] = $RebootReason
     }
-    if ($RebootStatus["IsPendingReboot"] -or $RebootStatus["IsPendingFileRename"]) {
-        if ($Computername) {
-            Write-Host "$Computername requires a reboot" -ForegroundColor Yellow
+    if ($RebootStatus.IsPendingReboot -or $RebootStatus.IsPendingFileRename -or $RebootStatus.IsPendingCBS -or $RebootStatus.IsPendingComputerRename) {
+        if ($ComputerName) {
+            Write-Host "$ComputerName requires a reboot" -ForegroundColor Yellow
         }
         else {
             Write-Host "Local system requires a reboot!" -ForegroundColor DarkYellow
         }
-        if ($RebootStatus["IsPendingReboot"]) {
-            Write-Host "Reason for pending reboot: $($RebootStatus['PendingRebootReason'])" -ForegroundColor Cyan
-        }
-        if ($RebootStatus["IsPendingFileRename"]) {
-            Write-Host "Pending file rename operations detected!" -ForegroundColor DarkGray
+        foreach ($Reason in $RebootStatus.RebootReasons) {
+            Write-Host "Reason: $Reason" -ForegroundColor Cyan
         }
     }
     else {
-        if ($Computername) {
-            Write-Host "$Computername has no pending reboot or file rename operations" -ForegroundColor Green
+        if ($ComputerName) {
+            Write-Host "$ComputerName has no pending reboot operations" -ForegroundColor Green
         }
         else {
-            Write-Host "Local system has no pending reboot or file rename operations" -ForegroundColor DarkGreen
+            Write-Host "Local system has no pending reboot operations" -ForegroundColor DarkGreen
         }
     }
     return $RebootStatus
