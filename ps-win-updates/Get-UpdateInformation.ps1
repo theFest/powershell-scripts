@@ -1,58 +1,42 @@
-Function Get-WindowsUpdates {
+function Get-UpdateInformation {
     <#
     .SYNOPSIS
-    Retrieves Windows updates information from a local or remote machine.
+    Retrieves information about available Windows updates from a local or remote machine.
 
     .DESCRIPTION
-    This function queries Windows updates on a local or remote machine, providing information about available updates based on specified criteria.
-
-    .PARAMETER ComputerName
-    Specifies the remote computer name, default is the local machine.
-    .PARAMETER User
-    Provides the username for remote authentication.
-    .PARAMETER Pass
-    Provides the password for the specified username.
-    .PARAMETER MaxUpdates
-    Maximum number of updates to be returned, default is 100.
-    .PARAMETER IncludeHidden
-    Include hidden updates in the results.
-    .PARAMETER IncludeInstalled
-    Include installed updates in the results.
-    .PARAMETER IncludeRebootRequired
-    Include updates requiring a system reboot in the results.
-    .PARAMETER OutputFile
-    File path where the updates information will be saved.
+    This function queries the Windows Update service for available updates. It can filter updates based on installation status, reboot requirements, and whether they are hidden. Results can be saved to a specified file. This function supports remote execution with authentication.
 
     .EXAMPLE
-    Get-WindowsUpdates -ComputerName "remote_host" -User "remote_user" -Pass "remote_pass" -MaxUpdates 50 -IncludeHidden -IncludeInstalled -OutputFile "C:\UpdatesInfo.txt"
+    Get-UpdateInformation -MaxUpdates 10 -IncludeHidden -OutputFile "C:\Temp\Updates.txt"
+    Get-UpdateInformation -ComputerName "remote_host" -User "remote_user" -Pass "remote_pass" -MaxUpdates 5 -IncludeRebootRequired
 
     .NOTES
-    v0.3.1
+    v0.4.0
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Position = 0, HelpMessage = "Specifies the remote computer name. Default is the local machine")]
+        [Parameter(Mandatory = $false, HelpMessage = "Remote computer name, default is the local machine")]
         [string]$ComputerName = $env:COMPUTERNAME,
     
-        [Parameter(Position = 1, HelpMessage = "Provides the username for remote authentication")]
+        [Parameter(Mandatory = $false, HelpMessage = "Provides the username for remote authentication")]
         [string]$User,
     
-        [Parameter(Position = 2, HelpMessage = "Provides the password for the specified username")]
+        [Parameter(Mandatory = $false, HelpMessage = "Provides the password for the specified username")]
         [string]$Pass,
     
-        [Parameter(Position = 3, HelpMessage = "Specifies the maximum number of updates to be returned")]
+        [Parameter(Mandatory = $false, HelpMessage = "Maximum number of updates to be returned")]
         [int]$MaxUpdates = 100,
     
-        [Parameter(Position = 4, HelpMessage = "Switch to include hidden updates in the results")]
+        [Parameter(Mandatory = $false, HelpMessage = "Include hidden updates in the results")]
         [switch]$IncludeHidden,
     
-        [Parameter(Position = 5, HelpMessage = "Switch to include installed updates in the results")]
+        [Parameter(Mandatory = $false, HelpMessage = "Include installed updates in the results")]
         [switch]$IncludeInstalled,
     
-        [Parameter(Position = 6, HelpMessage = "Switch to include updates requiring a system reboot in the results")]
+        [Parameter(Mandatory = $false, HelpMessage = "Include updates requiring a system reboot in the results")]
         [switch]$IncludeRebootRequired,
     
-        [Parameter(Position = 7, HelpMessage = "Specifies the file path where the updates information will be saved")]
+        [Parameter(Mandatory = $false, HelpMessage = "File path where the updates information will be saved")]
         [string]$OutputFile
     )
     try {
@@ -64,10 +48,10 @@ Function Get-WindowsUpdates {
         }
         $ScriptBlock = {
             param (
-                $IncludeHidden,
-                $IncludeInstalled,
-                $IncludeRebootRequired,
-                $MaxUpdates
+                [switch]$IncludeHidden,
+                [switch]$IncludeInstalled,
+                [switch]$IncludeRebootRequired,
+                [int]$MaxUpdates
             )
             $UpdateSession = New-Object -ComObject Microsoft.Update.Session
             $Searcher = $UpdateSession.CreateUpdateSearcher()
@@ -75,8 +59,8 @@ Function Get-WindowsUpdates {
             if (-not $IncludeHidden) {
                 $Criteria += " and IsHidden=0"
             }
-            if (-not $IncludeInstalled) {
-                $Criteria += " and IsInstalled=0"
+            if ($IncludeInstalled) {
+                $Criteria = $Criteria -replace "IsInstalled=0", "IsInstalled=1"
             }
             if (-not $IncludeRebootRequired) {
                 $Criteria += " and RebootRequired=0"
@@ -89,6 +73,7 @@ Function Get-WindowsUpdates {
             $Session = New-PSSession -ComputerName $ComputerName -Credential $UsingCred -ErrorAction Stop
             Write-Verbose -Message "Querying Windows updates remotely..."
             $Updates = Invoke-Command -Session $Session -ScriptBlock $ScriptBlock -ArgumentList $IncludeHidden, $IncludeInstalled, $IncludeRebootRequired, $MaxUpdates
+            
             if ($Session) {
                 Write-Verbose -Message "Removing the remote session with $ComputerName..."
                 Remove-PSSession -Session $Session -ErrorAction SilentlyContinue -Verbose
