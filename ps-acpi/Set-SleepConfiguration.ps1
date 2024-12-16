@@ -1,92 +1,87 @@
-Function Set-SleepConfiguration {
+function Set-SleepConfiguration {
     <#
     .SYNOPSIS
-    Configures sleep-related settings on the system.
-    
-    .DESCRIPTION
-    This function allows you to manage sleep, hibernate, and fast startup settings on your system. It provides options to enable or disable sleep, set a custom sleep timeout, check the current sleep configuration, enable or disable hibernate, and enable fast startup.
+    Configures sleep, hibernate, and fast startup settings on the system.
 
-    .PARAMETER EnableSleep
-    Enables sleep mode with the default timeout.
-    .PARAMETER SleepTimeout
-    Sets the sleep timeout in seconds. Use with -EnableSleep parameter.
-    .PARAMETER DisableSleep
-    Disables sleep mode.
-    .PARAMETER CheckSleep
-    Checks and displays the current sleep settings.
-    .PARAMETER EnableHibernate
-    Enables hibernate mode.
-    .PARAMETER DisableHibernate
-    Disables hibernate mode.
-    .PARAMETER EnableFastStartup
-    Enables fast startup mode.
+    .DESCRIPTION
+    This function allows you to manage power settings such as sleep, hibernate, and fast startup modes. It provides options to enable or disable sleep, configure custom sleep timeouts, check current sleep settings, enable or disable hibernate, and enable fast startup for faster boot times.
 
     .EXAMPLE
     Set-SleepConfiguration -EnableSleep
+    Set-SleepConfiguration -SleepTimeout 300 -EnableSleep
     Set-SleepConfiguration -DisableSleep
+    Set-SleepConfiguration -CheckSleep
+    Set-SleepConfiguration -EnableHibernate
+    Set-SleepConfiguration -DisableHibernate
+    Set-SleepConfiguration -EnableFastStartup
 
     .NOTES
-    v0.0.1
+    Version: 0.1.1
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Enables sleep mode with a default or specified timeout. Use this to configure the system's sleep functionality")]
         [switch]$EnableSleep,
 
-        [Parameter(Mandatory = $false)]
-        [int]$SleepTimeout = 0,
+        [Parameter(Mandatory = $false, HelpMessage = "Specifies the sleep timeout in seconds. Must be a positive integer and used with -EnableSleep")]
+        [int]$SleepTimeout,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Disables sleep mode entirely, preventing the system from entering sleep mode")]
         [switch]$DisableSleep,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Displays the current sleep settings, including timeouts for AC (plugged-in) and DC (battery) power modes")]
         [switch]$CheckSleep,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Enables hibernate mode, which saves the system state to disk and powers off to conserve energy")]
         [switch]$EnableHibernate,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Disables hibernate mode and deletes the hibernate file to free up disk space")]
         [switch]$DisableHibernate,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Enables fast startup, a hybrid feature that speeds up boot times by combining hibernate and shutdown behaviors")]
         [switch]$EnableFastStartup
     )
-    if ($EnableSleep) {
-        powercfg /change standby-timeout-ac 15
-        Write-Host "Sleep enabled with default timeout" -ForegroundColor Cyan
-    }
-    elseif ($DisableSleep) {
-        powercfg /change standby-timeout-ac 0
-        Write-Host "Sleep disabled" -ForegroundColor Cyan
-    }
-    elseif ($SleepTimeout -ne 0) {
-        powercfg /change standby-timeout-ac $SleepTimeout
-        Write-Host "Sleep timeout set to $SleepTimeout seconds" -ForegroundColor Cyan
-    }
-    elseif ($CheckSleep) {
-        $CurrentSetting = powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String "Power Setting Index"
-        if ($CurrentSetting) {
-            $CurrentValue = $CurrentSetting -replace '\D'
-            $CurrentInfo = powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String "Power Setting Index" -Context 0, 2 | ForEach-Object { $_.Context.PostContext -replace '.*:\s+' }
-            Write-Host "Current sleep setting: $($CurrentValue) - $($CurrentInfo)" -ForegroundColor Cyan
+    try {
+        if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+            throw "This function requires administrative privileges. Please run PowerShell as an administrator."
         }
-        else {
-            Write-Host "Failed to retrieve current sleep setting" -ForegroundColor Cyan
+        if ($EnableSleep -and $DisableSleep) {
+            throw "You cannot use -EnableSleep and -DisableSleep together!"
+        }
+        if ($EnableSleep -and $SleepTimeout -le 0) {
+            throw "When using -SleepTimeout with -EnableSleep, specify a positive timeout value in seconds!"
+        }
+        if ($EnableSleep) {
+            $Timeout = if ($SleepTimeout -gt 0) { $SleepTimeout } else { 900 }
+            powercfg /change standby-timeout-ac $Timeout
+            powercfg /change standby-timeout-dc $Timeout
+            Write-Host "Sleep enabled with a timeout of $Timeout seconds." -ForegroundColor Cyan
+        }
+        if ($DisableSleep) {
+            powercfg /change standby-timeout-ac 0
+            powercfg /change standby-timeout-dc 0
+            Write-Host "Sleep mode disabled." -ForegroundColor Cyan
+        }
+        if ($CheckSleep) {
+            $CurrentSettingAC = powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String "(AC)" | ForEach-Object { $_ -replace '.*:\s+', '' }
+            $CurrentSettingDC = powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String "(DC)" | ForEach-Object { $_ -replace '.*:\s+', '' }
+            Write-Host "Current sleep timeout (AC): $CurrentSettingAC seconds" -ForegroundColor Cyan
+            Write-Host "Current sleep timeout (DC): $CurrentSettingDC seconds" -ForegroundColor Cyan
+        }
+        if ($EnableHibernate) {
+            powercfg /hibernate on
+            Write-Host "Hibernate mode enabled." -ForegroundColor Cyan
+        }
+        if ($DisableHibernate) {
+            powercfg /hibernate off
+            Write-Host "Hibernate mode disabled." -ForegroundColor Cyan
+        }
+        if ($EnableFastStartup) {
+            powercfg /h on
+            Write-Host "Fast startup enabled." -ForegroundColor Cyan
         }
     }
-    elseif ($EnableHibernate) {
-        powercfg /hibernate on
-        Write-Host "Hibernate enabled" -ForegroundColor Cyan
-    }
-    elseif ($DisableHibernate) {
-        powercfg /hibernate off
-        Write-Host "Hibernate disabled" -ForegroundColor Cyan
-    }
-    elseif ($EnableFastStartup) {
-        powercfg /h on
-        Write-Host "Fast Startup enabled" -ForegroundColor Cyan
-    }
-    else {
-        Write-Warning -Message "Invalid parameters, use -EnableSleep, -DisableSleep, -SleepTimeout, -CheckSleep, -EnableHibernate, -DisableHibernate, or -EnableFastStartup!"
+    catch {
+        Write-Error "An error occurred: $_"
     }
 }
